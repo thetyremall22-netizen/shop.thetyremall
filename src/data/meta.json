@@ -1,474 +1,230 @@
 {
-  "productCount": 7062,
-  "brands": [
-    {
-      "name": "Pirelli",
-      "count": 1210
-    },
-    {
-      "name": "Continental",
-      "count": 968
-    },
-    {
-      "name": "Radar",
-      "count": 827
-    },
-    {
-      "name": "Bridgestone",
-      "count": 725
-    },
-    {
-      "name": "Goodyear",
-      "count": 638
-    },
-    {
-      "name": "Dunlop",
-      "count": 586
-    },
-    {
-      "name": "Michelin",
-      "count": 540
-    },
-    {
-      "name": "Landsail",
-      "count": 316
-    },
-    {
-      "name": "Tracmax",
-      "count": 217
-    },
-    {
-      "name": "Windforce",
-      "count": 199
-    },
-    {
-      "name": "General",
-      "count": 119
-    },
-    {
-      "name": "Kapsen",
-      "count": 116
-    },
-    {
-      "name": "Firestone",
-      "count": 90
-    },
-    {
-      "name": "Bfg",
-      "count": 90
-    },
-    {
-      "name": "Mag Wheel",
-      "count": 74
-    },
-    {
-      "name": "Annaite",
-      "count": 70
-    },
-    {
-      "name": "Anchee",
-      "count": 58
-    },
-    {
-      "name": "Sava",
-      "count": 51
-    },
-    {
-      "name": "Firemax",
-      "count": 34
-    },
-    {
-      "name": "Timax",
-      "count": 25
-    },
-    {
-      "name": "Landspider",
-      "count": 19
-    },
-    {
-      "name": "American",
-      "count": 7
-    },
-    {
-      "name": "Sumitomo",
-      "count": 7
-    },
-    {
-      "name": "Bbs",
-      "count": 6
-    },
-    {
-      "name": "Xcent",
-      "count": 6
-    },
-    {
-      "name": "Bf",
-      "count": 5
-    },
-    {
-      "name": "Dun",
-      "count": 5
-    },
-    {
-      "name": "Bmw M",
-      "count": 3
-    },
-    {
-      "name": "Amg",
-      "count": 3
-    },
-    {
-      "name": "Yokohama",
-      "count": 3
-    },
-    {
-      "name": "Rhc",
-      "count": 2
-    },
-    {
-      "name": "Rotiform",
-      "count": 2
-    },
-    {
-      "name": "Bfgoodrich",
-      "count": 2
-    },
-    {
-      "name": "16inch",
-      "count": 2
-    },
-    {
-      "name": "Imp",
-      "count": 2
-    },
-    {
-      "name": "Falken",
-      "count": 2
-    },
-    {
-      "name": "American Roadstar",
-      "count": 1
-    },
-    {
-      "name": "American Outlaw",
-      "count": 1
-    },
-    {
-      "name": "Vossen",
-      "count": 1
-    },
-    {
-      "name": "Volk Racing",
-      "count": 1
-    },
-    {
-      "name": "Xxr",
-      "count": 1
-    },
-    {
-      "name": "Borbet",
-      "count": 1
-    },
-    {
-      "name": "Volk",
-      "count": 1
-    },
-    {
-      "name": "Ceat",
-      "count": 1
-    },
-    {
-      "name": "Koko",
-      "count": 1
-    },
-    {
-      "name": "Vogue",
-      "count": 1
-    },
-    {
-      "name": "Bridgeston",
-      "count": 1
-    },
-    {
-      "name": "15",
-      "count": 1
-    },
-    {
-      "name": "17",
-      "count": 1
-    },
-    {
-      "name": "2",
-      "count": 1
-    },
-    {
-      "name": "Triangle",
-      "count": 1
-    },
-    {
-      "name": "1",
-      "count": 1
-    },
-    {
-      "name": "Pir",
-      "count": 1
-    },
-    {
-      "name": "185/60r15",
-      "count": 1
-    },
-    {
-      "name": "Sava185/65tr15",
-      "count": 1
-    },
-    {
-      "name": "Continental-215/40r17-87w-Premium-Contact-2-Ao",
-      "count": 1
-    },
-    {
-      "name": "Continental-215/65hr16-Premium-Contact-2",
-      "count": 1
-    },
-    {
-      "name": "Continental-205/55vr15-Premium-Contact-2-Ao-88",
-      "count": 1
-    },
-    {
-      "name": "Continental-175/70tr14-Premium-Contact-2-84",
-      "count": 1
-    },
-    {
-      "name": "Continental-195/45r16-84v-Premium-Contact-2",
-      "count": 1
-    },
-    {
-      "name": "Continental-195/55rf16-91h-Premium-Contact-2-Ssr",
-      "count": 1
-    },
-    {
-      "name": "Continental-205/60r15-95h-Premium-Contact-2",
-      "count": 1
-    },
-    {
-      "name": "Continental-205/50r16-87w-Premium-Contact-2",
-      "count": 1
-    },
-    {
-      "name": "Continental-205/60r16-96v-Premium-Contact-2",
-      "count": 1
-    },
-    {
-      "name": "Continental-235/60r16-100v-Premium-Contact-2",
-      "count": 1
-    },
-    {
-      "name": "Continental-195/55hr16-Premium-Contact-2",
-      "count": 1
-    },
-    {
-      "name": "Continental-185/55hr15-Premium-Contact-2-82",
-      "count": 1
-    },
-    {
-      "name": "Continental-215/60r17-96h-Premium-Contact-2",
-      "count": 1
-    },
-    {
-      "name": "Continental-205/45r16-83w-Premium-Contact-2",
-      "count": 1
-    }
-  ],
-  "widths": [
-    "7",
-    "11",
-    "31",
-    "32",
-    "33",
-    "35",
-    "37",
-    "155",
-    "165",
-    "175",
-    "180",
-    "185",
-    "195",
-    "205",
-    "215",
-    "225",
-    "235",
-    "245",
-    "255",
-    "265",
-    "275",
-    "285",
-    "295",
-    "305",
-    "315",
-    "325",
-    "335",
-    "355",
-    "385",
-    "750",
-    "775",
-    "825",
-    "875",
-    "925",
-    "ET38",
-    "7,5",
-    "7.5",
-    "9",
-    "10",
-    "12",
-    "13",
-    "14",
-    "27",
-    "30",
-    "39",
-    "110",
-    "115",
-    "120",
-    "125",
-    "135",
-    "145",
-    "170",
-    "190",
-    "200",
-    "230",
-    "260",
-    "270",
-    "280",
-    "320",
-    "340",
-    "345",
-    "365",
-    "8,5",
-    "8,25",
-    "250",
-    "300",
-    "375",
-    "425",
-    "445",
-    "900",
-    "1000",
-    "1100"
-  ],
-  "profiles": [
-    "9.5",
-    "10.5",
-    "12",
-    "12.5",
-    "13",
-    "13.5",
-    "14",
-    "15",
-    "16",
-    "18",
-    "20",
-    "24",
-    "25",
-    "30",
-    "35",
-    "40",
-    "45",
-    "50",
-    "55",
-    "60",
-    "65",
-    "70",
-    "75",
-    "80",
-    "12,5",
-    "6.5J",
-    "10,5",
-    "85",
-    "11,5",
-    "9,5",
-    "90",
-    "95",
-    "13,5",
-    "17,5",
-    "22,5",
-    "8,5"
-  ],
-  "rims": [
-    "10",
-    "12",
-    "13",
-    "14",
-    "15",
-    "16",
-    "17",
-    "17.5",
-    "18",
-    "19",
-    "20",
-    "21",
-    "22",
-    "22.5",
-    "22,5",
-    "19.5",
-    "23",
-    "24",
-    "17,5",
-    "19,5",
-    "26",
-    "32",
-    "36",
-    "38",
-    "44",
-    "48",
-    "80"
-  ],
-  "wheelRims": [
-    "14",
-    "15",
-    "16",
-    "17",
-    "18",
-    "19",
-    "20"
-  ],
-  "wheelWidths": [
-    "5",
-    "6",
-    "6.5",
-    "7",
-    "7.5",
-    "8",
-    "8.5",
-    "9",
-    "9.5",
-    "12",
-    "25"
-  ],
-  "wheelBrands": [
-    "American Outlaw",
-    "American Roadstar",
-    "Amg",
-    "Bbs",
-    "Bmw M",
-    "Borbet",
-    "Koko",
-    "Mag Wheel",
-    "Rhc",
-    "Rotiform",
-    "Vogue",
-    "Volk",
-    "Volk Racing",
-    "Vossen",
-    "Xxr"
-  ],
-  "pcds": [
-    "4x100",
-    "4x108",
-    "5x100",
-    "5x112",
-    "5x114",
-    "5x120",
-    "5x150",
-    "6x139",
-    "6x139.7",
-    "8x100"
-  ],
-  "generatedAt": "2026-10-09T08:13:47.380Z"
+ "productCount": 4352,
+ "brands": [
+  {
+   "name": "Bridgestone",
+   "count": 692
+  },
+  {
+   "name": "Pirelli",
+   "count": 596
+  },
+  {
+   "name": "Goodyear",
+   "count": 517
+  },
+  {
+   "name": "Dunlop",
+   "count": 511
+  },
+  {
+   "name": "Radar",
+   "count": 498
+  },
+  {
+   "name": "Landsail",
+   "count": 307
+  },
+  {
+   "name": "Michelin",
+   "count": 275
+  },
+  {
+   "name": "Tracmax",
+   "count": 183
+  },
+  {
+   "name": "Windforce",
+   "count": 178
+  },
+  {
+   "name": "Continental",
+   "count": 167
+  },
+  {
+   "name": "Kapsen",
+   "count": 105
+  },
+  {
+   "name": "BFGoodrich",
+   "count": 59
+  },
+  {
+   "name": "Firestone",
+   "count": 54
+  },
+  {
+   "name": "Sumitomo",
+   "count": 39
+  },
+  {
+   "name": "ANNAITE",
+   "count": 33
+  },
+  {
+   "name": "General",
+   "count": 31
+  },
+  {
+   "name": "Sava",
+   "count": 28
+  },
+  {
+   "name": "Tyre Mall",
+   "count": 19
+  },
+  {
+   "name": "Timax",
+   "count": 18
+  },
+  {
+   "name": "Landspider",
+   "count": 15
+  },
+  {
+   "name": "Firemax",
+   "count": 10
+  },
+  {
+   "name": "Anchee",
+   "count": 6
+  },
+  {
+   "name": "Xcent",
+   "count": 6
+  },
+  {
+   "name": "Yokohama",
+   "count": 3
+  },
+  {
+   "name": "CEAT",
+   "count": 1
+  },
+  {
+   "name": "Roadking",
+   "count": 1
+  }
+ ],
+ "widths": [
+  "7",
+  "9",
+  "10",
+  "11",
+  "12",
+  "13",
+  "14",
+  "27",
+  "30",
+  "31",
+  "32",
+  "33",
+  "35",
+  "37",
+  "39",
+  "120",
+  "125",
+  "145",
+  "155",
+  "165",
+  "170",
+  "175",
+  "180",
+  "185",
+  "190",
+  "195",
+  "200",
+  "205",
+  "215",
+  "225",
+  "235",
+  "245",
+  "250",
+  "255",
+  "265",
+  "275",
+  "285",
+  "295",
+  "305",
+  "315",
+  "325",
+  "335",
+  "355",
+  "385",
+  "425",
+  "445",
+  "750",
+  "775",
+  "825",
+  "875",
+  "925",
+  "7,5",
+  "7.5",
+  "8,25",
+  "8,5"
+ ],
+ "profiles": [
+  "12",
+  "13",
+  "14",
+  "15",
+  "16",
+  "20",
+  "24",
+  "25",
+  "30",
+  "35",
+  "40",
+  "45",
+  "50",
+  "55",
+  "60",
+  "65",
+  "70",
+  "75",
+  "80",
+  "85",
+  "90",
+  "95",
+  "10,5",
+  "10.5",
+  "11,5",
+  "12,5",
+  "12.5",
+  "13,5",
+  "13.5",
+  "17,5",
+  "22,5",
+  "8,5",
+  "9,5",
+  "9.5"
+ ],
+ "rims": [
+  "10",
+  "12",
+  "13",
+  "14",
+  "15",
+  "16",
+  "17",
+  "18",
+  "19",
+  "20",
+  "21",
+  "22",
+  "23",
+  "24",
+  "26",
+  "17,5",
+  "17.5",
+  "19,5",
+  "19.5",
+  "22,5",
+  "22.5"
+ ],
+ "wheelRims": [],
+ "wheelWidths": [],
+ "wheelBrands": [],
+ "pcds": [],
+ "generatedAt": "2026-10-10"
 }

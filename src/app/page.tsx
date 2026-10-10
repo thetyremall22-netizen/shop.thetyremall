@@ -14,7 +14,7 @@ import { AnimatedRating } from "@/components/AnimatedRating";
 import { RotatingReviews } from "@/components/RotatingReviews";
 import { Arrow } from "@/components/icons";
 
-const BRANDS = ["GOODYEAR", "MICHELIN", "BRIDGESTONE", "CONTINENTAL", "PIRELLI", "DUNLOP", "HANKOOK"];
+const BRANDS = ["BRIDGESTONE", "PIRELLI", "GOODYEAR", "DUNLOP", "RADAR", "MICHELIN", "CONTINENTAL", "LANDSAIL"];
 
 export default function Home() {
   const sellers = bestSellers(10);
@@ -129,14 +129,16 @@ export default function Home() {
       </section>
 
       {/* ============ MAG WHEELS ============ */}
-      <section className="container-x pb-12">
-        <Reveal><SectionHead eyebrow="Turn heads on every street" silver="FRESH" green="MAGS" href="/shop?type=wheel" /></Reveal>
-        <div className="no-scrollbar mt-6 flex gap-3 overflow-x-auto pb-2">
-          {mags.map((p, i) => (
-            <Reveal key={p.id} delay={i * 50} className="shrink-0"><ProductRailCard p={p} /></Reveal>
-          ))}
-        </div>
-      </section>
+      {mags.length > 0 && (
+        <section className="container-x pb-12">
+          <Reveal><SectionHead eyebrow="Turn heads on every street" silver="FRESH" green="MAGS" href="/shop?type=wheel" /></Reveal>
+          <div className="no-scrollbar mt-6 flex gap-3 overflow-x-auto pb-2">
+            {mags.map((p, i) => (
+              <Reveal key={p.id} delay={i * 50} className="shrink-0"><ProductRailCard p={p} /></Reveal>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ============ BRAND WALL ============ */}
       <section className="border-y border-line bg-ink-2">

@@ -1,258 +1,234 @@
 [
-  {
-    "id": 578,
-    "name": "UHP Tyres",
-    "slug": "uhp-tyres",
-    "count": 2540,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Untitled-design-23.png",
-    "primary": true
-  },
-  {
-    "id": 583,
-    "name": "Passenger Tyres",
-    "slug": "passenger-tyres",
-    "count": 2049,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-Passenger-Tyres-1080x1080-3.jpg",
-    "primary": true
-  },
-  {
-    "id": 565,
-    "name": "SUV Tyres",
-    "slug": "suv-tyres",
-    "count": 1139,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-SUV-1080x1080_imgupscaler.ai_v1Fast_2K.png",
-    "primary": true
-  },
-  {
-    "id": 557,
-    "name": "4×4 Tyres",
-    "slug": "4x4-tyres",
-    "count": 850,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-SUV4x4-1080x1080-3.jpg",
-    "primary": true
-  },
-  {
-    "id": 546,
-    "name": "Commercial Tyres",
-    "slug": "commercial-tyres",
-    "count": 620,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-Commercial-1080x1080_imgupscaler.ai_v1Fast_2K.png",
-    "primary": true
-  },
-  {
-    "id": 934,
-    "name": "Runflat Tyres",
-    "slug": "runflat-tyres",
-    "count": 336,
-    "image": "https://thetyremall.co.za/wp-content/uploads/1-5.png",
-    "primary": true
-  },
-  {
-    "id": 590,
-    "name": "Truck & Bus Tyres",
-    "slug": "truck-bus-tyres",
-    "count": 322,
-    "image": "https://thetyremall.co.za/wp-content/uploads/truck-1.png",
-    "primary": true
-  },
-  {
-    "id": 940,
-    "name": "UHP",
-    "slug": "uhp",
-    "count": 112,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Untitled-design-23.png",
-    "primary": true
-  },
-  {
-    "id": 1371,
-    "name": "Passenger Deals",
-    "slug": "passenger-deals",
-    "count": 82,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-PassengerSpecials-1080x1080_imgupscaler.ai_v1Fast_2K.png",
-    "primary": false
-  },
-  {
-    "id": 6169,
-    "name": "Mags Deals",
-    "slug": "mags-deals",
-    "count": 76,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-HotSpecials-1080x1080_imgupscaler.ai_v1Fast_2K.png",
-    "primary": false
-  },
-  {
-    "id": 1876,
-    "name": "Weekly Deals",
-    "slug": "weekly-deals",
-    "count": 74,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-WeeklySpecials-1080x1080_imgupscaler.ai_v1Fast_2K.png",
-    "primary": false
-  },
-  {
-    "id": 511,
-    "name": "Wheel/Rims",
-    "slug": "mag-wheel",
-    "count": 72,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-MAG-1080x1080_imgupscaler.ai_v1Fast_2K-1.png",
-    "primary": false
-  },
-  {
-    "id": 1299,
-    "name": "RunFlat Deals",
-    "slug": "runflat-deals",
-    "count": 57,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-RunFlatSpecials-1080x1080_imgupscaler.ai_v1Fast_2K.png",
-    "primary": false
-  },
-  {
-    "id": 1875,
-    "name": "Hot Deal",
-    "slug": "hot-deal",
-    "count": 56,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-HotSpecials-1080x1080_imgupscaler.ai_v1Fast_2K.png",
-    "primary": false
-  },
-  {
-    "id": 1921,
-    "name": "4×4 Deals",
-    "slug": "4x4-deals",
-    "count": 45,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-4x4Specials-1080x1080_imgupscaler.ai_v1Fast_2K-1.png",
-    "primary": false
-  },
-  {
-    "id": 6543,
-    "name": "UHP Deals",
-    "slug": "uhp-deals",
-    "count": 43,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-UHPSpecials-1080x1080_imgupscaler.ai_v1Fast_2K-1.png",
-    "primary": false
-  },
-  {
-    "id": 3927,
-    "name": "Deal of the Month",
-    "slug": "deal-of-the-month",
-    "count": 38,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-PromotionsSpecials-1080x1080-4.jpg",
-    "primary": false
-  },
-  {
-    "id": 6676,
-    "name": "Black November Deals",
-    "slug": "black-november-deals",
-    "count": 35,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Gemini_Generated_Image_2x8n8z2x8n8z2x8n-1.png",
-    "primary": false
-  },
-  {
-    "id": 550,
-    "name": "Bike Tyres",
-    "slug": "bike-tyres",
-    "count": 32,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-BikeSpecials-1080x1080_imgupscaler.ai_v1Fast_2K-1.png",
-    "primary": true
-  },
-  {
-    "id": 6674,
-    "name": "Clearance Specials",
-    "slug": "clearance-specials",
-    "count": 31,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Tyre-Mall-Clearance-Specials-Banners-1.jpg",
-    "primary": false
-  },
-  {
-    "id": 1451,
-    "name": "Commercial Deals",
-    "slug": "commercial-deals",
-    "count": 30,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-CommercialSpecials-1080x1080_imgupscaler.ai_v1Fast_2K-3.png",
-    "primary": false
-  },
-  {
-    "id": 1356,
-    "name": "SUV Deals",
-    "slug": "suv-deals",
-    "count": 28,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-SUVSpecials-1080x1080_imgupscaler.ai_v1Fast_2K.png",
-    "primary": false
-  },
-  {
-    "id": 1655,
-    "name": "Bus Deals",
-    "slug": "bus-deals",
-    "count": 23,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-Bus-1080x1080_imgupscaler.ai_v1Fast_2K.png",
-    "primary": false
-  },
-  {
-    "id": 1656,
-    "name": "Truck Deals",
-    "slug": "truck-deals",
-    "count": 22,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-TruckSpecials-1080x1080_imgupscaler.ai_v1Fast_2K-1.png",
-    "primary": false
-  },
-  {
-    "id": 6675,
-    "name": "Last of the Best",
-    "slug": "last-of-the-best",
-    "count": 16,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Tyre-Mall-LOB-Specials2-Banners-1.jpg",
-    "primary": false
-  },
-  {
-    "id": 6429,
-    "name": "Combo Deals",
-    "slug": "combo-deals",
-    "count": 13,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Catergory-ComboSpecials-1080x1080_imgupscaler.ai_v1Fast_2K-1.png",
-    "primary": false
-  },
-  {
-    "id": 6677,
-    "name": "WAS AND NOW DEALS",
-    "slug": "was-and-now-deals",
-    "count": 10,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Screenshot-2025-12-19-153451.png",
-    "primary": false
-  },
-  {
-    "id": 6679,
-    "name": "TAKE CONTROL DEALS",
-    "slug": "take-control-deals",
-    "count": 8,
-    "image": null,
-    "primary": false
-  },
-  {
-    "id": 6678,
-    "name": "3 + 1 DEALS",
-    "slug": "3-1-tyre-deals",
-    "count": 4,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Gemini_Generated_Image_6hj6ak6hj6ak6hj6.png",
-    "primary": false
-  },
-  {
-    "id": 6850,
-    "name": "LIMITED TIME TYRE DEALS",
-    "slug": "limited-time-tyre-deals",
-    "count": 3,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Kxv1pu5t.jpeg",
-    "primary": false
-  },
-  {
-    "id": 6681,
-    "name": "WomensMonth",
-    "slug": "womens-month",
-    "count": 3,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Gemini_Generated_Image_mz89smmz89smmz89-e1766152814769.png",
-    "primary": false
-  },
-  {
-    "id": 6846,
-    "name": "Fathers Day Deals",
-    "slug": "fathers-day-delas",
-    "count": 2,
-    "image": "https://thetyremall.co.za/wp-content/uploads/Tyre-Mall-Alts-2.jpg",
-    "primary": false
-  }
+ {
+  "id": 1001,
+  "name": "UHP Tyres",
+  "slug": "uhp-tyres",
+  "count": 1627,
+  "image": null,
+  "primary": true
+ },
+ {
+  "id": 1002,
+  "name": "Passenger Tyres",
+  "slug": "passenger-tyres",
+  "count": 1178,
+  "image": null,
+  "primary": true
+ },
+ {
+  "id": 1003,
+  "name": "SUV Tyres",
+  "slug": "suv-tyres",
+  "count": 827,
+  "image": null,
+  "primary": true
+ },
+ {
+  "id": 1004,
+  "name": "4x4 Tyres",
+  "slug": "4x4-tyres",
+  "count": 689,
+  "image": null,
+  "primary": true
+ },
+ {
+  "id": 1005,
+  "name": "Commercial Tyres",
+  "slug": "commercial-tyres",
+  "count": 361,
+  "image": null,
+  "primary": true
+ },
+ {
+  "id": 1006,
+  "name": "Runflat Tyres",
+  "slug": "runflat-tyres",
+  "count": 242,
+  "image": null,
+  "primary": true
+ },
+ {
+  "id": 1007,
+  "name": "Truck & Bus Tyres",
+  "slug": "truck-bus-tyres",
+  "count": 209,
+  "image": null,
+  "primary": true
+ },
+ {
+  "id": 1008,
+  "name": "Passenger Deals",
+  "slug": "passenger-deals",
+  "count": 50,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1009,
+  "name": "RunFlat Deals",
+  "slug": "runflat-deals",
+  "count": 49,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1010,
+  "name": "UHP Deals",
+  "slug": "uhp-deals",
+  "count": 40,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1011,
+  "name": "Hot Deal",
+  "slug": "hot-deal",
+  "count": 35,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1012,
+  "name": "Commercial Deals",
+  "slug": "commercial-deals",
+  "count": 30,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1013,
+  "name": "4x4 Deals",
+  "slug": "4x4-deals",
+  "count": 29,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1014,
+  "name": "Clearance Specials",
+  "slug": "clearance-specials",
+  "count": 27,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1015,
+  "name": "SUV Deals",
+  "slug": "suv-deals",
+  "count": 23,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1016,
+  "name": "Bus Deals",
+  "slug": "bus-deals",
+  "count": 21,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1017,
+  "name": "Truck Deals",
+  "slug": "truck-deals",
+  "count": 20,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1018,
+  "name": "Black November Deals",
+  "slug": "black-november-deals",
+  "count": 18,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1019,
+  "name": "Deal of the Month",
+  "slug": "deal-of-the-month",
+  "count": 16,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1020,
+  "name": "Last of the Best",
+  "slug": "last-of-the-best",
+  "count": 14,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1021,
+  "name": "Weekly Deals",
+  "slug": "weekly-deals",
+  "count": 11,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1022,
+  "name": "Bike Tyres",
+  "slug": "bike-tyres",
+  "count": 9,
+  "image": null,
+  "primary": true
+ },
+ {
+  "id": 1023,
+  "name": "TAKE CONTROL DEALS",
+  "slug": "take-control-deals",
+  "count": 8,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1024,
+  "name": "WAS AND NOW DEALS",
+  "slug": "was-and-now-deals",
+  "count": 5,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1025,
+  "name": "Fathers Day Deals",
+  "slug": "fathers-day-deals",
+  "count": 4,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1026,
+  "name": "3 + 1 DEALS",
+  "slug": "3-1-deals",
+  "count": 3,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1027,
+  "name": "LIMITED TIME TYRE DEALS",
+  "slug": "limited-time-tyre-deals",
+  "count": 3,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1028,
+  "name": "WomensMonth",
+  "slug": "womensmonth",
+  "count": 1,
+  "image": null,
+  "primary": false
+ },
+ {
+  "id": 1029,
+  "name": "Wheel/Rims",
+  "slug": "wheel-rims",
+  "count": 1,
+  "image": null,
+  "primary": false
+ }
 ]

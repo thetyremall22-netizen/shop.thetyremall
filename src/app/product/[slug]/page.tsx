@@ -85,9 +85,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             <div className="relative aspect-square">
               {/* floating ground shadow */}
               <div className="float-shadow absolute bottom-10 left-1/2 h-5 w-3/5 rounded-[50%] bg-black/35 blur-xl" />
-              {/* breathing tyre (multiply drops the photo's white onto the plate) */}
+              {/* breathing tyre (transparent webp sits straight on the plate) */}
               {p.image && (
-                <Image src={p.image} alt={p.name} fill priority sizes="(max-width:1024px) 100vw, 50vw" className="float-breathe object-contain p-10 mix-blend-multiply" />
+                <Image src={p.image} alt={p.name} fill priority sizes="(max-width:1024px) 100vw, 50vw" className="float-breathe object-contain p-10" />
               )}
               <div className="absolute left-3 top-3 flex flex-col gap-2">
                 {p.onSale && pct > 0 && <span className="badge badge-sale text-sm">SAVE {pct}%</span>}

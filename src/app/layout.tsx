@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
 import { Tyrone } from "@/components/Tyrone";
+import { ScrollToTop } from "@/components/ScrollToTop";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -37,6 +38,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${anton.variable}`}>
       <body>
         <CartProvider>
+          <ScrollToTop />
           <Header />
           <main>{children}</main>
           <Footer />

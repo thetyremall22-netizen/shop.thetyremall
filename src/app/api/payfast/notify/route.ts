@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyItnSignature, validateWithPayfast } from "@/lib/payfast";
 import { getOrder, updateOrder } from "@/lib/orders";
 import { sendOrderPaid, sendOrderFailed } from "@/lib/email";
-import { wooWriteConfigured, createWooOrder } from "@/lib/woo";
+import { decrementStock } from "@/lib/db/queries";
 
 export async function POST(req: NextRequest) {
   const raw = await req.text();
@@ -42,11 +42,9 @@ export async function POST(req: NextRequest) {
     if (order.status !== "processing" && order.status !== "completed") {
       const updated = await updateOrder(id, { status: "processing", pfPaymentId: data.pf_payment_id });
       if (updated) {
-        // Push to WooCommerce so it decrements stock, records the order and
-        // sends its own emails. If Woo isn't configured, send our own emails.
-        const wooId = wooWriteConfigured() ? await createWooOrder(updated) : null;
-        if (wooId) console.log(`[payfast] order ${updated.reference} -> Woo #${wooId}`);
-        else await sendOrderPaid(updated);
+        // Decrement stock in our database, then send the order emails.
+        for (const it of updated.items) await decrementStock(it.slug, it.qty);
+        await sendOrderPaid(updated);
       }
     }
   } else if (status === "FAILED") {

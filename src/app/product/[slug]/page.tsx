@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Metadata } from "next";
 import { getProduct, relatedProducts, dealProducts } from "@/lib/catalogue";
-import { getLiveBySlug } from "@/lib/woo";
+import { getLive } from "@/lib/db/queries";
 import { formatPrice, discountPct } from "@/lib/format";
 import { ProductCustomiser } from "@/components/ProductCustomiser";
 import { ProductRailCard } from "@/components/ProductCard";
@@ -36,8 +36,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const p = getProduct(slug);
   if (!p) notFound();
 
-  // Live stock + price from WooCommerce (refreshes ~60s); falls back to snapshot.
-  const live = await getLiveBySlug(slug);
+  // Live stock + price from our database (falls back to the snapshot).
+  const live = await getLive(slug);
   const inStock = live ? live.inStock : p.inStock;
   const price = live ? live.price : p.price;
   const regularPrice = live ? live.regularPrice : p.regularPrice;

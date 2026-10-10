@@ -58,17 +58,22 @@ function FilterBody({
   const router = useRouter();
   const params = new URLSearchParams(search);
 
-  const setParam = useCallback(
-    (key: string, value: string | null) => {
+  // Apply several param changes in ONE navigation (avoids the stale-search race
+  // you get when calling setParam twice in a row).
+  const setParams = useCallback(
+    (patch: Record<string, string | null>) => {
       const next = new URLSearchParams(search);
-      if (value == null || value === "") next.delete(key);
-      else next.set(key, value);
+      for (const [key, value] of Object.entries(patch)) {
+        if (value == null || value === "") next.delete(key);
+        else next.set(key, value);
+      }
       next.delete("page");
       router.push(`/shop?${next.toString()}`);
       onNavigate?.();
     },
     [search, router, onNavigate]
   );
+  const setParam = useCallback((key: string, value: string | null) => setParams({ [key]: value }), [setParams]);
 
   const current = (k: string) => params.get(k) ?? "";
   const activeCount = ["category", "brand", "width", "profile", "rim", "type", "onSale", "q"].filter((k) => params.get(k)).length;
@@ -97,15 +102,15 @@ function FilterBody({
 
       <Group title="Category">
         <ul className="space-y-1">
-          <Radio name="type-cat" checked={!current("category") && !current("type")} label="All products" onChange={() => { setParam("type", null); setParam("category", null); }} />
-          <Radio name="type-cat" checked={current("type") === "wheel"} label="Mag Wheels" onChange={() => setParam("type", "wheel")} />
-          {categories.filter((c) => c.primary).map((c) => (
+          <Radio name="type-cat" checked={!current("category") && !current("type")} label="All products" onChange={() => setParams({ type: null, category: null })} />
+          <Radio name="type-cat" checked={current("type") === "wheel"} label="Mag Wheels" onChange={() => setParams({ type: "wheel", category: null })} />
+          {categories.filter((c) => c.primary && c.slug !== "mag-wheel").map((c) => (
             <Radio
               key={c.slug}
               name="type-cat"
-              checked={current("category") === c.slug}
+              checked={current("category") === c.slug && current("type") !== "wheel"}
               label={`${c.name} (${c.count})`}
-              onChange={() => { setParam("type", null); setParam("category", c.slug); }}
+              onChange={() => setParams({ type: null, category: c.slug })}
             />
           ))}
         </ul>

@@ -1,12 +1,12 @@
 import "server-only";
-import { promises as fs } from "fs";
-import path from "path";
+import { eq, desc, sql } from "drizzle-orm";
+import { db, schema, libsql } from "./db";
 import type { LineItem, OrderTotals } from "./totals";
 import type { DeliveryMethod } from "./shop-config";
 
 export type OrderStatus =
-  | "pending"      // created, awaiting payment
-  | "processing"   // payment received
+  | "pending"
+  | "processing"
   | "completed"
   | "failed"
   | "cancelled"
@@ -14,8 +14,8 @@ export type OrderStatus =
   | "on-hold";
 
 export interface Order {
-  id: string;             // m_payment_id (our reference)
-  reference: string;      // human-friendly, e.g. TTM-1042
+  id: string;
+  reference: string;
   status: OrderStatus;
   customer: { firstName: string; lastName: string; email: string; phone: string };
   delivery: {
@@ -27,62 +27,64 @@ export interface Order {
   items: LineItem[];
   totals: OrderTotals;
   paymentMethod: string;
-  pfPaymentId?: string;   // PayFast's pf_payment_id
+  pfPaymentId?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-// ---- storage backends -------------------------------------------------------
-const KV_URL = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
-const useKV = Boolean(KV_URL && KV_TOKEN);
+type Row = typeof schema.orders.$inferSelect;
 
-async function kv(command: unknown[]): Promise<unknown> {
-  const res = await fetch(KV_URL!, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${KV_TOKEN}`, "Content-Type": "application/json" },
-    body: JSON.stringify(command),
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`KV error ${res.status}`);
-  const data = (await res.json()) as { result: unknown };
-  return data.result;
+function rowToOrder(r: Row): Order {
+  return {
+    id: r.orderId,
+    reference: r.reference,
+    status: r.status as OrderStatus,
+    customer: JSON.parse(r.customer),
+    delivery: JSON.parse(r.delivery),
+    items: JSON.parse(r.items),
+    totals: JSON.parse(r.totals),
+    paymentMethod: r.paymentMethod,
+    pfPaymentId: r.pfPaymentId ?? undefined,
+    createdAt: new Date(r.createdAt).toISOString(),
+    updatedAt: new Date(r.updatedAt).toISOString(),
+  };
 }
 
-// file fallback (local dev only — serverless filesystems are ephemeral)
-const DATA_DIR = path.join(process.cwd(), ".data");
-const FILE = path.join(DATA_DIR, "orders.json");
-
-async function readFile(): Promise<Record<string, Order>> {
-  try {
-    return JSON.parse(await fs.readFile(FILE, "utf8")) as Record<string, Order>;
-  } catch {
-    return {};
-  }
-}
-async function writeFile(all: Record<string, Order>): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(FILE, JSON.stringify(all, null, 2));
-}
-
-// ---- public API -------------------------------------------------------------
 export async function saveOrder(order: Order): Promise<void> {
-  if (useKV) {
-    await kv(["SET", `order:${order.id}`, JSON.stringify(order)]);
-    return;
-  }
-  const all = await readFile();
-  all[order.id] = order;
-  await writeFile(all);
+  const now = Date.now();
+  await db
+    .insert(schema.orders)
+    .values({
+      orderId: order.id,
+      reference: order.reference,
+      status: order.status,
+      customer: JSON.stringify(order.customer),
+      delivery: JSON.stringify(order.delivery),
+      items: JSON.stringify(order.items),
+      totals: JSON.stringify(order.totals),
+      paymentMethod: order.paymentMethod,
+      pfPaymentId: order.pfPaymentId ?? null,
+      createdAt: Date.parse(order.createdAt) || now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: schema.orders.orderId,
+      set: {
+        status: order.status,
+        customer: JSON.stringify(order.customer),
+        delivery: JSON.stringify(order.delivery),
+        items: JSON.stringify(order.items),
+        totals: JSON.stringify(order.totals),
+        paymentMethod: order.paymentMethod,
+        pfPaymentId: order.pfPaymentId ?? null,
+        updatedAt: now,
+      },
+    });
 }
 
 export async function getOrder(id: string): Promise<Order | null> {
-  if (useKV) {
-    const raw = (await kv(["GET", `order:${id}`])) as string | null;
-    return raw ? (JSON.parse(raw) as Order) : null;
-  }
-  const all = await readFile();
-  return all[id] ?? null;
+  const rows = await db.select().from(schema.orders).where(eq(schema.orders.orderId, id)).limit(1);
+  return rows[0] ? rowToOrder(rows[0]) : null;
 }
 
 export async function updateOrder(id: string, patch: Partial<Order>): Promise<Order | null> {
@@ -93,15 +95,22 @@ export async function updateOrder(id: string, patch: Partial<Order>): Promise<Or
   return next;
 }
 
-/** Next order number (atomic via KV INCR; timestamp-based in file mode). */
+/** Atomic incrementing order reference via the meta counter. */
 export async function nextReference(): Promise<string> {
-  if (useKV) {
-    const n = (await kv(["INCR", "order:seq"])) as number;
-    return `TTM-${1000 + n}`;
-  }
-  return `TTM-${Date.now().toString().slice(-7)}`;
+  const res = await libsql.execute(
+    "UPDATE meta SET value = CAST(value AS INTEGER) + 1 WHERE key = 'order_seq' RETURNING value"
+  );
+  const n = res.rows.length ? Number(res.rows[0].value) : Date.now() % 100000;
+  return `TTM-${1000 + n}`;
 }
 
-export function storageMode(): "kv" | "file" {
-  return useKV ? "kv" : "file";
+// ---- admin ------------------------------------------------------------------
+export async function listOrders(opts: { page?: number; perPage?: number; status?: string } = {}) {
+  const page = Math.max(1, opts.page ?? 1);
+  const perPage = opts.perPage ?? 25;
+  const where = opts.status ? eq(schema.orders.status, opts.status) : undefined;
+  const rows = await db.select().from(schema.orders).where(where)
+    .orderBy(desc(schema.orders.id)).limit(perPage).offset((page - 1) * perPage);
+  const totalRow = await db.select({ c: sql<number>`count(*)` }).from(schema.orders).where(where);
+  return { orders: rows.map(rowToOrder), total: Number(totalRow[0].c), page, perPage };
 }

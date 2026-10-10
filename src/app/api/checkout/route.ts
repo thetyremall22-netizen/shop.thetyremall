@@ -3,7 +3,7 @@ import { getProduct } from "@/lib/catalogue";
 import { computeTotals, type LineItem } from "@/lib/totals";
 import { saveOrder, nextReference, type Order } from "@/lib/orders";
 import { buildPaymentFields, PAYFAST_PROCESS_URL, isConfigured } from "@/lib/payfast";
-import { getLiveBySlug } from "@/lib/woo";
+import { getLive } from "@/lib/db/queries";
 import type { DeliveryMethod } from "@/lib/shop-config";
 
 interface Body {
@@ -40,9 +40,9 @@ export async function POST(req: NextRequest) {
   }
   if (!lines.length) return NextResponse.json({ error: "No valid items" }, { status: 400 });
 
-  // Live stock check against WooCommerce — prevents overselling.
+  // Live stock check against our database — prevents overselling.
   for (const l of lines) {
-    const liveStock = await getLiveBySlug(l.slug, true);
+    const liveStock = await getLive(l.slug);
     if (liveStock && !liveStock.inStock) {
       return NextResponse.json({ error: `Sorry, "${l.name}" just went out of stock. Please remove it and try again.` }, { status: 409 });
     }

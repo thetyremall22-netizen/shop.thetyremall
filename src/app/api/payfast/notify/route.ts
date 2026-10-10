@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyItnSignature, validateWithPayfast } from "@/lib/payfast";
 import { getOrder, updateOrder } from "@/lib/orders";
 import { sendOrderPaid, sendOrderFailed } from "@/lib/email";
+import { wooWriteConfigured, createWooOrder } from "@/lib/woo";
 
 export async function POST(req: NextRequest) {
   const raw = await req.text();
@@ -40,7 +41,13 @@ export async function POST(req: NextRequest) {
   if (status === "COMPLETE") {
     if (order.status !== "processing" && order.status !== "completed") {
       const updated = await updateOrder(id, { status: "processing", pfPaymentId: data.pf_payment_id });
-      if (updated) await sendOrderPaid(updated);
+      if (updated) {
+        // Push to WooCommerce so it decrements stock, records the order and
+        // sends its own emails. If Woo isn't configured, send our own emails.
+        const wooId = wooWriteConfigured() ? await createWooOrder(updated) : null;
+        if (wooId) console.log(`[payfast] order ${updated.reference} -> Woo #${wooId}`);
+        else await sendOrderPaid(updated);
+      }
     }
   } else if (status === "FAILED") {
     const updated = await updateOrder(id, { status: "failed", pfPaymentId: data.pf_payment_id });

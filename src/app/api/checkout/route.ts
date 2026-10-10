@@ -3,6 +3,7 @@ import { getProduct } from "@/lib/catalogue";
 import { computeTotals, type LineItem } from "@/lib/totals";
 import { saveOrder, nextReference, type Order } from "@/lib/orders";
 import { buildPaymentFields, PAYFAST_PROCESS_URL, isConfigured } from "@/lib/payfast";
+import { getLiveBySlug } from "@/lib/woo";
 import type { DeliveryMethod } from "@/lib/shop-config";
 
 interface Body {
@@ -38,6 +39,17 @@ export async function POST(req: NextRequest) {
     });
   }
   if (!lines.length) return NextResponse.json({ error: "No valid items" }, { status: 400 });
+
+  // Live stock check against WooCommerce — prevents overselling.
+  for (const l of lines) {
+    const liveStock = await getLiveBySlug(l.slug, true);
+    if (liveStock && !liveStock.inStock) {
+      return NextResponse.json({ error: `Sorry, "${l.name}" just went out of stock. Please remove it and try again.` }, { status: 409 });
+    }
+    if (liveStock?.lowStockRemaining != null && l.qty > liveStock.lowStockRemaining) {
+      return NextResponse.json({ error: `Only ${liveStock.lowStockRemaining} of "${l.name}" left — please reduce the quantity.` }, { status: 409 });
+    }
+  }
 
   const method: DeliveryMethod = delivery?.method === "fitment" ? "fitment" : "delivery";
   const totals = computeTotals(lines, method);

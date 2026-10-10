@@ -5,6 +5,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Metadata } from "next";
 import { getProduct, relatedProducts, dealProducts } from "@/lib/catalogue";
+import { getLiveBySlug } from "@/lib/woo";
 import { formatPrice, discountPct } from "@/lib/format";
 import { ProductCustomiser } from "@/components/ProductCustomiser";
 import { ProductRailCard } from "@/components/ProductCard";
@@ -35,7 +36,16 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const p = getProduct(slug);
   if (!p) notFound();
 
-  const pct = discountPct(p.regularPrice, p.salePrice);
+  // Live stock + price from WooCommerce (refreshes ~60s); falls back to snapshot.
+  const live = await getLiveBySlug(slug);
+  const inStock = live ? live.inStock : p.inStock;
+  const price = live ? live.price : p.price;
+  const regularPrice = live ? live.regularPrice : p.regularPrice;
+  const salePrice = live ? live.salePrice : p.salePrice;
+  const onSale = live ? live.onSale : p.onSale;
+  const lowStock = live?.lowStockRemaining ?? null;
+
+  const pct = discountPct(regularPrice, salePrice);
   const brandSrc = brandLogoSrc(p.brand);
   const related = relatedProducts(p, 6);
 
@@ -90,7 +100,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 <Image src={p.image} alt={p.name} fill priority sizes="(max-width:1024px) 100vw, 50vw" className="float-breathe object-contain p-10" />
               )}
               <div className="absolute left-3 top-3 flex flex-col gap-2">
-                {p.onSale && pct > 0 && <span className="badge badge-sale text-sm">SAVE {pct}%</span>}
+                {onSale && pct > 0 && <span className="badge badge-sale text-sm">SAVE {pct}%</span>}
                 {p.type === "wheel" && <span className="badge badge-volt">MAG WHEEL</span>}
               </div>
             </div>
@@ -123,8 +133,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <h1 className="mt-2 font-display text-3xl leading-tight sm:text-4xl">{p.name}</h1>
 
           <div className="mt-3 flex items-center gap-3">
-            {p.inStock ? (
-              <span className="flex items-center gap-1 text-sm font-semibold text-pay"><Check width={15} height={15} /> In stock{p.stockQty ? ` · ${p.stockQty} available` : ""}</span>
+            {inStock ? (
+              <span className="flex items-center gap-1 text-sm font-semibold text-pay">
+                <Check width={15} height={15} /> In stock{lowStock ? ` · only ${lowStock} left` : ""}
+              </span>
             ) : (
               <span className="text-sm font-semibold text-sale">Out of stock</span>
             )}
@@ -134,8 +146,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
 
           <div className="mt-4 flex items-end gap-4">
-            {p.onSale && pct > 0 && <span className="text-lg text-faint line-through">{formatPrice(p.regularPrice)}</span>}
-            <span className="font-display text-4xl text-fg">{formatPrice(p.price)}</span>
+            {onSale && pct > 0 && <span className="text-lg text-faint line-through">{formatPrice(regularPrice)}</span>}
+            <span className="font-display text-4xl text-fg">{formatPrice(price)}</span>
             <span className="ml-auto flex items-end" aria-label={`${p.brand} tyres`}>
               {brandSrc ? (
                 <span className="mb-0.5 inline-flex items-center rounded-lg bg-white px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-black/10">
@@ -149,8 +161,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
           <div className="mt-6 border-t border-line pt-6">
             <ProductCustomiser
-              inStock={p.inStock}
-              item={{ id: p.id, slug: p.slug, name: p.name, brand: p.brand, image: p.thumb ?? p.image, price: p.price, type: p.type }}
+              inStock={inStock}
+              item={{ id: p.id, slug: p.slug, name: p.name, brand: p.brand, image: p.thumb ?? p.image, price: price, type: p.type }}
             />
           </div>
 

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { MegaSearch } from "./MegaSearch";
-import { Cart, Menu, Close, Bolt, User, Heart } from "./icons";
-import { PROMOS } from "@/lib/nav";
+import { Cart, Menu, Close, Bolt, User, Heart, Chevron } from "./icons";
+import { PROMOS, NAV_PRIMARY } from "@/lib/nav";
 import { useCart } from "@/lib/cart";
 
 const NAV = [
@@ -47,9 +47,30 @@ export function Header() {
 
           {/* desktop nav */}
           <nav className="mx-auto hidden items-center gap-1 lg:flex">
-            <Link href="/shop" className="mr-1 rounded-lg border border-volt/60 px-3.5 py-2 text-sm font-bold text-volt transition-colors hover:bg-volt hover:text-volt-ink">
-              All Categories
-            </Link>
+            <div className="group relative mr-1">
+              <Link
+                href="/shop"
+                className="flex items-center gap-1 rounded-lg border border-volt/60 px-3.5 py-2 text-sm font-bold text-volt transition-colors group-hover:bg-volt group-hover:text-volt-ink"
+              >
+                All Categories <Chevron width={14} height={14} className="transition-transform group-hover:rotate-180" />
+              </Link>
+              <div className="invisible absolute left-0 top-full z-50 w-56 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
+                <div className="overflow-hidden rounded-xl border border-line bg-ink-2 shadow-2xl shadow-black/60">
+                  {NAV_PRIMARY.filter((c) => c.slug !== "wheel-rims").map((c) => (
+                    <Link
+                      key={c.slug}
+                      href={`/shop?category=${c.slug}`}
+                      className="block px-4 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface hover:text-volt"
+                    >
+                      {c.label} Tyres
+                    </Link>
+                  ))}
+                  <Link href="/shop" className="block border-t border-line px-4 py-2.5 text-sm font-bold text-volt transition-colors hover:bg-surface">
+                    View all →
+                  </Link>
+                </div>
+              </div>
+            </div>
             {NAV.map((n) => (
               <Link
                 key={n.label}
@@ -103,7 +124,15 @@ export function Header() {
                   {n.label}
                 </Link>
               ))}
-              <Link href="/coming-soon?for=Account" onClick={() => setMenuOpen(false)} className="py-3 font-medium text-muted">My Account</Link>
+              <div className="mt-3 border-t border-line pt-3">
+                <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted">Shop by category</div>
+                {NAV_PRIMARY.filter((c) => c.slug !== "wheel-rims").map((c) => (
+                  <Link key={c.slug} href={`/shop?category=${c.slug}`} onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-medium text-fg">
+                    {c.label} Tyres
+                  </Link>
+                ))}
+              </div>
+              <Link href="/coming-soon?for=Account" onClick={() => setMenuOpen(false)} className="mt-3 border-t border-line py-3 font-medium text-muted">My Account</Link>
             </div>
           </div>
         </div>

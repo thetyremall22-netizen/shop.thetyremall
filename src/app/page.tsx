@@ -14,7 +14,13 @@ import { AnimatedRating } from "@/components/AnimatedRating";
 import { RotatingReviews } from "@/components/RotatingReviews";
 import { Arrow } from "@/components/icons";
 
-const BRANDS = ["BRIDGESTONE", "PIRELLI", "GOODYEAR", "DUNLOP", "RADAR", "MICHELIN", "CONTINENTAL", "LANDSAIL"];
+const BRAND_LOGOS = [
+  "Bridgestone", "Pirelli", "Goodyear", "Dunlop", "Radar", "Michelin", "Continental", "Landsail",
+  "Windforce", "Tracmax", "BFGoodrich", "Firestone", "Sumitomo", "General", "Sava", "Yokohama",
+  "Kapsen", "Timax", "Anchee", "Roadking",
+];
+const brandLogo = (b: string) =>
+  b === "Radar" ? "/brand/logos/radar.png" : `/brand/logos/${b.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.webp`;
 
 export default function Home() {
   const sellers = bestSellers(10);
@@ -142,18 +148,34 @@ export default function Home() {
 
       {/* ============ BRAND WALL ============ */}
       <section className="border-y border-line bg-ink-2">
-        <Reveal>
-          <div className="container-x flex flex-wrap items-center justify-center gap-x-8 gap-y-3 py-6 lg:justify-between">
-            {BRANDS.map((b) => (
-              <Link key={b} href={`/shop?brand=${encodeURIComponent(b.charAt(0) + b.slice(1).toLowerCase())}`} className="skew-italic font-display text-xl tracking-wide text-faint transition-colors hover:text-fg sm:text-2xl">
-                {b}
-              </Link>
+        <div className="container-x py-10">
+          <Reveal>
+            <div className="mb-6 text-center">
+              <span className="eyebrow">Stocked &amp; ready to ship</span>
+              <h2 className="skew-italic mt-1 font-display text-3xl leading-none sm:text-4xl">
+                <span className="text-chrome">SHOP BY</span> <span className="text-volt-grad">BRAND</span>
+              </h2>
+            </div>
+          </Reveal>
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-10">
+            {BRAND_LOGOS.map((b, i) => (
+              <Reveal key={b} delay={(i % 10) * 40}>
+                <Link
+                  href={`/shop?brand=${encodeURIComponent(b)}`}
+                  aria-label={b}
+                  className="glow-hover flex aspect-[3/2] items-center justify-center rounded-xl bg-white p-2.5 ring-1 ring-black/5 transition-transform hover:scale-[1.04]"
+                >
+                  <Image src={brandLogo(b)} alt={b} width={140} height={84} className="h-auto max-h-full w-auto max-w-full object-contain" />
+                </Link>
+              </Reveal>
             ))}
-            <Link href="/shop" className="inline-flex items-center gap-1 text-xs font-bold tracking-wide text-volt hover:brightness-125">
+          </div>
+          <div className="mt-6 text-center">
+            <Link href="/shop" className="inline-flex items-center gap-1 text-sm font-bold tracking-wide text-volt hover:brightness-125">
               VIEW ALL BRANDS <Arrow width={14} height={14} />
             </Link>
           </div>
-        </Reveal>
+        </div>
       </section>
     </>
   );

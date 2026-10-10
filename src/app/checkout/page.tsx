@@ -5,31 +5,81 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/format";
-import { FITMENT_CENTRES, PAYMENT_METHODS, STANDARD_DELIVERY_FEE } from "@/lib/shop-config";
+import { FITMENT_CENTRES, PAYMENT_METHODS } from "@/lib/shop-config";
 import { Check, Truck, Pin, Shield, Bolt } from "@/components/icons";
 
 export default function CheckoutPage() {
-  const { items, totals, deliveryMethod, fitmentStoreId, clear } = useCart();
+  const { items, totals, deliveryMethod, fitmentStoreId, fitmentDate } = useCart();
   const [payment, setPayment] = useState("payfast");
-  const [placed, setPlaced] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const centre = FITMENT_CENTRES.find((f) => f.id === fitmentStoreId) ?? FITMENT_CENTRES[0];
 
-  if (placed) {
-    return (
-      <div className="container-x grid place-items-center py-24 text-center">
-        <div className="max-w-md">
-          <div className="mx-auto grid size-20 place-items-center rounded-full bg-pay/15 text-pay">
-            <Check width={40} height={40} />
-          </div>
-          <h1 className="mt-6 font-display text-4xl">Order placed!</h1>
-          <p className="mt-3 text-muted">
-            Thanks for your order. In the live store you&apos;d now be redirected to{" "}
-            <b className="text-fg">{PAYMENT_METHODS.find((m) => m.id === payment)?.name}</b> to complete secure payment.
-          </p>
-          <Link href="/" className="btn btn-volt mt-6">Back to home</Link>
-        </div>
-      </div>
-    );
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    const fd = new FormData(e.currentTarget);
+    const body = {
+      customer: {
+        firstName: String(fd.get("firstName") ?? ""),
+        lastName: String(fd.get("lastName") ?? ""),
+        email: String(fd.get("email") ?? ""),
+        phone: String(fd.get("phone") ?? ""),
+      },
+      delivery:
+        deliveryMethod === "fitment"
+          ? { method: "fitment" as const, fitmentStore: centre?.name, fitmentDate: fitmentDate ?? undefined }
+          : {
+              method: "delivery" as const,
+              address: {
+                street: String(fd.get("street") ?? ""),
+                suburb: String(fd.get("suburb") ?? ""),
+                city: String(fd.get("city") ?? ""),
+                province: String(fd.get("province") ?? ""),
+                postalCode: String(fd.get("postalCode") ?? ""),
+              },
+            },
+      items: items.map((i) => ({
+        slug: i.slug, qty: i.qty, roadHazard: i.roadHazard, alignment: i.alignment, balanceQty: i.balanceQty,
+      })),
+      paymentMethod: payment,
+    };
+
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+      if (data.gateway === false) {
+        setError(data.message ?? "That payment method isn't available yet. Please choose PayFast.");
+        setSubmitting(false);
+        return;
+      }
+      // Auto-submit a hidden form to PayFast.
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = data.processUrl;
+      for (const [k, v] of Object.entries(data.fields as Record<string, string>)) {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = k;
+        input.value = v;
+        form.appendChild(input);
+      }
+      document.body.appendChild(form);
+      form.submit();
+    } catch {
+      setError("Network error — please check your connection and try again.");
+      setSubmitting(false);
+    }
   }
 
   if (items.length === 0) {
@@ -49,13 +99,13 @@ export default function CheckoutPage() {
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_400px]">
         {/* form */}
-        <form className="space-y-8" onSubmit={(e) => { e.preventDefault(); setPlaced(true); clear(); }}>
+        <form className="space-y-8" onSubmit={handleSubmit}>
           <Section n={1} title="Your details">
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="First name" required />
-              <Field label="Last name" required />
-              <Field label="Email" type="email" required />
-              <Field label="Mobile" type="tel" required />
+              <Field name="firstName" label="First name" required />
+              <Field name="lastName" label="Last name" required />
+              <Field name="email" label="Email" type="email" required />
+              <Field name="phone" label="Mobile" type="tel" required />
             </div>
           </Section>
 
@@ -71,11 +121,11 @@ export default function CheckoutPage() {
               </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="sm:col-span-2"><Field label="Street address" required /></div>
-                <Field label="Suburb" required />
-                <Field label="City" required />
-                <Field label="Province" required />
-                <Field label="Postal code" required />
+                <div className="sm:col-span-2"><Field name="street" label="Street address" required /></div>
+                <Field name="suburb" label="Suburb" required />
+                <Field name="city" label="City" required />
+                <Field name="province" label="Province" required />
+                <Field name="postalCode" label="Postal code" required />
               </div>
             )}
           </Section>
@@ -96,6 +146,7 @@ export default function CheckoutPage() {
                     <span className="flex items-center gap-2">
                       <span className="font-bold text-fg">{m.name}</span>
                       <span className="badge badge-pay">{m.tag}</span>
+                      {m.id !== "payfast" && <span className="text-[10px] font-bold uppercase tracking-wide text-muted">coming soon</span>}
                     </span>
                     <span className="text-sm text-muted">{m.blurb}</span>
                   </span>
@@ -107,12 +158,16 @@ export default function CheckoutPage() {
               <Image src="/brand/payments.png" alt="Accepted payment methods" width={1920} height={120} className="h-auto w-full" />
             </div>
             <p className="mt-3 text-xs text-muted">
-              Payments are processed securely by the provider. Card details are never stored on this site.
+              Payments are processed securely by PayFast. Card details are never stored on this site.
             </p>
           </Section>
 
-          <button type="submit" className="btn btn-volt w-full py-4 text-base">
-            <Bolt width={18} height={18} /> Place order · {formatPrice(totals.total)}
+          {error && (
+            <div className="rounded-xl border border-sale/40 bg-sale/10 p-3 text-sm font-semibold text-sale">{error}</div>
+          )}
+
+          <button type="submit" disabled={submitting} className="btn btn-volt w-full py-4 text-base disabled:opacity-60">
+            {submitting ? "Redirecting to secure payment…" : <><Bolt width={18} height={18} /> Pay securely · {formatPrice(totals.total)}</>}
           </button>
         </form>
 
@@ -175,11 +230,12 @@ function Section({ n, title, children }: { n: number; title: string; children: R
   );
 }
 
-function Field({ label, type = "text", required }: { label: string; type?: string; required?: boolean }) {
+function Field({ name, label, type = "text", required }: { name: string; label: string; type?: string; required?: boolean }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-semibold text-muted">{label}{required && <span className="text-sale"> *</span>}</span>
       <input
+        name={name}
         type={type}
         required={required}
         className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt"

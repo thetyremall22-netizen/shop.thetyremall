@@ -11,8 +11,8 @@ import { useCart } from "@/lib/cart";
 
 const NAV = [
   { label: "Home", href: "/" },
-  { label: "The Tyre Shop", href: "/shop" },
-  { label: "The Wheel Shop", href: "/mag-wheels" },
+  { label: "The Tyre Shop", href: "/shop?type=tyre" },
+  { label: "The Wheel Shop", href: "/shop?type=wheel" },
   { label: "Contact us", href: "/contact" },
 ];
 

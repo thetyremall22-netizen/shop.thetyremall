@@ -230,5 +230,21 @@
   "count": 1,
   "image": null,
   "primary": false
+ },
+ {
+  "id": 2029,
+  "name": "Mag Wheels",
+  "slug": "mag-wheel",
+  "count": 71,
+  "image": null,
+  "primary": true
+ },
+ {
+  "id": 2030,
+  "name": "Mag Wheel Deals",
+  "slug": "mags-deals",
+  "count": 59,
+  "image": null,
+  "primary": false
  }
 ]

@@ -1,5 +1,5 @@
 {
- "productCount": 4352,
+ "productCount": 4423,
  "brands": [
   {
    "name": "Bridgestone",
@@ -222,9 +222,35 @@
   "22,5",
   "22.5"
  ],
- "wheelRims": [],
- "wheelWidths": [],
- "wheelBrands": [],
- "pcds": [],
+ "wheelRims": [
+  "14",
+  "15",
+  "16",
+  "17",
+  "18",
+  "19",
+  "20"
+ ],
+ "wheelWidths": [
+  "25J",
+  "6.5J",
+  "6J",
+  "7.5J",
+  "7J",
+  "8.5J",
+  "8J",
+  "9J"
+ ],
+ "wheelBrands": [
+  "Mag Wheel"
+ ],
+ "pcds": [
+  "4X100",
+  "5X100",
+  "5X112",
+  "5X150",
+  "6X139",
+  "6X139.7"
+ ],
  "generatedAt": "2026-10-10"
 }

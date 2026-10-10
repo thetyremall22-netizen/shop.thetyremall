@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# The Tyre Mall — Online Store
 
-## Getting Started
+Modern e-commerce storefront for **The Tyre Mall** (tyres, mag wheels & car accessories, South Africa).
+Built with **Next.js 16** (App Router), **React 19**, **Tailwind CSS v4** and **TypeScript**.
 
-First, run the development server:
+> **Status:** demo / build in progress. Checkout is currently a **mock flow** — no live payments are wired up yet (PayFast / HappyPay / Mobicred come in a later phase).
+
+---
+
+## Tech stack
+
+| Area        | Choice                                             |
+| ----------- | -------------------------------------------------- |
+| Framework   | Next.js 16 (App Router, Turbopack)                 |
+| UI          | React 19, Tailwind CSS v4, CSS animations          |
+| Language    | TypeScript                                         |
+| Data        | Static product catalogue in `src/data/*.json`      |
+| Images      | Product photos hotlinked from `thetyremall.co.za`  |
+| Hosting     | Vercel                                             |
+
+## Local setup
+
+Requires **Node.js 18.18+** (Node 20+ recommended).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install        # install dependencies
+npm run dev        # start dev server → http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Command         | What it does                              |
+| --------------- | ----------------------------------------- |
+| `npm run dev`   | Local dev server with hot reload          |
+| `npm run build` | Production build (run before deploying)   |
+| `npm run start` | Serve the production build locally        |
+| `npm run lint`  | Lint the codebase                         |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project structure
 
-## Learn More
+```
+src/
+  app/            # routes (home, shop, product, cart, checkout, api/search)
+  components/     # UI components (Hero, Header, MegaSearch, ProductCard, …)
+  lib/            # cart state, config, helpers
+  data/           # product + category catalogue (JSON)
+public/brand/     # logos, hero image, product scene art
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Deploying to Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The site is hosted on Vercel and **auto-deploys on every push to `main`**.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**First-time setup (one-off):**
 
-## Deploy on Vercel
+1. Go to [vercel.com/new](https://vercel.com/new) and sign in.
+2. **Import Git Repository** → select this repo (`shop.thetyremall`).
+3. Vercel auto-detects **Next.js** — keep all build settings at their defaults.
+4. Click **Deploy**. A live `*.vercel.app` URL is created in ~1–2 minutes.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Every change after that:**
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+git add -A
+git commit -m "describe your change"
+git push            # → GitHub, then Vercel auto-builds & redeploys
+```
+
+### Notes
+
+- **Free tier:** runs on Vercel's Hobby plan for demo/preview. A **live store taking real payments needs Vercel Pro** (Hobby is non-commercial only).
+- **No environment variables** are required yet. When live payments are added, API keys go in Vercel → Project → Settings → Environment Variables (never commit them).
+- Build output: most pages are static; `/shop`, `/coming-soon` and `/api/search` are server-rendered on demand.

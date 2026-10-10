@@ -5,6 +5,7 @@ import { CartProvider } from "@/lib/cart";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
+import { Tyrone } from "@/components/Tyrone";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -40,6 +41,7 @@ export default function RootLayout({
           <main>{children}</main>
           <Footer />
           <CartDrawer />
+          <Tyrone />
         </CartProvider>
       </body>
     </html>

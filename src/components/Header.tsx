@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { MegaSearch } from "./MegaSearch";
@@ -10,11 +11,18 @@ import { useCart } from "@/lib/cart";
 
 const NAV = [
   { label: "Home", href: "/" },
-  { label: "Shop by Brands", href: "/shop" },
-  { label: "The Tyre Shop", href: "/shop?type=tyre" },
-  { label: "The Wheel Shop", href: "/shop?type=wheel" },
-  { label: "Contact us", href: "/coming-soon?for=Contact%20us" },
+  { label: "The Tyre Shop", href: "/shop" },
+  { label: "The Wheel Shop", href: "/mag-wheels" },
+  { label: "Contact us", href: "/contact" },
 ];
+
+const BRAND_LOGOS = [
+  "Bridgestone", "Pirelli", "Goodyear", "Dunlop", "Radar", "Michelin", "Continental", "Landsail",
+  "Windforce", "Tracmax", "BFGoodrich", "Firestone", "Sumitomo", "General", "Sava", "Yokohama",
+  "Kapsen", "Timax", "Anchee", "Roadking",
+];
+const brandLogo = (b: string) =>
+  b === "Radar" ? "/brand/logos/radar.png" : `/brand/logos/${b.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.webp`;
 
 export function Header() {
   const { totals, setDrawerOpen } = useCart();
@@ -71,7 +79,36 @@ export function Header() {
                 </div>
               </div>
             </div>
-            {NAV.map((n) => (
+            <Link href="/" className="rounded-md px-3.5 py-2 text-sm font-bold tracking-wide text-fg transition-colors hover:text-volt">Home</Link>
+
+            {/* Shop by Brands — click goes to shop, hover opens the brand mega menu */}
+            <div className="group relative">
+              <Link href="/shop" className="flex items-center gap-1 rounded-md px-3.5 py-2 text-sm font-bold tracking-wide text-fg transition-colors group-hover:text-volt">
+                Shop by Brands <Chevron width={14} height={14} className="transition-transform group-hover:rotate-180" />
+              </Link>
+              <div className="invisible absolute left-1/2 top-full z-50 w-screen max-w-3xl -translate-x-1/2 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
+                <div className="overflow-hidden rounded-2xl border border-line bg-ink-2 p-5 shadow-2xl shadow-black/70">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="eyebrow">Shop by tyre brand</span>
+                    <Link href="/shop" className="text-xs font-bold text-volt hover:underline">View all →</Link>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2.5 lg:grid-cols-5">
+                    {BRAND_LOGOS.map((b) => (
+                      <Link
+                        key={b}
+                        href={`/shop?brand=${encodeURIComponent(b)}`}
+                        aria-label={b}
+                        className="glow-hover flex aspect-[3/2] items-center justify-center rounded-xl bg-white p-2 ring-1 ring-black/5 transition-transform hover:scale-[1.05]"
+                      >
+                        <Image src={brandLogo(b)} alt={b} width={120} height={70} className="h-auto max-h-full w-auto max-w-full object-contain" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {NAV.filter((n) => n.label !== "Home").map((n) => (
               <Link
                 key={n.label}
                 href={n.href}

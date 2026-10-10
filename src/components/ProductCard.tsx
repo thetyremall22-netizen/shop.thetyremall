@@ -1,13 +1,26 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { CSSProperties } from "react";
 import type { Product } from "@/lib/types";
 import { formatPrice, formatPriceShort, discountPct } from "@/lib/format";
 import { Star, Arrow } from "./icons";
 
-// Stable, varied float delay so each card bobs out of sync.
-const floatDelay = (slug: string): CSSProperties =>
-  ({ "--fdelay": `${(slug.charCodeAt(0) % 9) * 0.3}s` } as CSSProperties);
+// Brands we have a real logo image for.
+const LOGO_BRANDS = new Set([
+  "bridgestone", "pirelli", "goodyear", "dunlop", "radar", "michelin", "continental",
+  "landsail", "windforce", "tracmax", "bfgoodrich", "firestone", "sumitomo", "general",
+  "sava", "yokohama", "kapsen", "timax", "anchee", "roadking",
+]);
+const brandSlug = (b: string) => b.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+const brandLogoSrc = (b: string) => {
+  const s = brandSlug(b);
+  return s === "radar" ? "/brand/logos/radar.png" : `/brand/logos/${s}.webp`;
+};
+function BrandMark({ brand }: { brand: string }) {
+  if (LOGO_BRANDS.has(brandSlug(brand))) {
+    return <Image src={brandLogoSrc(brand)} alt={brand} width={120} height={32} className="h-6 w-auto max-w-[70%] object-contain" />;
+  }
+  return <span className="font-display text-base uppercase tracking-wider text-[#14171a]/75">{brand}</span>;
+}
 
 export function ProductCard({ p }: { p: Product }) {
   const pct = discountPct(p.regularPrice, p.salePrice);
@@ -15,8 +28,7 @@ export function ProductCard({ p }: { p: Product }) {
 
   return (
     <div
-      style={floatDelay(p.slug)}
-      className="float-card glow-hover group flex flex-col overflow-hidden rounded-[14px] bg-white text-[#14171a] shadow-lg shadow-black/20 ring-1 ring-black/5"
+      className="glow-hover group flex flex-col overflow-hidden rounded-[14px] bg-white text-[#14171a] shadow-lg shadow-black/20 ring-1 ring-black/5"
     >
       <Link href={`/product/${p.slug}`} className="relative block">
         <div className="relative aspect-square overflow-hidden bg-white">
@@ -80,9 +92,9 @@ export function ProductCard({ p }: { p: Product }) {
         </Link>
       </div>
 
-      {/* brand wordmark */}
+      {/* brand logo */}
       <div className="flex items-center justify-center border-t border-black/5 bg-neutral-50 py-2.5">
-        <span className="font-display text-base uppercase tracking-wider text-[#14171a]/75">{p.brand}</span>
+        <BrandMark brand={p.brand} />
       </div>
     </div>
   );
@@ -94,8 +106,7 @@ export function ProductRailCard({ p }: { p: Product }) {
   return (
     <Link
       href={`/product/${p.slug}`}
-      style={floatDelay(p.slug)}
-      className="float-card glow-hover group flex w-44 shrink-0 flex-col overflow-hidden rounded-[14px] bg-white text-[#14171a] shadow-lg shadow-black/20 ring-1 ring-black/5"
+      className="glow-hover group flex w-44 shrink-0 flex-col overflow-hidden rounded-[14px] bg-white text-[#14171a] shadow-lg shadow-black/20 ring-1 ring-black/5"
     >
       <div className="relative aspect-square w-full bg-white">
         {p.image && (

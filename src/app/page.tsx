@@ -12,6 +12,7 @@ import { Hero } from "@/components/Hero";
 import { Reveal } from "@/components/Reveal";
 import { AnimatedRating } from "@/components/AnimatedRating";
 import { RotatingReviews } from "@/components/RotatingReviews";
+import { AboutTeam } from "@/components/AboutTeam";
 import { Arrow } from "@/components/icons";
 
 const BRAND_LOGOS = [
@@ -145,6 +146,9 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* ============ ABOUT / OUR STORY + TEAM ============ */}
+      <AboutTeam />
 
       {/* ============ BRAND WALL ============ */}
       <section className="border-y border-line bg-ink-2">

@@ -5,8 +5,8 @@ import Link from "next/link";
 import { Close, Arrow, WhatsApp } from "./icons";
 import { formatPrice } from "@/lib/format";
 import { cleanVoiceQuery } from "@/lib/voice-search";
-import { whatsappHref } from "@/lib/shop-config";
 import { MicButton } from "./MicButton";
+import { WhatsAppPanel } from "./WhatsAppPanel";
 
 interface TyroneProduct {
   name: string;
@@ -126,6 +126,7 @@ function matchRule(input: string): string {
 
 export function Tyrone() {
   const [open, setOpen] = useState(false);
+  const [waOpen, setWaOpen] = useState(false);
   const [input, setInput] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", text: GREETING }]);
   const [typing, setTyping] = useState(false);
@@ -153,6 +154,7 @@ export function Tyrone() {
   useEffect(() => {
     function onOpen(e: Event) {
       setOpen(true);
+      setWaOpen(false);
       const say = (e as CustomEvent<{ botSay?: string }>).detail?.botSay;
       if (say) setMsgs((m) => (m.some((x) => x.text === say) ? m : [...m, { from: "bot", text: say }]));
     }
@@ -220,20 +222,17 @@ export function Tyrone() {
     <>
       {/* launcher dock — WhatsApp + Tyrone on a solid black row so page
           content is never hidden behind the two chat buttons */}
-      {!open && (
+      {!open && !waOpen && (
         <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-black p-1.5 shadow-xl shadow-black/50 ring-1 ring-white/10">
-          <a
-            href={whatsappHref("Hi The Tyre Mall! I'd like some help choosing tyres.")}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => { fetch("/api/enquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "whatsapp", message: "Floating WhatsApp enquiry" }), keepalive: true }).catch(() => {}); }}
+          <button
+            onClick={() => { setWaOpen(true); setOpen(false); }}
             className="grid size-11 place-items-center rounded-full bg-[#25D366] text-black transition-transform hover:scale-105"
-            aria-label="WhatsApp The Tyre Mall"
+            aria-label="WhatsApp / get a quote"
           >
             <WhatsApp width={24} height={24} />
-          </a>
+          </button>
           <button
-            onClick={() => setOpen(true)}
+            onClick={() => { setOpen(true); setWaOpen(false); }}
             className="flex items-center gap-2 rounded-full bg-volt py-2 pl-2 pr-4 text-volt-ink transition-transform hover:scale-105"
             aria-label="Chat with Tyrone"
           >
@@ -352,6 +351,9 @@ export function Tyrone() {
           </div>
         </div>
       )}
+
+      {/* WhatsApp quote panel — mutually exclusive with the Tyrone chat */}
+      <WhatsAppPanel open={waOpen} onClose={() => setWaOpen(false)} />
     </>
   );
 }

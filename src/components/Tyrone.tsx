@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Close, Arrow } from "./icons";
 import { formatPrice } from "@/lib/format";
+import { cleanVoiceQuery } from "@/lib/voice-search";
+import { MicButton } from "./MicButton";
 
 interface TyroneProduct {
   name: string;
@@ -258,8 +260,14 @@ export function Tyrone() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Tyrone a question…"
+              placeholder="Ask Tyrone — type or tap the mic…"
               className="h-10 flex-1 rounded-full bg-surface-2 px-4 text-sm text-fg placeholder:text-faint outline-none focus:ring-1 focus:ring-volt"
+            />
+            <MicButton
+              className="size-10 rounded-full bg-surface-2"
+              title="Talk to Tyrone — e.g. “tyres for a Toyota Hilux 2021”"
+              onInterim={(t) => setInput(t)}
+              onResult={(t) => send(cleanVoiceQuery(t))}
             />
             <button type="submit" className="grid size-10 shrink-0 place-items-center rounded-full bg-volt text-volt-ink transition-transform hover:scale-105" aria-label="Send">
               <Arrow width={18} height={18} />

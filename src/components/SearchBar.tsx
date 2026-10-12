@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Search } from "./icons";
 import { formatPriceShort } from "@/lib/format";
+import { cleanVoiceQuery } from "@/lib/voice-search";
+import { MicButton } from "./MicButton";
 
 interface Hit {
   name: string;
@@ -90,6 +92,12 @@ export function SearchBar({ big = false }: { big?: boolean }) {
           placeholder={big ? "Search by size (e.g. 265/60R18), brand or SKU…" : "Search tyres…"}
           className={`w-full bg-transparent px-3 text-fg placeholder:text-faint outline-none ${big ? "text-base" : "text-sm"}`}
           aria-label="Search tyres"
+        />
+        <MicButton
+          className={`mr-1 rounded-lg ${big ? "size-10" : "size-8"}`}
+          title="Search by voice — e.g. “two oh five fifty-five R sixteen”"
+          onInterim={(t) => setQ(t)}
+          onResult={(t) => { const c = cleanVoiceQuery(t); setQ(c); submit(c); }}
         />
         <button
           onClick={() => submit()}

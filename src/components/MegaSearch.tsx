@@ -6,6 +6,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Search, Close, Flame } from "./icons";
 import { formatPrice } from "@/lib/format";
+import { cleanVoiceQuery } from "@/lib/voice-search";
+import { MicButton } from "./MicButton";
 
 interface Hit {
   name: string;
@@ -114,6 +116,12 @@ export function MegaSearch() {
             <Close width={16} height={16} />
           </button>
         )}
+        <MicButton
+          className="mr-1 size-9 rounded-lg"
+          title="Search by voice — e.g. “two oh five fifty-five R sixteen”"
+          onInterim={(t) => { setOpen(true); setQ(t); }}
+          onResult={(t) => { const c = cleanVoiceQuery(t); setQ(c); go(c); }}
+        />
         <button type="submit" className="btn btn-volt m-1.5 shrink-0 px-6">Search</button>
       </form>
 

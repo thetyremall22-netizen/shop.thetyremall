@@ -10,7 +10,7 @@ const VEHICLE: { words: string[]; cat: string; label: string }[] = [
   { words: ["bakkie", "4x4", "4×4", "jeep", "off-road", "offroad", "overland", "ranger", "hilux", "d-max", "land cruiser", "landcruiser", "amarok", "wildtrak"], cat: "4x4-tyres", label: "your bakkie / 4×4" },
   { words: ["hatchback", "hatch", "sedan", "passenger", "polo", "golf", "corolla", "city car", "family car"], cat: "passenger-tyres", label: "your car" },
   { words: ["performance", "sports car", "sport", "uhp", "gti", "amg", "m3", "fast"], cat: "uhp-tyres", label: "your performance car" },
-  { words: ["van", "panel van", "commercial", "courier", "delivery"], cat: "commercial-tyres", label: "your van" },
+  { words: ["van", "panel van", "ldv", "commercial"], cat: "commercial-tyres", label: "your van" },
   { words: ["truck", "lorry", "bus", "fleet"], cat: "truck-bus-tyres", label: "your truck / bus" },
   { words: ["bike", "motorbike", "motorcycle", "scooter"], cat: "bike-tyres", label: "your bike" },
   { words: ["mag", "mags", "wheel", "wheels", "rim", "rims"], cat: "__wheel", label: "your ride" },

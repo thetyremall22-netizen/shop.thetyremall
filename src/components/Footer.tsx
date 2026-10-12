@@ -29,8 +29,8 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="container-x grid gap-10 py-12 md:grid-cols-4">
-        <div className="md:col-span-1">
+      <div className="container-x grid gap-10 py-12 md:grid-cols-2 lg:grid-cols-5">
+        <div className="lg:col-span-1">
           <Logo />
           <p className="mt-4 max-w-xs text-sm text-muted">
             South Africa's largest online tyre supplier. Quality tyres, mag wheels and expert service — delivered.
@@ -38,6 +38,7 @@ export function Footer() {
           <a href="tel:0780088788" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-fg">
             <Phone width={16} height={16} className="text-volt" /> 078 0088 788
           </a>
+          <Image src="/brand/springboks.png" alt="Proud supporters of the Springboks" width={300} height={120} className="mt-6 h-16 w-auto" />
         </div>
 
         <div>
@@ -48,27 +49,39 @@ export function Footer() {
                 <Link href={`/shop?category=${c.slug}`} className="hover:text-volt">{c.label} Tyres</Link>
               </li>
             ))}
+            <li><Link href="/shop?type=wheel" className="hover:text-volt">Mag Wheels</Link></li>
           </ul>
         </div>
 
         <div>
           <h4 className="eyebrow mb-3">Help</h4>
           <ul className="space-y-2 text-sm text-muted">
-            <li><Link href="/shop" className="hover:text-volt">Shop all</Link></li>
-            <li><a href="#" className="hover:text-volt">Delivery & Returns</a></li>
-            <li><a href="#" className="hover:text-volt">Free delivery areas</a></li>
-            <li><a href="#" className="hover:text-volt">Fitment centres</a></li>
-            <li><a href="#" className="hover:text-volt">Contact us</a></li>
+            <li><Link href="/faq" className="hover:text-volt">FAQ</Link></li>
+            <li><Link href="/returns" className="hover:text-volt">Returns &amp; Refunds</Link></li>
+            <li><Link href="/delivery-areas" className="hover:text-volt">Free delivery areas</Link></li>
+            <li><Link href="/radar-protect" className="hover:text-volt">Radar Protect</Link></li>
+            <li><Link href="/contact" className="hover:text-volt">Contact us</Link></li>
           </ul>
         </div>
 
         <div>
-          <h4 className="eyebrow mb-3">Proud supporters</h4>
-          <Image src="/brand/springboks.png" alt="Proud supporters of the Springboks" width={300} height={120} className="h-20 w-auto" />
-          <p className="mt-4 text-xs text-muted">
+          <h4 className="eyebrow mb-3">Company</h4>
+          <ul className="space-y-2 text-sm text-muted">
+            <li><Link href="/about" className="hover:text-volt">About us</Link></li>
+            <li><Link href="/about#team" className="hover:text-volt">Meet the team</Link></li>
+            <li><Link href="/blog" className="hover:text-volt">Blog</Link></li>
+            <li><Link href="/terms" className="hover:text-volt">Terms &amp; Conditions</Link></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="eyebrow mb-3">Visit us</h4>
+          <p className="text-sm text-muted">
             <Pin width={13} height={13} className="mr-1 inline text-volt" />
             31 Heronmere Road, Reuven, Johannesburg, 2091
           </p>
+          <a href="mailto:shop@thetyremall.co.za" className="mt-3 block text-sm text-muted hover:text-volt">shop@thetyremall.co.za</a>
+          <p className="mt-3 text-xs text-muted">Mon–Fri 8:00–17:00 · Sat 8:00–13:00</p>
         </div>
       </div>
 

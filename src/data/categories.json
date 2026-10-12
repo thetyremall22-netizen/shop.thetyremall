@@ -3,7 +3,7 @@
   "id": 1001,
   "name": "UHP Tyres",
   "slug": "uhp-tyres",
-  "count": 1627,
+  "count": 1624,
   "image": null,
   "primary": true
  },
@@ -57,6 +57,14 @@
  },
  {
   "id": 1008,
+  "name": "Mag Wheels",
+  "slug": "mag-wheel",
+  "count": 79,
+  "image": null,
+  "primary": true
+ },
+ {
+  "id": 1009,
   "name": "Passenger Deals",
   "slug": "passenger-deals",
   "count": 50,
@@ -64,7 +72,7 @@
   "primary": false
  },
  {
-  "id": 1009,
+  "id": 1010,
   "name": "RunFlat Deals",
   "slug": "runflat-deals",
   "count": 49,
@@ -72,7 +80,7 @@
   "primary": false
  },
  {
-  "id": 1010,
+  "id": 1011,
   "name": "UHP Deals",
   "slug": "uhp-deals",
   "count": 40,
@@ -80,7 +88,7 @@
   "primary": false
  },
  {
-  "id": 1011,
+  "id": 1012,
   "name": "Hot Deal",
   "slug": "hot-deal",
   "count": 35,
@@ -88,7 +96,7 @@
   "primary": false
  },
  {
-  "id": 1012,
+  "id": 1013,
   "name": "Commercial Deals",
   "slug": "commercial-deals",
   "count": 30,
@@ -96,7 +104,7 @@
   "primary": false
  },
  {
-  "id": 1013,
+  "id": 1014,
   "name": "4x4 Deals",
   "slug": "4x4-deals",
   "count": 29,
@@ -104,7 +112,7 @@
   "primary": false
  },
  {
-  "id": 1014,
+  "id": 1015,
   "name": "Clearance Specials",
   "slug": "clearance-specials",
   "count": 27,
@@ -112,7 +120,7 @@
   "primary": false
  },
  {
-  "id": 1015,
+  "id": 1016,
   "name": "SUV Deals",
   "slug": "suv-deals",
   "count": 23,
@@ -120,7 +128,7 @@
   "primary": false
  },
  {
-  "id": 1016,
+  "id": 1017,
   "name": "Bus Deals",
   "slug": "bus-deals",
   "count": 21,
@@ -128,7 +136,7 @@
   "primary": false
  },
  {
-  "id": 1017,
+  "id": 1018,
   "name": "Truck Deals",
   "slug": "truck-deals",
   "count": 20,
@@ -136,7 +144,7 @@
   "primary": false
  },
  {
-  "id": 1018,
+  "id": 1019,
   "name": "Black November Deals",
   "slug": "black-november-deals",
   "count": 18,
@@ -144,7 +152,7 @@
   "primary": false
  },
  {
-  "id": 1019,
+  "id": 1020,
   "name": "Deal of the Month",
   "slug": "deal-of-the-month",
   "count": 16,
@@ -152,7 +160,7 @@
   "primary": false
  },
  {
-  "id": 1020,
+  "id": 1021,
   "name": "Last of the Best",
   "slug": "last-of-the-best",
   "count": 14,
@@ -160,7 +168,7 @@
   "primary": false
  },
  {
-  "id": 1021,
+  "id": 1022,
   "name": "Weekly Deals",
   "slug": "weekly-deals",
   "count": 11,
@@ -168,7 +176,7 @@
   "primary": false
  },
  {
-  "id": 1022,
+  "id": 1023,
   "name": "Bike Tyres",
   "slug": "bike-tyres",
   "count": 9,
@@ -176,7 +184,7 @@
   "primary": true
  },
  {
-  "id": 1023,
+  "id": 1024,
   "name": "TAKE CONTROL DEALS",
   "slug": "take-control-deals",
   "count": 8,
@@ -184,7 +192,7 @@
   "primary": false
  },
  {
-  "id": 1024,
+  "id": 1025,
   "name": "WAS AND NOW DEALS",
   "slug": "was-and-now-deals",
   "count": 5,
@@ -192,7 +200,7 @@
   "primary": false
  },
  {
-  "id": 1025,
+  "id": 1026,
   "name": "Fathers Day Deals",
   "slug": "fathers-day-deals",
   "count": 4,
@@ -200,7 +208,7 @@
   "primary": false
  },
  {
-  "id": 1026,
+  "id": 1027,
   "name": "3 + 1 DEALS",
   "slug": "3-1-deals",
   "count": 3,
@@ -208,7 +216,7 @@
   "primary": false
  },
  {
-  "id": 1027,
+  "id": 1028,
   "name": "LIMITED TIME TYRE DEALS",
   "slug": "limited-time-tyre-deals",
   "count": 3,
@@ -216,34 +224,10 @@
   "primary": false
  },
  {
-  "id": 1028,
+  "id": 1029,
   "name": "WomensMonth",
   "slug": "womensmonth",
   "count": 1,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1029,
-  "name": "Wheel/Rims",
-  "slug": "wheel-rims",
-  "count": 1,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 2029,
-  "name": "Mag Wheels",
-  "slug": "mag-wheel",
-  "count": 71,
-  "image": null,
-  "primary": true
- },
- {
-  "id": 2030,
-  "name": "Mag Wheel Deals",
-  "slug": "mags-deals",
-  "count": 59,
   "image": null,
   "primary": false
  }

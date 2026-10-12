@@ -3,8 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Close, Arrow } from "./icons";
+import { formatPrice } from "@/lib/format";
 
-type Msg = { from: "bot" | "user"; text: string };
+interface TyroneProduct {
+  name: string;
+  slug: string;
+  brand: string;
+  price: number;
+  regularPrice: number;
+  onSale: boolean;
+  pct: number;
+  thumb: string | null;
+  size: string;
+}
+type Msg = { from: "bot" | "user"; text: string; products?: TyroneProduct[] };
 
 interface Rule {
   keys: string[];
@@ -87,10 +99,10 @@ const GREETING =
   "Hey there! 👋 I'm Tyrone, your tyre guy at The Tyre Mall. Ask me anything — finding the right tyres, delivery, payment, fitment, you name it. How can I help today?";
 
 const SUGGESTIONS = [
+  "Tyres for my SUV",
+  "I need 265/60R18",
+  "Show me the deals",
   "How does delivery work?",
-  "How do I pay?",
-  "Help me find tyres",
-  "Do you do fitment?",
 ];
 
 function matchRule(input: string): string {
@@ -120,17 +132,29 @@ export function Tyrone() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, typing, open]);
 
-  function send(text: string) {
+  async function send(text: string) {
     const t = text.trim();
     if (!t) return;
     setMsgs((m) => [...m, { from: "user", text: t }]);
     setInput("");
     setTyping(true);
-    const reply = matchRule(t);
+    const started = Date.now();
+    let reply: Msg = { from: "bot", text: matchRule(t) };
+    try {
+      const res = await fetch(`/api/tyrone?msg=${encodeURIComponent(t)}`);
+      const data = await res.json();
+      if (Array.isArray(data.products) && data.products.length) {
+        reply = { from: "bot", text: `${data.label}${data.note ? " — " + data.note : ""}:`, products: data.products };
+      }
+    } catch {
+      /* fall back to the keyword reply */
+    }
+    // keep a natural little pause
+    const wait = Math.max(0, 450 - (Date.now() - started));
     window.setTimeout(() => {
       setTyping(false);
-      setMsgs((m) => [...m, { from: "bot", text: reply }]);
-    }, 550);
+      setMsgs((m) => [...m, reply]);
+    }, wait);
   }
 
   return (
@@ -170,7 +194,7 @@ export function Tyrone() {
           {/* messages */}
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             {msgs.map((m, i) => (
-              <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
+              <div key={i} className={`flex flex-col ${m.from === "user" ? "items-end" : "items-start"}`}>
                 <div
                   className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                     m.from === "user"
@@ -180,6 +204,34 @@ export function Tyrone() {
                 >
                   {m.text}
                 </div>
+                {m.products && m.products.length > 0 && (
+                  <div className="mt-2 w-full space-y-2">
+                    {m.products.map((p) => (
+                      <Link
+                        key={p.slug}
+                        href={`/product/${p.slug}`}
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 rounded-xl bg-white p-2 ring-1 ring-black/5 transition-transform hover:scale-[1.01]"
+                      >
+                        <span className="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-white">
+                          {p.thumb && <img src={p.thumb} alt="" className="size-14 object-contain" />}
+                          {p.onSale && p.pct > 0 && (
+                            <span className="absolute left-0 top-0 rounded-br-md bg-sale px-1 text-[9px] font-black text-white">-{p.pct}%</span>
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[10px] font-extrabold uppercase tracking-wide text-[#4f7000]">{p.brand}{p.size ? ` · ${p.size}` : ""}</span>
+                          <span className="line-clamp-2 text-[11px] font-semibold leading-snug text-[#14171a]">{p.name}</span>
+                          <span className="mt-0.5 flex items-center gap-1.5">
+                            {p.onSale && p.pct > 0 && <span className="text-[10px] text-neutral-400 line-through">{formatPrice(p.regularPrice)}</span>}
+                            <span className="font-display text-sm text-[#14171a]">{formatPrice(p.price)}</span>
+                          </span>
+                        </span>
+                        <Arrow width={14} height={14} className="shrink-0 text-[#4f7000]" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             {typing && (

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Search, ChevronDown } from "./icons";
+import { VehiclePicker, type Variant } from "./VehiclePicker";
 
 type Mode = "size" | "vehicle" | "brand";
 
@@ -56,11 +57,11 @@ function Panel({
   brands: string[];
   bigField: React.ReactNode;
   threeFields: (brandField: React.ReactNode) => React.ReactNode;
-  onSearch: (mode: Mode, brand: string, vehicle: string) => void;
+  onSearch: (mode: Mode, brand: string, vehicle: Variant | null) => void;
 }) {
   const [mode, setMode] = useState<Mode>("size");
   const [brand, setBrand] = useState("");
-  const [vehicle, setVehicle] = useState("");
+  const [vehicle, setVehicle] = useState<Variant | null>(null);
 
   const brandField = (
     <Select label="Brand" value={brand} onChange={setBrand} options={brands} placeholder="All brands" />
@@ -98,15 +99,7 @@ function Panel({
 
       <div className="mt-4 space-y-3">
         {mode === "vehicle" ? (
-          <label className="block">
-            <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-muted">Your vehicle</span>
-            <input
-              value={vehicle}
-              onChange={(e) => setVehicle(e.target.value)}
-              placeholder="e.g. VW Polo, Ford Ranger, Toyota Corolla…"
-              className="h-11 w-full rounded-lg border border-line bg-ink px-3 text-sm font-semibold text-fg outline-none focus:border-volt"
-            />
-          </label>
+          <VehiclePicker onSelect={setVehicle} />
         ) : mode === "brand" ? (
           <div className="max-w-xs">{brandField}</div>
         ) : (
@@ -168,9 +161,9 @@ export function TyreWheelSearch({
           </>
         )}
         onSearch={(mode, brand, vehicle) => {
+          if (mode === "vehicle") { router.push(vehicle ? vehicle.tyreHref : "/shop?type=tyre"); return; }
           const p = new URLSearchParams({ type: "tyre" });
-          if (mode === "vehicle" && vehicle) p.set("q", vehicle);
-          else if (mode === "brand" && brand) p.set("brand", brand);
+          if (mode === "brand" && brand) p.set("brand", brand);
           else {
             if (tw) p.set("width", tw);
             if (tp) p.set("profile", tp);
@@ -196,9 +189,9 @@ export function TyreWheelSearch({
           </>
         )}
         onSearch={(mode, brand, vehicle) => {
+          if (mode === "vehicle") { router.push(vehicle ? vehicle.wheelHref : "/shop?type=wheel"); return; }
           const p = new URLSearchParams({ type: "wheel" });
-          if (mode === "vehicle" && vehicle) p.set("q", vehicle);
-          else if (mode === "brand" && brand) p.set("brand", brand);
+          if (mode === "brand" && brand) p.set("brand", brand);
           else {
             if (wr) p.set("rim", wr);
             if (wpcd) p.set("pcd", wpcd);

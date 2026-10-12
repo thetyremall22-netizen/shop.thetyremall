@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { products, searchProducts, queryProducts, dealProducts } from "@/lib/catalogue";
+import { findVehicle } from "@/lib/vehicles";
 import { discountPct } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
@@ -58,10 +59,18 @@ export async function GET(req: NextRequest) {
   let label = "";
   let note = "";
 
+  const vehicleFit = !size ? findVehicle(msg) : null;
+
   if (size) {
     picks = searchProducts(size, 30).filter((p) => (p.specs.size ?? "").toUpperCase().includes(size.toUpperCase()));
     if (!picks.length) picks = searchProducts(size, 12);
     label = `Here's what I found in ${size}`;
+  } else if (vehicleFit && vehicleFit.tyres.length) {
+    const oe = vehicleFit.tyres[0].replace(/\s+/g, "").toUpperCase(); // 195/45R16
+    picks = searchProducts(oe, 30).filter((p) => (p.specs.size ?? "").toUpperCase().replace(/\s+/g, "").includes(oe));
+    if (!picks.length) picks = searchProducts(oe, 12);
+    label = `For your ${vehicleFit.make} ${vehicleFit.model}${vehicleFit.label ? ` (${vehicleFit.label})` : ""}, the fitment is ${vehicleFit.tyres.join(" or ")}`;
+    if (vehicleFit.rims.length) note = `Rim ${vehicleFit.rims.join(" / ")}${vehicleFit.pcd ? ` · PCD ${vehicleFit.pcd.replace(/\*/g, "×")}` : ""}`;
   } else if (brandHit) {
     const r = queryProducts({ brand: brandHit, onSale: wantsDeals || undefined, perPage: 24 });
     picks = r.items;
@@ -84,7 +93,10 @@ export async function GET(req: NextRequest) {
 
   picks = picks.filter((p) => p.image).sort(rank).slice(0, 4);
   const onSaleCount = picks.filter((p) => p.onSale).length;
-  if (onSaleCount > 0) note = `${onSaleCount === picks.length ? "They're all" : `${onSaleCount} of these are`} on sale right now 🔥`;
+  if (onSaleCount > 0) {
+    const sn = `${onSaleCount === picks.length ? "they're all" : `${onSaleCount} of these are`} on sale right now 🔥`;
+    note = note ? `${note} · ${sn}` : sn.charAt(0).toUpperCase() + sn.slice(1);
+  }
 
   return NextResponse.json({
     label,

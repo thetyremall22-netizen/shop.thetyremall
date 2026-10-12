@@ -104,7 +104,28 @@ export default function CheckoutPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <Field name="firstName" label="First name" required />
               <Field name="lastName" label="Last name" required />
-              <Field name="email" label="Email" type="email" required />
+              <Field
+                name="email"
+                label="Email"
+                type="email"
+                required
+                onBlur={(e) => {
+                  const email = e.target.value.trim();
+                  if (!email || items.length === 0) return;
+                  // Abandoned-cart capture (item 45) — save against this email so
+                  // a recovery email can go out if checkout isn't completed.
+                  fetch("/api/abandoned-cart", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      email,
+                      total: totals.total,
+                      items: items.map((i) => ({ name: i.name, qty: i.qty, price: i.price, slug: i.slug, image: i.image })),
+                    }),
+                    keepalive: true,
+                  }).catch(() => {});
+                }}
+              />
               <Field name="phone" label="Mobile" type="tel" required />
             </div>
           </Section>
@@ -231,7 +252,7 @@ function Section({ n, title, children }: { n: number; title: string; children: R
   );
 }
 
-function Field({ name, label, type = "text", required }: { name: string; label: string; type?: string; required?: boolean }) {
+function Field({ name, label, type = "text", required, onBlur }: { name: string; label: string; type?: string; required?: boolean; onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-semibold text-muted">{label}{required && <span className="text-sale"> *</span>}</span>
@@ -239,6 +260,7 @@ function Field({ name, label, type = "text", required }: { name: string; label: 
         name={name}
         type={type}
         required={required}
+        onBlur={onBlur}
         className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt"
       />
     </label>

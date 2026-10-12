@@ -168,11 +168,26 @@ export function Tyrone() {
       }),
       keepalive: true,
     }).catch(() => {});
+
+    // Lead capture (item 44): if the visitor shared an email or phone, save it
+    // so the team can follow up even if they drop off before buying.
+    const hasContact = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(t) || /(?:\+?27|0)\s?\d{2}[\s-]?\d{3}[\s-]?\d{4}/.test(t);
+    let leadReply: Msg | null = null;
+    if (hasContact) {
+      fetch("/api/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "tyrone", message: t }),
+        keepalive: true,
+      }).catch(() => {});
+      leadReply = { from: "bot", text: "Got it — I've saved your details. Someone from The Tyre Mall will reach out to help. 👍" };
+    }
+
     // keep a natural little pause
     const wait = Math.max(0, 450 - (Date.now() - started));
     window.setTimeout(() => {
       setTyping(false);
-      setMsgs((m) => [...m, reply]);
+      setMsgs((m) => (leadReply ? [...m, reply, leadReply] : [...m, reply]));
     }, wait);
   }
 

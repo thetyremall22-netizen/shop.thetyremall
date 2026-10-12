@@ -46,6 +46,15 @@ export async function logEnquiry(e: Enquiry): Promise<void> {
   }
 }
 
+/** Recent enquiries for the admin view. */
+export async function listEnquiries(limit = 100): Promise<Record<string, unknown>[]> {
+  try {
+    await ensureTable();
+    const res = await libsql.execute({ sql: `SELECT * FROM enquiries ORDER BY id DESC LIMIT ?`, args: [limit] });
+    return res.rows as unknown as Record<string, unknown>[];
+  } catch { return []; }
+}
+
 /** Call-tap counts per store since a given time (for the weekly digest). */
 export async function callTapSummary(sinceMs: number): Promise<{ storeName: string; taps: number }[]> {
   try {

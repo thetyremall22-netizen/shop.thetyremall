@@ -35,6 +35,30 @@ export async function sendMail(to: string, subject: string, html: string): Promi
   await getTransport().sendMail({ from: FROM, to, subject, html });
 }
 
+const SITE_URL = process.env.SITE_URL ?? "https://thetyremall.co.za";
+// Abandoned-cart recovery keeps the "made by iHD" footer credit (as the WP plugin does).
+const IHD_CREDIT = process.env.IHD_CREDIT_URL ?? "https://www.iheartdigital.co.za";
+
+/** Abandoned-cart recovery email — nudges a shopper who left items behind. */
+export async function sendAbandonedCartEmail(to: string, items: { name: string; qty: number; price: number }[], total: number): Promise<void> {
+  const rows = items.map((i) =>
+    `<tr><td style="padding:8px 0;border-bottom:1px solid #eee">${i.name}${i.qty > 1 ? ` × ${i.qty}` : ""}</td>
+     <td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;white-space:nowrap">${zar(i.price * i.qty)}</td></tr>`
+  ).join("");
+  const body = `
+    <p style="font-size:14px;margin:0 0 12px">You left some great tyres in your cart — they&apos;re still waiting for you. Free delivery on 2 or more tyres, nationwide.</p>
+    <table role="presentation" width="100%" style="border-collapse:collapse;font-size:14px;margin:12px 0">
+      ${rows}
+      <tr><td style="padding:10px 0 0;font-weight:800">Total</td><td style="padding:10px 0 0;text-align:right;font-weight:800;color:${INK}">${zar(total)}</td></tr>
+    </table>
+    <p style="margin:18px 0"><a href="${SITE_URL}/cart" style="display:inline-block;background:${BRAND};color:${INK};font-weight:800;text-decoration:none;padding:12px 22px;border-radius:10px">Complete your order →</a></p>
+    <p style="font-size:12px;color:#6b7280">Buy now, pay later with HappyPay &amp; Mobicred. Need help choosing? Just reply or WhatsApp us.</p>
+    <p style="font-size:11px;color:#9aa2ab;margin-top:20px;border-top:1px solid #eee;padding-top:12px">
+      Made by <a href="${IHD_CREDIT}" style="color:#9aa2ab">iHeart Digital</a>
+    </p>`;
+  await sendMail(to, "You left tyres in your cart — The Tyre Mall", layout("Still thinking it over?", body));
+}
+
 /** Notify the shop of a WhatsApp / Tyrone product enquiry. */
 export async function sendEnquiryEmail(e: {
   type: "whatsapp" | "tyrone";
@@ -211,13 +235,13 @@ export async function sendOrderCancelled(o: Order): Promise<void> {
 }
 export async function sendOrderRefunded(o: Order): Promise<void> {
   const c = tRefundedCustomer(o);
-  await sendMail(o.customer.email, c.subject, c.html);
+  await Promise.all([sendMail(o.customer.email, c.subject, c.html), sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, c.html)]);
 }
 export async function sendOrderCompleted(o: Order): Promise<void> {
   const c = tCompletedCustomer(o);
-  await sendMail(o.customer.email, c.subject, c.html);
+  await Promise.all([sendMail(o.customer.email, c.subject, c.html), sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, c.html)]);
 }
 export async function sendOrderOnHold(o: Order): Promise<void> {
   const c = tOnHoldCustomer(o);
-  await sendMail(o.customer.email, c.subject, c.html);
+  await Promise.all([sendMail(o.customer.email, c.subject, c.html), sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, c.html)]);
 }

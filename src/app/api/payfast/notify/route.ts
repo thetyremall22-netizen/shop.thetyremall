@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyItnSignature, validateWithPayfast } from "@/lib/payfast";
 import { getOrder, updateOrder } from "@/lib/orders";
 import { sendOrderPaid, sendOrderFailed } from "@/lib/email";
+import { markRecovered } from "@/lib/abandoned";
 import { decrementStock } from "@/lib/db/queries";
 
 export async function POST(req: NextRequest) {
@@ -45,6 +46,8 @@ export async function POST(req: NextRequest) {
         // Decrement stock in our database, then send the order emails.
         for (const it of updated.items) await decrementStock(it.slug, it.qty);
         await sendOrderPaid(updated);
+        // Cart was recovered — don't chase it.
+        await markRecovered(updated.customer.email).catch(() => {});
       }
     }
   } else if (status === "FAILED") {

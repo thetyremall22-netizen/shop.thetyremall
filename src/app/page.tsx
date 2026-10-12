@@ -65,7 +65,7 @@ export default async function Home() {
       {/* ============ BEST SELLERS ============ */}
       <section className="container-x pb-12">
         <Reveal><SectionHead eyebrow="Flying out the door" silver="FAN" green="FAVOURITES" href="/shop" /></Reveal>
-        <div className="no-scrollbar mt-6 flex gap-3 overflow-x-auto pb-2">
+        <div className="no-scrollbar -mx-4 mt-4 flex gap-4 overflow-x-auto px-4 py-6">
           {sellers.map((p, i) => (
             <Reveal key={p.id} delay={i * 50} className="shrink-0"><ProductRailCard p={p} /></Reveal>
           ))}
@@ -132,7 +132,7 @@ export default async function Home() {
       {mags.length > 0 && (
         <section className="container-x pb-12">
           <Reveal><SectionHead eyebrow="Turn heads on every street" silver="FRESH" green="MAGS" href="/shop?type=wheel" /></Reveal>
-          <div className="no-scrollbar mt-6 flex gap-3 overflow-x-auto pb-2">
+          <div className="no-scrollbar -mx-4 mt-4 flex gap-4 overflow-x-auto px-4 py-6">
             {mags.map((p, i) => (
               <Reveal key={p.id} delay={i * 50} className="shrink-0"><ProductRailCard p={p} /></Reveal>
             ))}

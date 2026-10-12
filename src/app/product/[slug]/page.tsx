@@ -297,8 +297,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           {suggested.length > 0 && tyreSpec.size && (
             <p className="mt-1 text-sm text-muted">Same {tyreSpec.size} size, different brands &amp; price points.</p>
           )}
-          <div className="no-scrollbar mt-5 flex gap-3 overflow-x-auto pb-2">
+          <div className="no-scrollbar -mx-4 mt-3 flex gap-4 overflow-x-auto px-4 py-7">
             {(suggested.length > 0 ? suggested : related).map((r) => <ProductRailCard key={r.id} p={r} />)}
+            <span className="w-1 shrink-0" aria-hidden />
           </div>
         </section>
       )}

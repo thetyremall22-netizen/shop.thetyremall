@@ -13,15 +13,10 @@ import { Reveal } from "@/components/Reveal";
 import { AnimatedRating } from "@/components/AnimatedRating";
 import { RotatingReviews } from "@/components/RotatingReviews";
 import { AboutTeam } from "@/components/AboutTeam";
+import { BrandTile } from "@/components/BrandTile";
+import { BRANDS } from "@/lib/brands";
 import { Arrow } from "@/components/icons";
 
-const BRAND_LOGOS = [
-  "Bridgestone", "Pirelli", "Goodyear", "Dunlop", "Radar", "Michelin", "Continental", "Landsail",
-  "Windforce", "Tracmax", "BFGoodrich", "Firestone", "Sumitomo", "General", "Sava", "Yokohama",
-  "Kapsen", "Timax", "Anchee", "Roadking",
-];
-const brandLogo = (b: string) =>
-  b === "Radar" ? "/brand/logos/radar.png" : `/brand/logos/${b.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.webp`;
 
 export default function Home() {
   const sellers = bestSellers(10);
@@ -161,16 +156,10 @@ export default function Home() {
               </h2>
             </div>
           </Reveal>
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-10">
-            {BRAND_LOGOS.map((b, i) => (
-              <Reveal key={b} delay={(i % 10) * 40}>
-                <Link
-                  href={`/shop?brand=${encodeURIComponent(b)}`}
-                  aria-label={b}
-                  className="glow-hover flex aspect-[3/2] items-center justify-center rounded-xl bg-white p-2.5 ring-1 ring-black/5 transition-transform hover:scale-[1.04]"
-                >
-                  <Image src={brandLogo(b)} alt={b} width={140} height={84} className="h-auto max-h-full w-auto max-w-full object-contain" />
-                </Link>
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+            {BRANDS.map((b, i) => (
+              <Reveal key={b} delay={(i % 8) * 35}>
+                <BrandTile brand={b} />
               </Reveal>
             ))}
           </div>

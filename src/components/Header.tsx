@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { MegaSearch } from "./MegaSearch";
+import { BrandTile } from "./BrandTile";
 import { Cart, Menu, Close, Bolt, User, Heart, Chevron } from "./icons";
 import { PROMOS, NAV_PRIMARY } from "@/lib/nav";
+import { BRANDS } from "@/lib/brands";
 import { useCart } from "@/lib/cart";
 
 const NAV = [
@@ -16,13 +17,6 @@ const NAV = [
   { label: "Contact us", href: "/contact" },
 ];
 
-const BRAND_LOGOS = [
-  "Bridgestone", "Pirelli", "Goodyear", "Dunlop", "Radar", "Michelin", "Continental", "Landsail",
-  "Windforce", "Tracmax", "BFGoodrich", "Firestone", "Sumitomo", "General", "Sava", "Yokohama",
-  "Kapsen", "Timax", "Anchee", "Roadking",
-];
-const brandLogo = (b: string) =>
-  b === "Radar" ? "/brand/logos/radar.png" : `/brand/logos/${b.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.webp`;
 
 export function Header() {
   const { totals, setDrawerOpen } = useCart();
@@ -92,16 +86,9 @@ export function Header() {
                     <span className="eyebrow">Shop by tyre brand</span>
                     <Link href="/shop" className="text-xs font-bold text-volt hover:underline">View all →</Link>
                   </div>
-                  <div className="grid grid-cols-4 gap-2.5 lg:grid-cols-5">
-                    {BRAND_LOGOS.map((b) => (
-                      <Link
-                        key={b}
-                        href={`/shop?brand=${encodeURIComponent(b)}`}
-                        aria-label={b}
-                        className="glow-hover flex aspect-[3/2] items-center justify-center rounded-xl bg-white p-2 ring-1 ring-black/5 transition-transform hover:scale-[1.05]"
-                      >
-                        <Image src={brandLogo(b)} alt={b} width={120} height={70} className="h-auto max-h-full w-auto max-w-full object-contain" />
-                      </Link>
+                  <div className="grid grid-cols-4 gap-2.5 lg:grid-cols-6">
+                    {BRANDS.map((b) => (
+                      <BrandTile key={b} brand={b} />
                     ))}
                   </div>
                 </div>

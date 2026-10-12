@@ -1,0 +1,87 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireAdmin } from "@/lib/admin-auth";
+import { AdminShell } from "@/components/admin/AdminShell";
+import { OrderStatusForm } from "@/components/admin/OrderStatusForm";
+import { getOrder } from "@/lib/orders";
+
+export const instant = false;
+
+const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2 });
+
+export default async function AdminOrderDetail({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
+  const { id } = await params;
+  const o = await getOrder(id);
+  if (!o) notFound();
+
+  const a = o.delivery.address;
+  const t = o.totals;
+
+  return (
+    <AdminShell>
+      <Link href="/admin/orders" className="text-sm font-bold text-volt hover:underline">← Orders</Link>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-2xl">{o.reference}</h1>
+        <span className="badge badge-pay">{o.status}</span>
+      </div>
+      <div className="mt-1 text-sm text-muted">Placed {new Date(o.createdAt).toLocaleString("en-ZA")} · Paid via {o.paymentMethod}{o.pfPaymentId ? ` (PF ${o.pfPaymentId})` : ""}</div>
+
+      <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_300px]">
+        <div className="card p-5">
+          <h2 className="font-display text-lg">Items</h2>
+          <table className="mt-3 w-full text-sm">
+            <tbody>
+              {o.items.map((i) => (
+                <tr key={i.slug} className="border-b border-line last:border-0">
+                  <td className="py-2">{i.name}{i.qty > 1 ? ` × ${i.qty}` : ""}
+                    {(i.alignment || (i.balanceQty ?? 0) > 0 || i.roadHazard) && (
+                      <div className="text-xs text-muted">
+                        {i.alignment ? "alignment " : ""}{(i.balanceQty ?? 0) > 0 ? `balance×${i.balanceQty} ` : ""}{i.roadHazard ? "road-hazard" : ""}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-2 text-right whitespace-nowrap">{zar(i.price * i.qty)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <dl className="mt-3 space-y-1 border-t border-line pt-3 text-sm">
+            <Row k="Subtotal" v={zar(t.subtotal)} />
+            {t.alignmentTotal > 0 && <Row k="Alignment" v={zar(t.alignmentTotal)} />}
+            {t.balanceTotal > 0 && <Row k="Balance & valve" v={zar(t.balanceTotal)} />}
+            {t.hazardTotal > 0 && <Row k="Road hazard" v={zar(t.hazardTotal)} />}
+            <Row k="Delivery" v={t.delivery === 0 ? "FREE" : zar(t.delivery)} />
+            <div className="flex justify-between border-t border-line pt-2 font-bold"><dt>Total</dt><dd>{zar(t.total)}</dd></div>
+          </dl>
+        </div>
+
+        <div className="space-y-5">
+          <div className="card p-5">
+            <h2 className="font-display text-lg">Customer</h2>
+            <div className="mt-2 text-sm">
+              <div className="font-semibold text-fg">{o.customer.firstName} {o.customer.lastName}</div>
+              <div className="text-muted">{o.customer.email}</div>
+              <div className="text-muted">{o.customer.phone}</div>
+            </div>
+            <h3 className="mt-4 text-xs font-bold uppercase tracking-wide text-muted">{o.delivery.method === "fitment" ? "Fitment" : "Delivery"}</h3>
+            <div className="mt-1 text-sm text-fg">
+              {o.delivery.method === "fitment"
+                ? <>{o.delivery.fitmentStore ?? "Partner centre"}{o.delivery.fitmentDate ? ` · ${o.delivery.fitmentDate}` : ""}</>
+                : a ? <>{a.street}, {a.suburb}<br />{a.city}, {a.province} {a.postalCode}</> : "—"}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 card p-5">
+        <h2 className="font-display text-lg">Update status</h2>
+        <div className="mt-3"><OrderStatusForm id={o.id} current={o.status} /></div>
+      </div>
+    </AdminShell>
+  );
+}
+
+function Row({ k, v }: { k: string; v: string }) {
+  return <div className="flex justify-between"><dt className="text-muted">{k}</dt><dd>{v}</dd></div>;
+}

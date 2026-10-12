@@ -57,6 +57,18 @@ export async function decrementStock(slug: string, qty: number): Promise<void> {
   }
 }
 
+/** Add stock back (e.g. when an order is cancelled or refunded). */
+export async function incrementStock(slug: string, qty: number): Promise<void> {
+  try {
+    await db
+      .update(schema.products)
+      .set({ stockQty: sql`${schema.products.stockQty} + ${qty}`, updatedAt: Date.now() })
+      .where(eq(schema.products.slug, slug));
+  } catch (e) {
+    console.error("[db] incrementStock failed", slug, (e as Error).message);
+  }
+}
+
 // ---- admin ------------------------------------------------------------------
 export type AdminFilter = "all" | "low" | "out" | "sale";
 

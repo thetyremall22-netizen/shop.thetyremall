@@ -37,8 +37,8 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
               </thead>
               <tbody>
                 {orders.map((o) => (
-                  <tr key={o.id} className="border-b border-line last:border-0">
-                    <td className="px-4 py-2.5 font-semibold text-fg">{o.reference}</td>
+                  <tr key={o.id} className="border-b border-line last:border-0 hover:bg-surface">
+                    <td className="px-4 py-2.5 font-semibold"><Link href={`/admin/orders/${o.id}`} className="text-volt hover:underline">{o.reference}</Link></td>
                     <td className="px-4 py-2.5">
                       <div className="text-fg">{o.customer.firstName} {o.customer.lastName}</div>
                       <div className="text-xs text-muted">{o.customer.email}</div>

@@ -17,6 +17,7 @@ import {
   BALANCE_PER_TYRE,
   type DeliveryMethod,
 } from "./shop-config";
+import { setDiscountFor } from "./pricing";
 
 export interface CartItem {
   id: number;
@@ -110,6 +111,7 @@ export interface CartTotals {
   tyreQty: number;
   itemCount: number;
   subtotal: number;
+  setDiscount: number;
   hazardTotal: number;
   alignmentTotal: number;
   balanceTotal: number;
@@ -162,6 +164,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       .reduce((n, i) => n + i.qty, 0);
     const itemCount = state.items.reduce((n, i) => n + i.qty, 0);
     const subtotal = state.items.reduce((n, i) => n + i.price * i.qty, 0);
+    const setDiscount = state.items.reduce((n, i) => n + setDiscountFor(i.price, i.qty, i.type), 0);
     const hazardTotal = state.items
       .filter((i) => i.roadHazard)
       .reduce((n, i) => n + ROAD_HAZARD_FEE * i.qty, 0);
@@ -184,13 +187,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       tyreQty,
       itemCount,
       subtotal,
+      setDiscount,
       hazardTotal,
       alignmentTotal,
       balanceTotal,
       delivery,
       freeDelivery,
       tyresToFreeDelivery,
-      total: subtotal + hazardTotal + alignmentTotal + balanceTotal + delivery,
+      total: subtotal - setDiscount + hazardTotal + alignmentTotal + balanceTotal + delivery,
     };
   }, [state]);
 

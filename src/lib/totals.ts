@@ -8,6 +8,7 @@ import {
   BALANCE_PER_TYRE,
   type DeliveryMethod,
 } from "./shop-config";
+import { setDiscountFor } from "./pricing";
 
 export interface LineItem {
   id: number;
@@ -26,6 +27,7 @@ export interface OrderTotals {
   tyreQty: number;
   itemCount: number;
   subtotal: number;
+  setDiscount: number;
   hazardTotal: number;
   alignmentTotal: number;
   balanceTotal: number;
@@ -38,6 +40,7 @@ export function computeTotals(items: LineItem[], deliveryMethod: DeliveryMethod)
   const tyreQty = items.filter((i) => i.type === "tyre").reduce((n, i) => n + i.qty, 0);
   const itemCount = items.reduce((n, i) => n + i.qty, 0);
   const subtotal = items.reduce((n, i) => n + i.price * i.qty, 0);
+  const setDiscount = items.reduce((n, i) => n + setDiscountFor(i.price, i.qty, i.type), 0);
   const hazardTotal = items.filter((i) => i.roadHazard).reduce((n, i) => n + ROAD_HAZARD_FEE * i.qty, 0);
   const alignmentTotal = items.filter((i) => i.alignment).reduce((n) => n + ALIGNMENT_FEE, 0);
   const balanceTotal = items.reduce((n, i) => n + (i.balanceQty ?? 0) * BALANCE_PER_TYRE, 0);
@@ -48,11 +51,12 @@ export function computeTotals(items: LineItem[], deliveryMethod: DeliveryMethod)
     tyreQty,
     itemCount,
     subtotal,
+    setDiscount,
     hazardTotal,
     alignmentTotal,
     balanceTotal,
     delivery,
     freeDelivery,
-    total: subtotal + hazardTotal + alignmentTotal + balanceTotal + delivery,
+    total: subtotal - setDiscount + hazardTotal + alignmentTotal + balanceTotal + delivery,
   };
 }

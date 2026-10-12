@@ -78,6 +78,7 @@ function itemsTable(o: Order): string {
   return `<table role="presentation" width="100%" style="border-collapse:collapse;font-size:14px;margin:12px 0">
     ${rows}
     ${line("Subtotal", zar(t.subtotal))}
+    ${t.setDiscount ? line("Set of 4 saving", `&minus;${zar(t.setDiscount)}`) : ""}
     ${t.alignmentTotal ? line("Wheel alignment", zar(t.alignmentTotal)) : ""}
     ${t.balanceTotal ? line("Balance &amp; valve", zar(t.balanceTotal)) : ""}
     ${t.hazardTotal ? line("Road hazard cover", zar(t.hazardTotal)) : ""}

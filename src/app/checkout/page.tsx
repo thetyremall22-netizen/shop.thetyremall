@@ -193,6 +193,7 @@ export default function CheckoutPage() {
 
             <dl className="mt-4 space-y-2 border-t border-line pt-4 text-sm">
               <SumRow label="Subtotal" value={formatPrice(totals.subtotal)} />
+              {totals.setDiscount > 0 && <SumRow label="Set of 4 saving" value={`−${formatPrice(totals.setDiscount)}`} highlight />}
               {totals.hazardTotal > 0 && <SumRow label="Road hazard" value={formatPrice(totals.hazardTotal)} />}
               {totals.alignmentTotal > 0 && <SumRow label="Wheel alignment" value={formatPrice(totals.alignmentTotal)} />}
               {totals.balanceTotal > 0 && <SumRow label="Balance & valve" value={formatPrice(totals.balanceTotal)} />}

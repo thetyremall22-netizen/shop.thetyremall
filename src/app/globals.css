@@ -713,3 +713,6 @@ body::before {
 }
 .prose-ttm img { border-radius: 0.75rem; border: 1px solid var(--color-line); }
 .prose-ttm hr { border-color: var(--color-line); }
+
+/* set-of-4 price on light product cards — readable brand green */
+.price-set { color: #3f7d00; }

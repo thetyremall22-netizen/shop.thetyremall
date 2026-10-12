@@ -6,6 +6,8 @@ import { BLOG_POSTS } from "@/data/blog";
 
 const SITE = "https://shop.thetyremall.co.za";
 
+export const instant = false;
+
 export function generateStaticParams() {
   return BLOG_POSTS.map((p) => ({ slug: p.slug }));
 }

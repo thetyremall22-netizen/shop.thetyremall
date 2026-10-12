@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/format";
+import { setDiscountFor } from "@/lib/pricing";
 import { FITMENT_CENTRES, STANDARD_DELIVERY_FEE } from "@/lib/shop-config";
 import { Trash, Plus, Minus, Truck, Pin, Check, Shield, Bolt } from "@/components/icons";
 
@@ -71,6 +72,11 @@ export default function CartPage() {
                   </div>
                   <span className="font-display text-lg">{formatPrice(i.price * i.qty)}</span>
                 </div>
+                {setDiscountFor(i.price, i.qty, i.type) > 0 && (
+                  <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-volt/15 px-2 py-0.5 text-[11px] font-bold text-volt">
+                    <Check width={12} height={12} /> Set of 4 — save {formatPrice(setDiscountFor(i.price, i.qty, i.type))}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -107,6 +113,7 @@ export default function CartPage() {
 
             <dl className="mt-4 space-y-2 border-t border-line pt-4 text-sm">
               <Row label="Subtotal" value={formatPrice(totals.subtotal)} />
+              {totals.setDiscount > 0 && <Row label="Set of 4 saving" value={`−${formatPrice(totals.setDiscount)}`} highlight />}
               {totals.hazardTotal > 0 && <Row label="Road hazard cover" value={formatPrice(totals.hazardTotal)} />}
               {totals.alignmentTotal > 0 && <Row label="Wheel alignment" value={formatPrice(totals.alignmentTotal)} />}
               {totals.balanceTotal > 0 && <Row label="Balance & valve" value={formatPrice(totals.balanceTotal)} />}

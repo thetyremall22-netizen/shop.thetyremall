@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart, type CartItem } from "@/lib/cart";
 import { formatPrice } from "@/lib/format";
+import { setDiscountFor, setPriceOf4, SET_OF_4_DISCOUNT } from "@/lib/pricing";
 import {
   FITMENT_STORES,
   FREE_DELIVERY_MIN_TYRES,
@@ -47,13 +48,14 @@ export function ProductCustomiser({ item, inStock }: { item: Item; inStock: bool
 
   const t = useMemo(() => {
     const base = item.price * qty;
+    const setDiscount = setDiscountFor(item.price, qty, item.type);
     const alignFee = alignment && isTyre ? ALIGNMENT_FEE : 0;
     const balanceFee = isTyre ? balanceQty * BALANCE_PER_TYRE : 0;
     const freeDelivery = !isTyre || qty >= FREE_DELIVERY_MIN_TYRES;
     const delivery = method === "fitment" ? 0 : freeDelivery ? 0 : STANDARD_DELIVERY_FEE;
     const options = alignFee + balanceFee;
-    return { base, alignFee, balanceFee, delivery, options, freeDelivery, total: base + options + delivery };
-  }, [item.price, qty, alignment, balanceQty, method, isTyre]);
+    return { base, setDiscount, alignFee, balanceFee, delivery, options, freeDelivery, total: base - setDiscount + options + delivery };
+  }, [item.price, qty, alignment, balanceQty, method, isTyre, item.type]);
 
   const need = Math.max(0, FREE_DELIVERY_MIN_TYRES - qty);
 
@@ -102,6 +104,18 @@ export function ProductCustomiser({ item, inStock }: { item: Item; inStock: bool
             </div>
           )}
         </div>
+        {isTyre && (
+          t.setDiscount > 0 ? (
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-volt/40 bg-volt/10 px-4 py-2.5 text-sm font-bold text-volt">
+              <Check width={16} height={16} /> Set of 4 price applied — you save {formatPrice(t.setDiscount)}
+            </div>
+          ) : (
+            <button onClick={() => setQty(4)} className="mt-3 flex w-full items-center justify-between gap-2 rounded-xl border border-dashed border-line-2 bg-surface px-4 py-2.5 text-left text-sm text-muted transition-colors hover:border-volt hover:text-fg">
+              <span>Buy a <b className="text-fg">set of 4</b> → <span className="font-bold text-volt">{formatPrice(setPriceOf4(item.price))}</span></span>
+              <span className="shrink-0 rounded-full bg-volt/15 px-2 py-0.5 text-xs font-black text-volt">save {formatPrice(SET_OF_4_DISCOUNT)}</span>
+            </button>
+          )
+        )}
         {isTyre && (t.freeDelivery ? (
           <div key="free-unlocked" className="pop-in shine-sweep mt-3 rounded-xl border border-volt/40 bg-pay/10 px-4 py-3.5 shadow-[0_0_24px_-6px_rgba(138,197,63,0.5)]">
             <div className="flex flex-wrap items-baseline gap-x-[0.3em] gap-y-1 font-display text-[1.9rem] leading-[0.9] sm:text-4xl">
@@ -194,6 +208,7 @@ export function ProductCustomiser({ item, inStock }: { item: Item; inStock: bool
       {/* total */}
       <div className="rounded-xl border border-line bg-surface p-4">
         <div className="flex items-center justify-between text-sm text-muted"><span>{qty} × {formatPrice(item.price)}</span><span className="text-fg">{formatPrice(t.base)}</span></div>
+        {t.setDiscount > 0 && <div className="mt-1 flex items-center justify-between text-sm font-semibold text-volt"><span>Set of 4 saving</span><span>−{formatPrice(t.setDiscount)}</span></div>}
         {t.options > 0 && <div className="mt-1 flex items-center justify-between text-sm text-muted"><span>Options (alignment / balancing)</span><span className="text-fg">{formatPrice(t.options)}</span></div>}
         <div className="mt-1 flex items-center justify-between text-sm text-muted"><span>Delivery</span><span className={t.delivery === 0 ? "text-pay" : "text-fg"}>{t.delivery === 0 ? "FREE" : formatPrice(t.delivery)}</span></div>
         <div className="mt-3 flex items-center justify-between border-t border-line pt-3"><span className="font-bold">Total <span className="text-xs font-normal text-muted">(VAT incl.)</span></span><span className="font-display text-2xl text-volt">{formatPrice(t.total)}</span></div>

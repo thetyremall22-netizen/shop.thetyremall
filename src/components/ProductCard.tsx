@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/lib/types";
 import { formatPrice, formatPriceShort, discountPct } from "@/lib/format";
+import { hasSetPricing, setPriceOf4 } from "@/lib/pricing";
 import { Star, Arrow } from "./icons";
 
 // Brands we have a real logo image for.
@@ -71,12 +72,33 @@ export function ProductCard({ p }: { p: Product }) {
           </div>
         )}
 
-        <div className="mt-2.5">
-          {p.onSale && pct > 0 && (
-            <div className="text-xs text-neutral-400 line-through">{formatPrice(p.regularPrice)}</div>
-          )}
-          <div className="font-display text-xl text-[#14171a]">{formatPrice(p.price)}</div>
-        </div>
+        {hasSetPricing(p.type) ? (
+          <div className="mt-2.5 flex items-end justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-[9px] font-extrabold uppercase tracking-wider text-[#8a929c]">Per tyre</div>
+              {p.onSale && pct > 0 && (
+                <div className="text-[11px] leading-none text-neutral-400 line-through">{formatPrice(p.regularPrice)}</div>
+              )}
+              <div className="font-display text-lg leading-tight text-[#14171a]">{formatPrice(p.price)}</div>
+            </div>
+            <div className="shrink-0 rounded-lg bg-[#eef6e0] px-2.5 py-1.5 text-right ring-1 ring-[#8ac53f]/40">
+              <div className="text-[9px] font-extrabold uppercase tracking-wider text-[#4f7000]">Set of 4</div>
+              <div className="price-set font-display text-xl leading-tight">{formatPrice(setPriceOf4(p.price))}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-2.5">
+            {p.onSale && pct > 0 && (
+              <div className="text-xs text-neutral-400 line-through">{formatPrice(p.regularPrice)}</div>
+            )}
+            <div className="font-display text-xl text-[#14171a]">{formatPrice(p.price)}</div>
+          </div>
+        )}
+        {p.onSale && pct > 0 && (
+          <div className="mt-1.5 inline-flex items-center gap-1 self-start rounded-full bg-sale/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-sale">
+            🔥 On sale — save {pct}%
+          </div>
+        )}
 
         <div className="mt-2 rounded-md bg-[#FFD400] px-2 py-1.5 text-black">
           <div className="text-[13px] font-black leading-none">

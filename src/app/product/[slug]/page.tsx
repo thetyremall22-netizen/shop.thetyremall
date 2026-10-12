@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { getProduct, relatedProducts, dealProducts } from "@/lib/catalogue";
 import { getLive } from "@/lib/db/queries";
 import { formatPrice, discountPct } from "@/lib/format";
+import { hasSetPricing, setPriceOf4 } from "@/lib/pricing";
 import { ProductCustomiser } from "@/components/ProductCustomiser";
 import { ProductRailCard } from "@/components/ProductCard";
 import { YouMayLike } from "@/components/YouMayLike";
@@ -145,10 +146,30 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             )}
           </div>
 
-          <div className="mt-4 flex items-end gap-4">
-            {onSale && pct > 0 && <span className="text-lg text-faint line-through">{formatPrice(regularPrice)}</span>}
-            <span className="font-display text-4xl text-fg">{formatPrice(price)}</span>
-            <span className="ml-auto flex items-end" aria-label={`${p.brand} tyres`}>
+          <div className="mt-4 flex items-end justify-between gap-4">
+            <div className="min-w-0">
+              {onSale && pct > 0 && (
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="text-lg text-faint line-through">{formatPrice(regularPrice)}</span>
+                  <span className="rounded-full bg-sale/15 px-2 py-0.5 text-[11px] font-black uppercase tracking-wide text-sale">🔥 On sale!</span>
+                </div>
+              )}
+              {hasSetPricing(p.type) ? (
+                <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
+                  <div>
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-muted">Per tyre</div>
+                    <div className="font-display text-4xl leading-none text-fg">{formatPrice(price)}</div>
+                  </div>
+                  <div className="rounded-xl bg-volt/10 px-3.5 py-2 ring-1 ring-volt/30">
+                    <div className="text-[10px] font-extrabold uppercase tracking-wider text-volt">Set of 4</div>
+                    <div className="font-display text-3xl leading-none text-volt">{formatPrice(setPriceOf4(price))}</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="font-display text-4xl text-fg">{formatPrice(price)}</div>
+              )}
+            </div>
+            <span className="flex shrink-0 items-end" aria-label={`${p.brand} tyres`}>
               {brandSrc ? (
                 <span className="mb-0.5 inline-flex items-center rounded-lg bg-white px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-black/10">
                   <Image src={brandSrc} alt={`${p.brand} logo`} width={430} height={124} className="h-6 w-auto object-contain sm:h-7" />

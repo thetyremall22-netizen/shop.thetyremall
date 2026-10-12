@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/format";
+import { setDiscountFor } from "@/lib/pricing";
 import { Close, Trash, Plus, Minus, Truck, Cart as CartIcon, Check } from "./icons";
 
 export function CartDrawer() {
@@ -114,6 +115,11 @@ export function CartDrawer() {
                       </div>
                       <span className="font-display text-base text-fg">{formatPrice(i.price * i.qty)}</span>
                     </div>
+                    {setDiscountFor(i.price, i.qty, i.type) > 0 && (
+                      <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-volt/15 px-2 py-0.5 text-[11px] font-bold text-volt">
+                        <Check width={12} height={12} /> Set of 4 — save {formatPrice(setDiscountFor(i.price, i.qty, i.type))}
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}
@@ -127,6 +133,12 @@ export function CartDrawer() {
               <span>Subtotal</span>
               <span className="text-fg">{formatPrice(totals.subtotal)}</span>
             </div>
+            {totals.setDiscount > 0 && (
+              <div className="mt-1 flex items-center justify-between text-sm font-semibold text-volt">
+                <span>Set of 4 saving</span>
+                <span>−{formatPrice(totals.setDiscount)}</span>
+              </div>
+            )}
             <div className="mt-1 flex items-center justify-between text-sm text-muted">
               <span>Delivery</span>
               <span className={totals.delivery === 0 ? "text-pay" : "text-fg"}>

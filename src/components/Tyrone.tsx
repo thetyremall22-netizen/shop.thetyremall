@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Close, Arrow } from "./icons";
+import { Close, Arrow, WhatsApp } from "./icons";
 import { formatPrice } from "@/lib/format";
 import { cleanVoiceQuery } from "@/lib/voice-search";
+import { whatsappHref } from "@/lib/shop-config";
 import { MicButton } from "./MicButton";
 
 interface TyroneProduct {
@@ -142,15 +143,31 @@ export function Tyrone() {
     setTyping(true);
     const started = Date.now();
     let reply: Msg = { from: "bot", text: matchRule(t) };
+    let firstProduct: TyroneProduct | undefined;
     try {
       const res = await fetch(`/api/tyrone?msg=${encodeURIComponent(t)}`);
       const data = await res.json();
       if (Array.isArray(data.products) && data.products.length) {
         reply = { from: "bot", text: `${data.label}${data.note ? " — " + data.note : ""}:`, products: data.products };
+        firstProduct = data.products[0];
       }
     } catch {
       /* fall back to the keyword reply */
     }
+
+    // Record the Tyrone enquiry (DB + email to the shop) — fire and forget.
+    fetch("/api/enquiry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "tyrone",
+        message: t,
+        productSlug: firstProduct?.slug,
+        productName: firstProduct?.name,
+        price: firstProduct?.price,
+      }),
+      keepalive: true,
+    }).catch(() => {});
     // keep a natural little pause
     const wait = Math.max(0, 450 - (Date.now() - started));
     window.setTimeout(() => {
@@ -161,19 +178,32 @@ export function Tyrone() {
 
   return (
     <>
-      {/* launcher */}
+      {/* launcher dock — WhatsApp + Tyrone on a solid black row so page
+          content is never hidden behind the two chat buttons */}
       {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          className="glow-hover fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-full bg-volt py-2.5 pl-2.5 pr-4 text-volt-ink shadow-xl shadow-black/40 transition-transform hover:scale-105"
-          aria-label="Chat with Tyrone"
-        >
-          <span className="relative grid size-9 place-items-center rounded-full bg-ink text-volt">
-            <Avatar />
-            <span className="absolute -right-0.5 -top-0.5 size-3 rounded-full border-2 border-volt bg-pay" />
-          </span>
-          <span className="text-sm font-extrabold">Chat with Tyrone</span>
-        </button>
+        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-black p-1.5 shadow-xl shadow-black/50 ring-1 ring-white/10">
+          <a
+            href={whatsappHref("Hi The Tyre Mall! I'd like some help choosing tyres.")}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => { fetch("/api/enquiry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "whatsapp", message: "Floating WhatsApp enquiry" }), keepalive: true }).catch(() => {}); }}
+            className="grid size-11 place-items-center rounded-full bg-[#25D366] text-black transition-transform hover:scale-105"
+            aria-label="WhatsApp The Tyre Mall"
+          >
+            <WhatsApp width={24} height={24} />
+          </a>
+          <button
+            onClick={() => setOpen(true)}
+            className="flex items-center gap-2 rounded-full bg-volt py-2 pl-2 pr-4 text-volt-ink transition-transform hover:scale-105"
+            aria-label="Chat with Tyrone"
+          >
+            <span className="relative grid size-8 place-items-center rounded-full bg-ink text-volt">
+              <Avatar />
+              <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-volt bg-pay" />
+            </span>
+            <span className="text-sm font-extrabold">Chat with Tyrone</span>
+          </button>
+        </div>
       )}
 
       {/* panel */}

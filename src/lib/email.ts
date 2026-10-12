@@ -35,6 +35,27 @@ export async function sendMail(to: string, subject: string, html: string): Promi
   await getTransport().sendMail({ from: FROM, to, subject, html });
 }
 
+/** Notify the shop of a WhatsApp / Tyrone product enquiry. */
+export async function sendEnquiryEmail(e: {
+  type: "whatsapp" | "tyrone";
+  productName?: string; sku?: string; price?: number; productUrl?: string; message?: string;
+}): Promise<void> {
+  const rows: [string, string][] = [];
+  if (e.productName) rows.push(["Product", e.productName]);
+  if (e.sku) rows.push(["SKU", e.sku]);
+  if (e.price != null) rows.push(["Price", `R${(e.price / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}`]);
+  if (e.productUrl) rows.push(["Link", `<a href="${e.productUrl}">${e.productUrl}</a>`]);
+  if (e.message) rows.push(["Message", e.message]);
+  const table = rows.map(([k, v]) => `<tr><td style="padding:4px 0;color:#6b7280">${k}</td><td style="padding:4px 0 4px 16px;font-weight:600">${v}</td></tr>`).join("");
+  const label = e.type === "whatsapp" ? "WhatsApp product enquiry" : "Tyrone chat enquiry";
+  await sendMail(
+    SHOP_EMAIL,
+    `${label}${e.productName ? ` — ${e.productName}` : ""}`,
+    layout(label, `<p style="margin:0 0 12px;font-size:14px">A customer sent a ${label.toLowerCase()} from the website:</p>
+      <table role="presentation" style="font-size:14px;border-collapse:collapse">${table}</table>`)
+  );
+}
+
 // ---- formatting helpers -----------------------------------------------------
 const zar = (minor: number) =>
   "R" + (minor / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

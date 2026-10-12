@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart, type CartItem } from "@/lib/cart";
 import { formatPrice } from "@/lib/format";
-import { setDiscountFor, setPriceOf4, SET_OF_4_DISCOUNT } from "@/lib/pricing";
+import { setDiscountFor, setPriceOf4, SET_OF_4_DISCOUNT, hasSetPricing } from "@/lib/pricing";
+import { WhatsAppButton } from "./WhatsAppButton";
 import {
   FITMENT_STORES,
   FREE_DELIVERY_MIN_TYRES,
@@ -34,7 +35,7 @@ function StepLabel({ n, children }: { n: number; children: React.ReactNode }) {
   );
 }
 
-export function ProductCustomiser({ item, inStock }: { item: Item; inStock: boolean }) {
+export function ProductCustomiser({ item, inStock, sku, size }: { item: Item; inStock: boolean; sku?: string; size?: string }) {
   const router = useRouter();
   const { add, setDelivery, setFitment, setFitmentDate } = useCart();
   const isTyre = item.type === "tyre";
@@ -219,6 +220,15 @@ export function ProductCustomiser({ item, inStock }: { item: Item; inStock: bool
         <button disabled={!inStock} onClick={commit} className="btn btn-dark py-3.5 text-base disabled:opacity-50"><Cart width={18} height={18} /> Add to cart</button>
         <button disabled={!inStock} onClick={() => { commit(); router.push("/checkout"); }} className="btn btn-volt py-3.5 text-base disabled:opacity-50"><Bolt width={18} height={18} /> Buy now</button>
       </div>
+      <WhatsAppButton
+        className="w-full py-3.5 text-base"
+        slug={item.slug}
+        name={item.name}
+        sku={sku}
+        size={size}
+        price={item.price}
+        setPrice={hasSetPricing(item.type) ? setPriceOf4(item.price) : undefined}
+      />
       {!inStock && <p className="text-center text-sm text-sale">Currently out of stock</p>}
     </div>
   );

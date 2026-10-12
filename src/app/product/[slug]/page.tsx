@@ -211,6 +211,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <div className="mt-6 border-t border-line pt-6">
             <ProductCustomiser
               inStock={inStock}
+              sku={p.sku}
+              size={p.specs.size}
               item={{ id: p.id, slug: p.slug, name: p.name, brand: p.brand, image: p.thumb ?? p.image, price: price, type: p.type }}
             />
           </div>

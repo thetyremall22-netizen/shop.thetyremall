@@ -161,12 +161,17 @@ function FilterBody({
 
 function CheckRow({ checked, label, onChange }: { checked: boolean; label: string; onChange: () => void }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2.5 py-1 text-sm" onClick={onChange}>
+    <button
+      type="button"
+      onClick={onChange}
+      aria-pressed={checked}
+      className="flex w-full items-center gap-2.5 rounded-md px-1.5 py-2 text-left text-sm transition-colors hover:bg-surface"
+    >
       <span className={`grid size-4 shrink-0 place-items-center rounded border ${checked ? "border-volt bg-volt" : "border-line-2"}`}>
         {checked && <span className="size-2 rounded-[2px] bg-volt-ink" />}
       </span>
-      <span className={checked ? "font-semibold text-fg" : "text-muted hover:text-fg"}>{label}</span>
-    </label>
+      <span className={checked ? "font-semibold text-fg" : "text-muted"}>{label}</span>
+    </button>
   );
 }
 
@@ -195,16 +200,18 @@ function MiniSelect({ label, value, options, onChange }: { label: string; value:
   );
 }
 
-function Radio({ name, checked, label, onChange }: { name: string; checked: boolean; label: string; onChange: () => void }) {
+function Radio({ checked, label, onChange }: { name?: string; checked: boolean; label: string; onChange: () => void }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2.5 py-1 text-sm">
-      <span
-        onClick={onChange}
-        className={`grid size-4 shrink-0 place-items-center rounded-full border ${checked ? "border-volt bg-volt" : "border-line-2"}`}
-      >
+    <button
+      type="button"
+      onClick={onChange}
+      aria-pressed={checked}
+      className="flex w-full items-center gap-2.5 rounded-md px-1.5 py-2 text-left text-sm transition-colors hover:bg-surface"
+    >
+      <span className={`grid size-4 shrink-0 place-items-center rounded-full border ${checked ? "border-volt bg-volt" : "border-line-2"}`}>
         {checked && <span className="size-1.5 rounded-full bg-volt-ink" />}
       </span>
-      <span onClick={onChange} className={checked ? "font-semibold text-fg" : "text-muted hover:text-fg"}>{label}</span>
-    </label>
+      <span className={checked ? "font-semibold text-fg" : "text-muted"}>{label}</span>
+    </button>
   );
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { listProducts, type AdminFilter } from "@/lib/db/queries";
+import { ProductsToolbar } from "@/components/admin/ProductsToolbar";
 
 const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2 });
 
@@ -38,6 +39,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
           <button className="btn btn-volt h-9 px-4 text-sm">Search</button>
         </form>
       </div>
+      <div className="mt-3"><ProductsToolbar /></div>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {filters.map((f) => (

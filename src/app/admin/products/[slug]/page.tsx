@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ProductEditForm } from "@/components/admin/ProductEditForm";
+import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
 import { getProductRow } from "@/lib/db/queries";
 
 export const instant = false;
@@ -35,9 +36,12 @@ export default async function AdminProductEdit({ params }: { params: Promise<{ s
         />
       </div>
 
-      <Link href={`/product/${p.slug}`} target="_blank" className="mt-4 inline-block text-sm font-semibold text-muted hover:text-volt">
-        View on store ↗
-      </Link>
+      <div className="mt-5 flex items-center justify-between gap-4 border-t border-line pt-4">
+        <Link href={`/product/${p.slug}`} target="_blank" className="text-sm font-semibold text-muted hover:text-volt">
+          View on store ↗
+        </Link>
+        <DeleteProductButton slug={p.slug} name={p.name} />
+      </div>
     </AdminShell>
   );
 }

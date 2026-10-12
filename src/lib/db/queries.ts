@@ -113,6 +113,90 @@ export async function updateProductFields(slug: string, patch: ProductPatch): Pr
   await db.update(schema.products).set({ ...patch, updatedAt: Date.now() }).where(eq(schema.products.slug, slug));
 }
 
+export async function getAllProducts() {
+  return db.select().from(schema.products).orderBy(schema.products.name);
+}
+
+export interface NewProduct {
+  slug: string;
+  name: string;
+  brand?: string;
+  type?: string;
+  sku?: string;
+  regularPrice: number;
+  salePrice?: number;
+  onSale?: boolean;
+  stockQty?: number;
+  lowStockThreshold?: number;
+  image?: string | null;
+  categories?: string[];
+  specs?: Record<string, string>;
+  shortDescription?: string;
+  description?: string;
+  visible?: boolean;
+}
+
+export async function createProduct(p: NewProduct): Promise<{ ok: boolean; error?: string }> {
+  const existing = await getProductRow(p.slug);
+  if (existing) return { ok: false, error: "A product with that slug already exists." };
+  const id = Math.floor(Date.now() / 1000) * 1000 + Math.floor(Math.random() * 1000);
+  const onSale = !!p.onSale && (p.salePrice ?? 0) > 0 && (p.salePrice ?? 0) < p.regularPrice;
+  await db.insert(schema.products).values({
+    id,
+    slug: p.slug,
+    name: p.name,
+    brand: p.brand ?? "",
+    type: p.type ?? "tyre",
+    sku: p.sku ?? "",
+    price: onSale ? (p.salePrice ?? p.regularPrice) : p.regularPrice,
+    regularPrice: p.regularPrice,
+    salePrice: p.salePrice ?? p.regularPrice,
+    onSale,
+    stockQty: p.stockQty ?? 0,
+    lowStockThreshold: p.lowStockThreshold ?? 4,
+    image: p.image ?? "/brand/placeholder-tyre.webp",
+    categories: JSON.stringify(p.categories ?? []),
+    specs: JSON.stringify(p.specs ?? {}),
+    shortDescription: p.shortDescription ?? "",
+    description: p.description ?? "",
+    visible: p.visible ?? true,
+    updatedAt: Date.now(),
+  });
+  return { ok: true };
+}
+
+export async function deleteProduct(slug: string): Promise<void> {
+  await db.delete(schema.products).where(eq(schema.products.slug, slug));
+}
+
+/** Bulk update price/stock/sale/visibility by slug or SKU. Returns counts. */
+export async function bulkUpsert(rows: Record<string, string>[]): Promise<{ updated: number; skipped: number }> {
+  let updated = 0, skipped = 0;
+  for (const r of rows) {
+    const slug = (r.slug || "").trim();
+    const sku = (r.sku || "").trim();
+    let target = slug ? await getProductRow(slug) : null;
+    if (!target && sku) {
+      const bySku = await db.select().from(schema.products).where(eq(schema.products.sku, sku)).limit(1);
+      target = bySku[0] ?? null;
+    }
+    if (!target) { skipped++; continue; }
+    const patch: ProductPatch = {};
+    const n = (v: string) => (v !== undefined && v !== "" && isFinite(Number(v)) ? Math.max(0, Math.round(Number(v))) : undefined);
+    if (r.regular_price !== undefined) patch.price = n(r.regular_price);
+    if (r.sale_price !== undefined) patch.salePrice = n(r.sale_price);
+    if (r.stock !== undefined) patch.stockQty = n(r.stock);
+    if (r.low_stock_threshold !== undefined) patch.lowStockThreshold = n(r.low_stock_threshold);
+    if (r.on_sale !== undefined) patch.onSale = /^(1|true|yes)$/i.test(r.on_sale.trim());
+    if (r.visible !== undefined) patch.visible = /^(1|true|yes)$/i.test(r.visible.trim());
+    if (patch.onSale && patch.salePrice !== undefined) patch.price = patch.salePrice;
+    if (patch.onSale === false) patch.price = patch.price ?? target.regularPrice;
+    await updateProductFields(target.slug, patch);
+    updated++;
+  }
+  return { updated, skipped };
+}
+
 export async function dashboardStats() {
   const [tot, inStock, low, out, onSale] = await Promise.all([
     db.select({ c: sql<number>`count(*)` }).from(schema.products),

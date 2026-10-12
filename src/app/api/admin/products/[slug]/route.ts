@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin-auth";
-import { updateProductFields, getProductRow, type ProductPatch } from "@/lib/db/queries";
+import { updateProductFields, getProductRow, deleteProduct, type ProductPatch } from "@/lib/db/queries";
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const { slug } = await params;
+  await deleteProduct(slug);
+  return NextResponse.json({ ok: true });
+}
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

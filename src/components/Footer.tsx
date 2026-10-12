@@ -60,6 +60,7 @@ export function Footer() {
             <li><Link href="/returns" className="hover:text-volt">Returns &amp; Refunds</Link></li>
             <li><Link href="/delivery-areas" className="hover:text-volt">Free delivery areas</Link></li>
             <li><Link href="/radar-protect" className="hover:text-volt">Radar Protect</Link></li>
+            <li><Link href="/compare" className="hover:text-volt">Compare tyres</Link></li>
             <li><Link href="/contact" className="hover:text-volt">Contact us</Link></li>
           </ul>
         </div>

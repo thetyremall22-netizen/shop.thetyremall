@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { Anton, Inter } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/lib/cart";
+import { CompareProvider } from "@/lib/compare";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
+import { CompareBar } from "@/components/CompareBar";
 import { Tyrone } from "@/components/Tyrone";
 import { ScrollToTop } from "@/components/ScrollToTop";
 
@@ -38,12 +40,15 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${anton.variable}`}>
       <body>
         <CartProvider>
-          <ScrollToTop />
-          <Header />
-          <main>{children}</main>
-          <Footer />
-          <CartDrawer />
-          <Tyrone />
+          <CompareProvider>
+            <ScrollToTop />
+            <Header />
+            <main>{children}</main>
+            <Footer />
+            <CartDrawer />
+            <CompareBar />
+            <Tyrone />
+          </CompareProvider>
         </CartProvider>
       </body>
     </html>

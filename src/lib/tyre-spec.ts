@@ -53,7 +53,9 @@ function tier(brand: string): TyreSpec["range"] {
   return "Budget";
 }
 
-export function parseTyreSpec(p: Product): TyreSpec {
+type SpecInput = Pick<Product, "name" | "brand" | "specs" | "categories">;
+
+export function parseTyreSpec(p: SpecInput): TyreSpec {
   const name = (p.name || "").toUpperCase();
   const s = p.specs || {};
 
@@ -106,7 +108,7 @@ export function parseTyreSpec(p: Product): TyreSpec {
 }
 
 /** Short bullet "key features" derived from the parsed spec + category. */
-export function keyFeatures(p: Product, spec: TyreSpec): string[] {
+export function keyFeatures(p: Pick<Product, "categories">, spec: TyreSpec): string[] {
   const out: string[] = [];
   const cat = p.categories;
   if (cat.includes("uhp-tyres")) out.push("Ultra-high-performance — built for grip and high-speed stability");

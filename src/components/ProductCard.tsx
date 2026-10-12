@@ -3,7 +3,17 @@ import Link from "next/link";
 import type { Product } from "@/lib/types";
 import { formatPrice, formatPriceShort, discountPct } from "@/lib/format";
 import { hasSetPricing, setPriceOf4 } from "@/lib/pricing";
+import { CompareToggle } from "./CompareToggle";
+import type { CompareItem } from "@/lib/compare";
 import { Star, Arrow } from "./icons";
+
+function toCompareItem(p: Product): CompareItem {
+  return {
+    id: p.id, slug: p.slug, name: p.name, brand: p.brand, type: p.type,
+    price: p.price, regularPrice: p.regularPrice, salePrice: p.salePrice, onSale: p.onSale,
+    image: p.image, specs: p.specs, categories: p.categories, inStock: p.inStock, sku: p.sku,
+  };
+}
 
 // Brands we have a real logo image for.
 const LOGO_BRANDS = new Set([
@@ -94,6 +104,12 @@ export function ProductCard({ p }: { p: Product }) {
             <div className="font-display text-xl text-[#14171a]">{formatPrice(p.price)}</div>
           </div>
         )}
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <span className={`text-[11px] font-bold ${p.inStock ? "text-pay-ink" : "text-sale"}`}>
+            {p.inStock ? "In stock" : "Out of stock"}
+          </span>
+          <CompareToggle item={toCompareItem(p)} />
+        </div>
         {p.onSale && pct > 0 && (
           <div className="mt-1.5 inline-flex items-center gap-1 self-start rounded-full bg-sale/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-sale">
             🔥 On sale — save {pct}%

@@ -130,10 +130,23 @@ export function Tyrone() {
   const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", text: GREETING }]);
   const [typing, setTyping] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const lastMsgRef = useRef<HTMLDivElement>(null);
+
+  // When a new bot reply arrives, bring the START of that reply to the top of
+  // the chat so a long answer reads from the beginning (no scrolling up).
+  // For the user's own message / typing, keep the latest in view at the bottom.
+  useEffect(() => {
+    const last = msgs[msgs.length - 1];
+    if (last?.from === "bot" && msgs.length > 1) {
+      lastMsgRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      endRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [msgs, open]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs, typing, open]);
+    if (typing) endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [typing]);
 
   // Let other parts of the site open Tyrone (e.g. the no-results help panel)
   // and optionally have him greet with a specific message.
@@ -253,7 +266,11 @@ export function Tyrone() {
           {/* messages */}
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             {msgs.map((m, i) => (
-              <div key={i} className={`flex flex-col ${m.from === "user" ? "items-end" : "items-start"}`}>
+              <div
+                key={i}
+                ref={i === msgs.length - 1 ? lastMsgRef : undefined}
+                className={`flex scroll-mt-2 flex-col ${m.from === "user" ? "items-end" : "items-start"}`}
+              >
                 <div
                   className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                     m.from === "user"

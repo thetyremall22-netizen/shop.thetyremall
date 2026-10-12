@@ -132,13 +132,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <div className="mt-5 grid gap-8 lg:grid-cols-2">
         {/* gallery */}
         <div className="lg:sticky lg:top-40 lg:h-fit">
-          <div className="relative mx-auto w-full max-w-[420px] overflow-hidden rounded-3xl bg-[radial-gradient(75%_75%_at_50%_42%,#ffffff_0%,#f2f4f6_68%,#e7eaed_100%)] shadow-2xl shadow-black/50 ring-1 ring-black/5">
-            <div className="relative aspect-square">
+          <div className="relative w-full overflow-hidden rounded-3xl bg-[radial-gradient(75%_75%_at_50%_42%,#ffffff_0%,#f2f4f6_68%,#e7eaed_100%)] shadow-2xl shadow-black/50 ring-1 ring-black/5">
+            <div className="relative aspect-[3/2]">
               {/* floating ground shadow */}
               <div className="float-shadow absolute bottom-10 left-1/2 h-5 w-3/5 rounded-[50%] bg-black/35 blur-xl" />
               {/* breathing tyre (transparent webp sits straight on the plate) */}
               {p.image && (
-                <Image src={p.image} alt={p.name} fill priority sizes="(max-width:1024px) 100vw, 420px" className="float-breathe object-contain p-7" />
+                <Image src={p.image} alt={p.name} fill priority sizes="(max-width:1024px) 100vw, 50vw" className="float-breathe object-contain p-7" />
               )}
               <div className="absolute left-3 top-3 flex flex-col gap-2">
                 {onSale && pct > 0 && <span className="badge badge-sale text-sm">SAVE {pct}%</span>}

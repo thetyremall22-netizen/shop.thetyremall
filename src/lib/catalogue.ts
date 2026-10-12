@@ -134,6 +134,33 @@ export async function relatedProducts(p: Product, limit = 6): Promise<Product[]>
     .slice(0, limit);
 }
 
+/** Suggested tyres: same size, different brand (item 9). Falls back to same
+ *  width + rim, then same category, so the rail is never empty. */
+export async function similarTyres(p: Product, limit = 8): Promise<Product[]> {
+  const products = await getProducts();
+  const pool = products.filter((o) => o.id !== p.id && o.type === "tyre" && o.image && o.inStock);
+  const size = p.specs.size;
+  const diffBrand = (o: Product) => o.brand.toLowerCase() !== p.brand.toLowerCase();
+
+  const sameSize = size ? pool.filter((o) => o.specs.size === size && diffBrand(o)) : [];
+  const sameFit = pool.filter(
+    (o) => o.specs.width === p.specs.width && o.specs.rim === p.specs.rim && diffBrand(o)
+  );
+  const sameCat = pool.filter((o) => o.categories.some((c) => p.categories.includes(c)) && diffBrand(o));
+
+  const out: Product[] = [];
+  const seen = new Set<number>([p.id]);
+  for (const list of [sameSize, sameFit, sameCat]) {
+    for (const o of list) {
+      if (seen.has(o.id)) continue;
+      seen.add(o.id);
+      out.push(o);
+      if (out.length >= limit) return out;
+    }
+  }
+  return out;
+}
+
 export async function bestSellers(limit = 10): Promise<Product[]> {
   const products = await getProducts();
   return products.filter((p) => p.inStock && p.image).slice(0, limit);

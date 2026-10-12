@@ -27,6 +27,25 @@ export function getModels(make: string): string[] {
   return [...new Set(vehicles.filter((v) => v.make.toLowerCase() === m).map((v) => v.model))].sort();
 }
 
+export interface VehicleFit { make: string; model: string; years: string }
+
+/** Vehicles whose factory tyre size matches `size` (e.g. "205/55R16"). */
+export function vehiclesForSize(size: string, limit = 12): VehicleFit[] {
+  const key = (size || "").replace(/\s+/g, "").toUpperCase();
+  if (!/^\d{2,3}\/\d{2}R\d{2}$/.test(key)) return [];
+  const seen = new Set<string>();
+  const out: VehicleFit[] = [];
+  for (const v of vehicles) {
+    if (!v.tyres?.some((t) => t.replace(/\s+/g, "").toUpperCase() === key)) continue;
+    const id = `${v.make}|${v.model}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({ make: v.make, model: v.model, years: v.label });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 export function getVariants(make: string, model: string): Vehicle[] {
   const mk = make.toLowerCase(), md = model.toLowerCase();
   return vehicles

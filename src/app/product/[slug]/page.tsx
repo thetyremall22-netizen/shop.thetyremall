@@ -4,13 +4,16 @@ import { notFound } from "next/navigation";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Metadata } from "next";
-import { getProduct, relatedProducts, dealProducts } from "@/lib/catalogue";
+import { getProduct, relatedProducts, dealProducts, similarTyres } from "@/lib/catalogue";
 import { getLive } from "@/lib/db/queries";
+import { vehiclesForSize } from "@/lib/vehicles";
 import { formatPrice, discountPct } from "@/lib/format";
 import { hasSetPricing, setPriceOf4 } from "@/lib/pricing";
+import { parseTyreSpec, keyFeatures } from "@/lib/tyre-spec";
 import { ProductCustomiser } from "@/components/ProductCustomiser";
 import { ProductRailCard } from "@/components/ProductCard";
 import { YouMayLike } from "@/components/YouMayLike";
+import { TyreSizeExplainer } from "@/components/TyreSizeExplainer";
 import { Chevron, Check, Truck, Shield, Bolt, Star } from "@/components/icons";
 
 export const instant = false;
@@ -70,14 +73,39 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     size: r.specs.size,
     onSale: r.onSale,
   }));
-  const specs = [
-    ["Brand", p.brand],
-    ["Size", p.specs.size],
-    ["Width", p.specs.width],
-    ["Profile", p.specs.profile],
-    ["Rim", p.specs.rim ? `${p.specs.rim}"` : undefined],
-    ["SKU", p.sku],
-  ].filter(([, v]) => v) as [string, string][];
+  const isTyre = p.type === "tyre";
+  const tyreSpec = parseTyreSpec(p);
+  const features = isTyre ? keyFeatures(p, tyreSpec) : [];
+  const fits = isTyre && tyreSpec.size ? vehiclesForSize(tyreSpec.size, 12) : [];
+  const suggested = isTyre ? await similarTyres(p, 8) : [];
+
+  const kmh = (v?: string) => (v === "240+" ? "240+" : v);
+  const specs = (
+    isTyre
+      ? [
+          ["Brand", p.brand],
+          tyreSpec.pattern ? ["Pattern", tyreSpec.pattern] : null,
+          ["Size", tyreSpec.size ?? ""],
+          ["Range", tyreSpec.range],
+          tyreSpec.loadIndex
+            ? ["Load index", tyreSpec.loadKg ? `${tyreSpec.loadIndex} · ${tyreSpec.loadKg} kg` : tyreSpec.loadIndex]
+            : null,
+          tyreSpec.speed
+            ? ["Speed rating", tyreSpec.speedKmh ? `${tyreSpec.speed} · ${kmh(tyreSpec.speedKmh)} km/h` : tyreSpec.speed]
+            : null,
+          ["Run-flat", tyreSpec.runFlat ? "Yes" : "No"],
+          ["Extra load", tyreSpec.extraLoad ? "Yes" : "No"],
+          p.sku ? ["SKU", p.sku] : null,
+        ]
+      : [
+          ["Brand", p.brand],
+          p.specs.size ? ["Size", p.specs.size] : null,
+          p.specs.rim ? ["Rim", `${p.specs.rim}"`] : null,
+          p.specs.width ? ["Width", p.specs.width] : null,
+          p.specs.pcd ? ["PCD", p.specs.pcd] : null,
+          p.sku ? ["SKU", p.sku] : null,
+        ]
+  ).filter(Boolean) as [string, string][];
 
   return (
     <div className="container-x py-6 lg:py-10">
@@ -194,32 +222,72 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </div>
 
       {/* details */}
-      <div className="mt-12 grid gap-8 lg:grid-cols-[1fr_320px]">
+      <div className="mt-12 grid gap-8 lg:grid-cols-[1fr_340px]">
         <div>
-          <h2 className="font-display text-2xl">Description</h2>
+          {features.length > 0 && (
+            <>
+              <h2 className="font-display text-2xl">Key features</h2>
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                {features.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-muted">
+                    <Check width={16} height={16} className="mt-0.5 shrink-0 text-volt" /> {f}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <h2 className="mt-8 font-display text-2xl">Description</h2>
           <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted">
             {p.description || p.shortDescription || "Full product details available on request."}
           </p>
         </div>
         <div>
-          <h2 className="font-display text-2xl">Specs</h2>
+          <h2 className="font-display text-2xl">Specifications</h2>
           <dl className="mt-3 overflow-hidden rounded-xl border border-line">
             {specs.map(([k, v], i) => (
-              <div key={k} className={`flex justify-between px-4 py-2.5 text-sm ${i % 2 ? "bg-surface" : "bg-ink-2"}`}>
-                <dt className="text-muted">{k}</dt>
-                <dd className="font-semibold text-fg">{v}</dd>
+              <div key={k} className={`flex justify-between gap-3 px-4 py-2.5 text-sm ${i % 2 ? "bg-surface" : "bg-ink-2"}`}>
+                <dt className="shrink-0 text-muted">{k}</dt>
+                <dd className="text-right font-semibold text-fg">{v}</dd>
               </div>
             ))}
           </dl>
         </div>
       </div>
 
-      {/* related */}
-      {related.length > 0 && (
+      {/* how to read this size (tyres) */}
+      {isTyre && <TyreSizeExplainer spec={tyreSpec} />}
+
+      {/* fits these vehicles (tyres) */}
+      {fits.length > 0 && (
+        <section className="mt-12">
+          <h2 className="font-display text-2xl sm:text-3xl">
+            Fits these vehicles <span className="text-base font-normal text-muted">factory size match</span>
+          </h2>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {fits.map((v) => (
+              <span key={`${v.make}-${v.model}`} className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm">
+                <span className="font-semibold text-fg">{v.make} {v.model}</span>
+                {v.years && <span className="ml-1.5 text-xs text-muted">{v.years}</span>}
+              </span>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-muted">
+            Always confirm against your vehicle&apos;s door-jamb placard — alternative fitments may also apply.
+          </p>
+        </section>
+      )}
+
+      {/* suggested tyres from other brands (item 9) / related */}
+      {(suggested.length > 0 ? suggested : related).length > 0 && (
         <section className="mt-14">
-          <h2 className="font-display text-2xl sm:text-3xl">You might also like</h2>
+          <h2 className="font-display text-2xl sm:text-3xl">
+            {suggested.length > 0 ? "Suggested tyres — other brands" : "You might also like"}
+          </h2>
+          {suggested.length > 0 && tyreSpec.size && (
+            <p className="mt-1 text-sm text-muted">Same {tyreSpec.size} size, different brands &amp; price points.</p>
+          )}
           <div className="no-scrollbar mt-5 flex gap-3 overflow-x-auto pb-2">
-            {related.map((r) => <ProductRailCard key={r.id} p={r} />)}
+            {(suggested.length > 0 ? suggested : related).map((r) => <ProductRailCard key={r.id} p={r} />)}
           </div>
         </section>
       )}

@@ -12,6 +12,8 @@ import { hasSetPricing, setPriceOf4 } from "@/lib/pricing";
 import { parseTyreSpec, keyFeatures } from "@/lib/tyre-spec";
 import { ProductCustomiser } from "@/components/ProductCustomiser";
 import { ProductRailCard } from "@/components/ProductCard";
+import { CompareToggle } from "@/components/CompareToggle";
+import type { CompareItem } from "@/lib/compare";
 import { YouMayLike } from "@/components/YouMayLike";
 import { TyreSizeExplainer } from "@/components/TyreSizeExplainer";
 import { Chevron, Check, Truck, Shield, Bolt, Star } from "@/components/icons";
@@ -52,6 +54,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const pct = discountPct(regularPrice, salePrice);
   const brandSrc = brandLogoSrc(p.brand);
   const related = await relatedProducts(p, 6);
+
+  const compareItem: CompareItem = {
+    id: p.id, slug: p.slug, name: p.name, brand: p.brand, type: p.type,
+    price, regularPrice, salePrice, onSale,
+    image: p.image, specs: p.specs, categories: p.categories, inStock, sku: p.sku,
+  };
 
   // "We think you'll like these" — 4 tyres, guaranteed one on sale
   let likePicks = (await relatedProducts(p, 16))
@@ -161,7 +169,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
           <h1 className="mt-2 font-display text-3xl leading-tight sm:text-4xl">{p.name}</h1>
 
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             {inStock ? (
               <span className="flex items-center gap-1 text-sm font-semibold text-pay">
                 <Check width={15} height={15} /> In stock{lowStock ? ` · only ${lowStock} left` : ""}
@@ -172,6 +180,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             {p.reviews > 0 && (
               <span className="flex items-center gap-1 text-sm text-amber-400"><Star width={14} height={14} /> {p.rating} ({p.reviews})</span>
             )}
+            <CompareToggle item={compareItem} dark labelAdd="Add to compare" className="text-sm" />
           </div>
 
           <div className="mt-4 flex items-end justify-between gap-4">

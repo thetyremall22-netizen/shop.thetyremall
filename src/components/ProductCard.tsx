@@ -111,7 +111,7 @@ export function ProductCard({ p }: { p: Product }) {
           <span className={`text-[11px] font-bold ${p.inStock ? "text-pay-ink" : "text-sale"}`}>
             {p.inStock ? "In stock" : "Out of stock"}
           </span>
-          <CompareToggle item={toCompareItem(p)} />
+          <CompareToggle item={toCompareItem(p)} className="text-[11px]" />
         </div>
         {p.onSale && pct > 0 && (
           <div className="mt-1.5 inline-flex items-center gap-1 self-start rounded-full bg-sale/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-sale">

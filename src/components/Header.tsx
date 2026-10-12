@@ -6,6 +6,7 @@ import { Logo } from "./Logo";
 import { MegaSearch } from "./MegaSearch";
 import { BrandTile } from "./BrandTile";
 import { Cart, Menu, Close, Bolt, User, Heart, Chevron } from "./icons";
+import { ThemeToggle } from "./ThemeToggle";
 import { PROMOS, NAV_PRIMARY } from "@/lib/nav";
 import { BRANDS } from "@/lib/brands";
 import { useCart } from "@/lib/cart";
@@ -109,6 +110,7 @@ export function Header() {
 
           {/* right icons */}
           <div className="ml-auto flex items-center gap-1">
+            <ThemeToggle />
             <Link href="/coming-soon?for=Account" className="grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Account">
               <User />
             </Link>

@@ -44,6 +44,23 @@
   color-scheme: dark;
 }
 
+/* ---- Light theme (opt-in via data-theme="light") ---------------------------
+   Remaps the neutral carbon palette to light surfaces while keeping the volt
+   brand accent and the white product cards unchanged. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-ink: #f2f4f7;
+  --color-ink-2: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef1f4;
+  --color-line: #e3e7eb;
+  --color-line-2: #ccd2d9;
+  --color-fg: #14171a;
+  --color-muted: #5c646d;
+  --color-faint: #98a0a9;
+  --color-volt-2: #5f8f2a;
+}
+
 * {
   border-color: var(--color-line);
 }
@@ -716,3 +733,21 @@ body::before {
 
 /* set-of-4 price on light product cards — readable brand green */
 .price-set { color: #3f7d00; }
+
+/* Light-theme override: the chrome (silver) heading gradient is invisible on
+   white, so switch it to a dark steel gradient when light mode is on. */
+:root[data-theme="light"] .text-chrome {
+  background: linear-gradient(100deg, #3a4049 0%, #767d86 26%, #20242a 50%, #767d86 74%, #3a4049 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.12));
+}
+
+/* The wordmark logo is white/green on transparent (for dark backgrounds). In
+   light mode, sit it on a small dark chip so "THE TYRE" stays visible. */
+:root[data-theme="light"] .ttm-logo {
+  background: #0a0b0d;
+  border-radius: 10px;
+  padding: 3px 9px;
+}

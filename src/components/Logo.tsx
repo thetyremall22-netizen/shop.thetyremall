@@ -4,7 +4,7 @@ import Image from "next/image";
 /** Official The Tyre Mall logo (white/green on transparent — for dark backgrounds). */
 export function Logo({ className = "", priority = false }: { className?: string; priority?: boolean }) {
   return (
-    <Link href="/" aria-label="The Tyre Mall home" className={`inline-flex items-center ${className}`}>
+    <Link href="/" aria-label="The Tyre Mall home" className={`ttm-logo inline-flex items-center ${className}`}>
       <Image
         src="/brand/logo-real.webp"
         alt="The Tyre Mall"

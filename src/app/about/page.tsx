@@ -92,7 +92,7 @@ export default function AboutPage() {
 
       {/* meet the team */}
       <div id="team" className="mt-14 scroll-mt-24">
-        <span className="eyebrow">The people behind the Mall</span>
+        <span className="eyebrow">The people behind The Tyre Mall</span>
         <h2 className="skew-italic mt-1 font-display text-4xl sm:text-5xl">
           <span className="text-chrome">MEET THE</span> <span className="text-volt-grad">TEAM</span>
         </h2>

@@ -44,7 +44,7 @@ export function Hero() {
           </div>
 
           <p className="mt-5 max-w-md text-base font-semibold text-fg drop-shadow sm:text-lg">
-            7,000+ tyres &amp; mags, priced to move. <span className="text-volt">Nobody beats the Mall.</span>
+            7,000+ tyres &amp; mags, priced to move. <span className="text-volt">Nobody beats The Tyre Mall.</span>
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-4">

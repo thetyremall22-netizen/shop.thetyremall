@@ -37,7 +37,14 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${anton.variable}`}>
+    <html lang="en" className={`${inter.variable} ${anton.variable}`} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem('ttm-theme')==='light')document.documentElement.dataset.theme='light';}catch(e){}`,
+          }}
+        />
+      </head>
       <body>
         <CartProvider>
           <CompareProvider>

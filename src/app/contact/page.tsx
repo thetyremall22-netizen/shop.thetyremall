@@ -44,7 +44,7 @@ export default function ContactPage() {
           </div>
 
           <div className="card p-5">
-            <span className="eyebrow">Follow the Mall</span>
+            <span className="eyebrow">Follow The Tyre Mall</span>
             <div className="mt-2 flex flex-wrap gap-2">
               {SOCIALS.map((s) => (
                 <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm font-semibold text-fg transition-colors hover:border-volt hover:text-volt">

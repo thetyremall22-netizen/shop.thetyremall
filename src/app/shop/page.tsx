@@ -1,11 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { queryProducts, categories, meta, getCategory } from "@/lib/catalogue";
+import { detectTyreSize } from "@/lib/voice-search";
+import { findVehicle, factorySizes } from "@/lib/vehicles";
 import { ProductCard } from "@/components/ProductCard";
 import { ShopFilters } from "@/components/ShopFilters";
+import { ActiveFilterChips } from "@/components/ActiveFilterChips";
 import { SortSelect } from "@/components/SortSelect";
 import { ShopPromo } from "@/components/ShopPromo";
-import { Chevron } from "@/components/icons";
+import { Chevron, Truck } from "@/components/icons";
 
 export const metadata: Metadata = { title: "Shop tyres & mag wheels" };
 export const instant = false;
@@ -19,9 +22,26 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   const q = one(sp.q) ?? "";
   const category = one(sp.category);
   const type = one(sp.type) as "tyre" | "wheel" | undefined;
+  const priceNum = (v: string | undefined) => (v && !Number.isNaN(Number(v)) ? Number(v) : undefined);
+
+  // Item 18: a query that isn't a size but names a vehicle (e.g. "hilux",
+  // "toyota hilux 2021") shows that vehicle's factory-fitment tyres.
+  let vehicle: ReturnType<typeof findVehicle> = null;
+  let vehicleSizes: string[] | undefined;
+  if (q && !detectTyreSize(q)) {
+    vehicle = findVehicle(q);
+    if (vehicle) {
+      const hasYear = /\b(19|20)\d{2}\b/.test(q);
+      vehicleSizes = hasYear
+        ? [...new Set(vehicle.tyres.map((t) => t.replace(/\s+/g, "").toUpperCase()))].filter((s) => /^\d{2,3}\/\d{2}R\d{2}$/.test(s))
+        : factorySizes(vehicle.make, vehicle.model);
+      if (!vehicleSizes.length) { vehicle = null; vehicleSizes = undefined; }
+    }
+  }
 
   const result = await queryProducts({
-    q,
+    q: vehicle ? "" : q,
+    sizes: vehicleSizes,
     category,
     type,
     brand: one(sp.brand),
@@ -29,6 +49,10 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
     profile: one(sp.profile),
     rim: one(sp.rim),
     pcd: one(sp.pcd),
+    runFlat: one(sp.runflat) === "1",
+    extraLoad: one(sp.xl) === "1",
+    minPrice: priceNum(one(sp.min)),
+    maxPrice: priceNum(one(sp.max)),
     onSale: one(sp.onSale) === "1",
     sort: (one(sp.sort) as "relevance" | "price-asc" | "price-desc" | "name" | "newest") ?? "relevance",
     page,
@@ -36,15 +60,17 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   });
 
   const cat = category ? getCategory(category) : undefined;
-  const heading = q
-    ? `Results for “${q}”`
-    : cat
-      ? cat.name
-      : type === "wheel"
-        ? "Mag Wheels"
-        : one(sp.onSale) === "1"
-          ? "Hot Deals"
-          : "All Tyres & Wheels";
+  const heading = vehicle
+    ? `Tyres for your ${vehicle.make} ${vehicle.model}`
+    : q
+      ? `Results for “${q}”`
+      : cat
+        ? cat.name
+        : type === "wheel"
+          ? "Mag Wheels"
+          : one(sp.onSale) === "1"
+            ? "Hot Deals"
+            : "All Tyres & Wheels";
 
   // current query string (single-valued) for client filter controls + pagination
   const currentParams = new URLSearchParams();
@@ -78,6 +104,19 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
         <div className="hidden lg:block"><SortSelect search={searchStr} /></div>
       </div>
 
+      {vehicle && (
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-volt/30 bg-volt/10 px-4 py-3 text-sm">
+          <Truck width={18} height={18} className="text-volt" />
+          <span className="font-semibold text-fg">
+            Factory fitment for {vehicle.make} {vehicle.model}{vehicle.label ? ` (${vehicle.label})` : ""}:
+          </span>
+          <span className="text-muted">
+            {vehicleSizes?.map((s) => s.replace("R", " R")).join(" · ")}
+          </span>
+          <Link href="/shop" className="ml-auto text-xs font-bold text-volt hover:underline">Clear</Link>
+        </div>
+      )}
+
       <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
         {/* sidebar */}
         <aside className="lg:sticky lg:top-40 lg:h-fit">
@@ -97,6 +136,8 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
           <div className="mb-4 flex items-center justify-between lg:hidden">
             <SortSelect search={searchStr} />
           </div>
+
+          <ActiveFilterChips search={searchStr} categories={categories} />
 
           {result.items.length === 0 ? (
             <div className="card grid place-items-center p-16 text-center">

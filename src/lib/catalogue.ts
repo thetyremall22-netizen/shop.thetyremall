@@ -5,6 +5,8 @@ import metaData from "@/data/meta.json";
 import { cacheLife } from "next/cache";
 import type { Product, Category, CatalogueMeta, ProductType } from "./types";
 import { db, schema } from "./db";
+import { detectTyreSize } from "./voice-search";
+import { parseTyreSpec } from "./tyre-spec";
 
 const snapshot = productsData as unknown as Product[];
 export const categories = categoriesData as unknown as Category[];
@@ -18,6 +20,63 @@ export const dealCategories = categories.filter(
 
 export function getCategory(slug: string): Category | undefined {
   return catBySlug.get(slug);
+}
+
+// ---- search normalisation: sizes typed any way + brand spelling fixes --------
+const SPELL_DICT = [
+  ...new Set([
+    ...meta.brands.map((b) => b.name.toLowerCase()),
+    // extra tokens worth correcting towards
+    "bridgestone", "michelin", "continental", "pirelli", "goodyear", "dunlop",
+    "firestone", "yokohama", "falken", "bfgoodrich", "general", "sumitomo",
+    "hankook", "landsail", "windforce", "tracmax", "radar", "kapsen",
+    "runflat", "passenger", "commercial",
+  ]),
+].filter((w) => w.length >= 4);
+
+function lev(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+function correctToken(tok: string): string {
+  if (tok.length < 4) return tok;
+  let best = tok, bestD = Infinity;
+  for (const w of SPELL_DICT) {
+    const d = lev(tok, w);
+    if (d < bestD) { bestD = d; best = w; }
+    if (d === 0) return tok; // already a known word
+  }
+  const thr = Math.max(1, Math.floor(tok.length * 0.3));
+  return bestD > 0 && bestD <= thr ? best : tok;
+}
+
+/** Split a raw query into an optional canonical tyre size + spelling-fixed text terms. */
+function parseSearch(raw: string): { size: string | null; terms: string[] } {
+  const r = (raw || "").trim();
+  if (!r) return { size: null, terms: [] };
+  const size = detectTyreSize(r);
+  const text = size ? r.replace(/\d/g, " ") : r; // drop digits once a size is captured
+  const terms = text
+    .toLowerCase()
+    .split(/[\s/]+/)
+    .filter((t) => t.length >= 2)
+    .map(correctToken);
+  return { size, terms };
 }
 
 // ---- live product source (DB, cached) with snapshot fallback ----------------
@@ -63,6 +122,7 @@ export async function getProduct(slug: string): Promise<Product | undefined> {
 export interface Query {
   q?: string; category?: string; brand?: string; type?: "tyre" | "wheel";
   width?: string; profile?: string; rim?: string; pcd?: string;
+  sizes?: string[]; runFlat?: boolean; extraLoad?: boolean;
   minPrice?: number; maxPrice?: number; onSale?: boolean;
   sort?: "relevance" | "price-asc" | "price-desc" | "name" | "newest";
   page?: number; perPage?: number;
@@ -72,9 +132,10 @@ export interface QueryResult {
   facetBrands: { name: string; count: number }[];
 }
 
-function matchesText(p: Product, terms: string[]): boolean {
+function matches(p: Product, size: string | null, terms: string[]): boolean {
+  if (size && p.specs.size !== size) return false;
   if (!terms.length) return true;
-  const hay = `${p.name} ${p.brand} ${p.sku} ${p.specs.size ?? ""}`.toLowerCase();
+  const hay = `${p.name} ${p.brand} ${p.sku}`.toLowerCase();
   return terms.every((t) => hay.includes(t));
 }
 
@@ -82,10 +143,13 @@ export async function queryProducts(q: Query): Promise<QueryResult> {
   const products = await getProducts();
   const page = Math.max(1, q.page ?? 1);
   const perPage = q.perPage ?? 24;
-  const terms = (q.q ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+  const { size, terms } = parseSearch(q.q ?? "");
+  const sizeSet = q.sizes && q.sizes.length ? new Set(q.sizes) : null;
+  const needSpec = !!(q.runFlat || q.extraLoad);
 
   let items = products.filter((p) => {
-    if (!matchesText(p, terms)) return false;
+    if (!matches(p, size, terms)) return false;
+    if (sizeSet && !(p.specs.size && sizeSet.has(p.specs.size))) return false;
     if (q.category && !p.categories.includes(q.category)) return false;
     if (q.brand && p.brand.toLowerCase() !== q.brand.toLowerCase()) return false;
     if (q.type && p.type !== q.type) return false;
@@ -96,6 +160,11 @@ export async function queryProducts(q: Query): Promise<QueryResult> {
     if (q.onSale && !p.onSale) return false;
     if (q.minPrice != null && p.price < q.minPrice * 100) return false;
     if (q.maxPrice != null && p.price > q.maxPrice * 100) return false;
+    if (needSpec) {
+      const s = parseTyreSpec(p);
+      if (q.runFlat && !s.runFlat) return false;
+      if (q.extraLoad && !s.extraLoad) return false;
+    }
     return true;
   });
 
@@ -118,11 +187,11 @@ export async function queryProducts(q: Query): Promise<QueryResult> {
 
 export async function searchProducts(q: string, limit = 8): Promise<Product[]> {
   const products = await getProducts();
-  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
-  if (!terms.length) return [];
+  const { size, terms } = parseSearch(q);
+  if (!size && !terms.length) return [];
   const out: Product[] = [];
   for (const p of products) {
-    if (matchesText(p, terms)) { out.push(p); if (out.length >= limit) break; }
+    if (matches(p, size, terms)) { out.push(p); if (out.length >= limit) break; }
   }
   return out;
 }

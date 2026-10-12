@@ -76,7 +76,8 @@ function FilterBody({
   const setParam = useCallback((key: string, value: string | null) => setParams({ [key]: value }), [setParams]);
 
   const current = (k: string) => params.get(k) ?? "";
-  const activeCount = ["category", "brand", "width", "profile", "rim", "type", "onSale", "q"].filter((k) => params.get(k)).length;
+  const activeCount = ["category", "brand", "width", "profile", "rim", "type", "onSale", "q", "runflat", "xl", "min", "max"].filter((k) => params.get(k)).length;
+  const priceActive = (min: string, max: string) => current("min") === min && current("max") === max;
 
   return (
     <div className="space-y-5">
@@ -130,10 +131,41 @@ function FilterBody({
         </div>
       </Group>
 
+      <Group title="Features">
+        <CheckRow checked={current("runflat") === "1"} label="Run-flat" onChange={() => setParam("runflat", current("runflat") === "1" ? null : "1")} />
+        <CheckRow checked={current("xl") === "1"} label="Extra load (XL)" onChange={() => setParam("xl", current("xl") === "1" ? null : "1")} />
+      </Group>
+
+      <Group title="Price">
+        <ul className="space-y-1">
+          <Radio name="price" checked={!current("min") && !current("max")} label="Any price" onChange={() => setParams({ min: null, max: null })} />
+          {([
+            ["Under R1 000", "", "1000"],
+            ["R1 000 – R2 000", "1000", "2000"],
+            ["R2 000 – R3 500", "2000", "3500"],
+            ["R3 500 – R6 000", "3500", "6000"],
+            ["R6 000+", "6000", ""],
+          ] as [string, string, string][]).map(([label, min, max]) => (
+            <Radio key={label} name="price" checked={priceActive(min, max)} label={label} onChange={() => setParams({ min: min || null, max: max || null })} />
+          ))}
+        </ul>
+      </Group>
+
       <Group title="Offers">
         <Radio name="sale" checked={current("onSale") === "1"} label="On sale only" onChange={() => setParam("onSale", current("onSale") === "1" ? null : "1")} />
       </Group>
     </div>
+  );
+}
+
+function CheckRow({ checked, label, onChange }: { checked: boolean; label: string; onChange: () => void }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2.5 py-1 text-sm" onClick={onChange}>
+      <span className={`grid size-4 shrink-0 place-items-center rounded border ${checked ? "border-volt bg-volt" : "border-line-2"}`}>
+        {checked && <span className="size-2 rounded-[2px] bg-volt-ink" />}
+      </span>
+      <span className={checked ? "font-semibold text-fg" : "text-muted hover:text-fg"}>{label}</span>
+    </label>
   );
 }
 

@@ -59,7 +59,11 @@ const MAKE_ALIASES: Record<string, string> = {
   "range rover": "land rover", mahindra: "mahindra", bakkie: "", toyota: "toyota",
 };
 
-/** Find the best vehicle for a free-text query (for Tyrone). */
+const wordIn = (hay: string, needle: string) =>
+  new RegExp(`(^|[^a-z0-9])${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`).test(hay);
+
+/** Find the best vehicle for a free-text query. Matches on make+model, make+year,
+ *  or a distinctive model on its own (e.g. "hilux"). */
 export function findVehicle(text: string): Vehicle | null {
   let q = text.toLowerCase();
   for (const [alias, real] of Object.entries(MAKE_ALIASES)) {
@@ -72,13 +76,33 @@ export function findVehicle(text: string): Vehicle | null {
   for (const v of vehicles) {
     const mk = v.make.toLowerCase();
     const md = v.model.toLowerCase();
-    if (!q.includes(mk)) continue;
-    let score = 1;
-    if (md && q.includes(md)) score += 2;
+    const makeHit = q.includes(mk);
+    const modelHit = md.length >= 3 && wordIn(q, md);
+    if (!makeHit && !(modelHit && md.length >= 4)) continue; // model-only needs a distinctive (4+) model
+    let score = 0;
+    if (makeHit) score += 2;
+    if (modelHit) score += 2;
     if (year && v.yearFrom && v.yearTo && year >= v.yearFrom && year <= v.yearTo) score += 2;
-    if (score > bestScore) { bestScore = score; best = v; }
+    // prefer stronger matches, then the newer generation on ties
+    if (score > bestScore || (score === bestScore && best && (v.yearFrom ?? 0) > (best.yearFrom ?? 0))) {
+      bestScore = score; best = v;
+    }
   }
-  return bestScore >= 3 ? best : null; // need make + (model or matching year)
+  return bestScore >= 2 ? best : null;
+}
+
+/** All factory tyre sizes across every generation of a make+model, canonicalised. */
+export function factorySizes(make: string, model: string): string[] {
+  const mk = make.toLowerCase(), md = model.toLowerCase();
+  const out = new Set<string>();
+  for (const v of vehicles) {
+    if (v.make.toLowerCase() !== mk || v.model.toLowerCase() !== md) continue;
+    for (const t of v.tyres) {
+      const k = t.replace(/\s+/g, "").toUpperCase();
+      if (/^\d{2,3}\/\d{2}R\d{2}$/.test(k)) out.add(k);
+    }
+  }
+  return [...out];
 }
 
 // ---- size parsing → shop search params --------------------------------------

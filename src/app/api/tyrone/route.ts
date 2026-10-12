@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { products, searchProducts, queryProducts, dealProducts } from "@/lib/catalogue";
+import { getProducts, searchProducts, queryProducts, dealProducts } from "@/lib/catalogue";
 import { findVehicle } from "@/lib/vehicles";
 import { discountPct } from "@/lib/format";
 import type { Product } from "@/lib/types";
@@ -49,7 +49,8 @@ export async function GET(req: NextRequest) {
   const msg = (req.nextUrl.searchParams.get("msg") ?? "").toLowerCase();
   if (!msg.trim()) return NextResponse.json({ products: [] });
 
-  const brands = [...new Set(products.map((p) => p.brand))];
+  const allProducts = await getProducts();
+  const brands = [...new Set(allProducts.map((p) => p.brand))];
   const brandHit = brands.find((b) => b && msg.includes(b.toLowerCase()));
   const size = sizePattern(msg);
   const vehicle = VEHICLE.find((v) => v.words.some((w) => msg.includes(w)));
@@ -62,30 +63,30 @@ export async function GET(req: NextRequest) {
   const vehicleFit = !size ? findVehicle(msg) : null;
 
   if (size) {
-    picks = searchProducts(size, 30).filter((p) => (p.specs.size ?? "").toUpperCase().includes(size.toUpperCase()));
-    if (!picks.length) picks = searchProducts(size, 12);
+    picks = (await searchProducts(size, 30)).filter((p) => (p.specs.size ?? "").toUpperCase().includes(size.toUpperCase()));
+    if (!picks.length) picks = await searchProducts(size, 12);
     label = `Here's what I found in ${size}`;
   } else if (vehicleFit && vehicleFit.tyres.length) {
     const oe = vehicleFit.tyres[0].replace(/\s+/g, "").toUpperCase(); // 195/45R16
-    picks = searchProducts(oe, 30).filter((p) => (p.specs.size ?? "").toUpperCase().replace(/\s+/g, "").includes(oe));
-    if (!picks.length) picks = searchProducts(oe, 12);
+    picks = (await searchProducts(oe, 30)).filter((p) => (p.specs.size ?? "").toUpperCase().replace(/\s+/g, "").includes(oe));
+    if (!picks.length) picks = await searchProducts(oe, 12);
     label = `For your ${vehicleFit.make} ${vehicleFit.model}${vehicleFit.label ? ` (${vehicleFit.label})` : ""}, the fitment is ${vehicleFit.tyres.join(" or ")}`;
     if (vehicleFit.rims.length) note = `Rim ${vehicleFit.rims.join(" / ")}${vehicleFit.pcd ? ` · PCD ${vehicleFit.pcd.replace(/\*/g, "×")}` : ""}`;
   } else if (brandHit) {
-    const r = queryProducts({ brand: brandHit, onSale: wantsDeals || undefined, perPage: 24 });
+    const r = await queryProducts({ brand: brandHit, onSale: wantsDeals || undefined, perPage: 24 });
     picks = r.items;
     label = `Some great ${brandHit} tyres`;
   } else if (vehicle) {
     if (vehicle.cat === "__wheel") {
-      picks = products.filter((p) => p.type === "wheel");
+      picks = allProducts.filter((p) => p.type === "wheel");
       label = "Here are some mag wheels to turn heads";
     } else {
-      const r = queryProducts({ category: vehicle.cat, onSale: wantsDeals || undefined, perPage: 40 });
+      const r = await queryProducts({ category: vehicle.cat, onSale: wantsDeals || undefined, perPage: 40 });
       picks = r.items;
       label = `Great picks for ${vehicle.label}`;
     }
   } else if (wantsDeals) {
-    picks = dealProducts(20);
+    picks = await dealProducts(20);
     label = "🔥 Here are some hot deals right now";
   } else {
     return NextResponse.json({ products: [] }); // not a product query

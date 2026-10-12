@@ -26,7 +26,8 @@ export async function GET(req: NextRequest) {
     // recommended: on-sale first, then best sellers (deduped)
     const seen = new Set<number>();
     const recommended: ReturnType<typeof map>[] = [];
-    for (const p of [...dealProducts(14), ...bestSellers(14)]) {
+    const [deals, sellers] = await Promise.all([dealProducts(14), bestSellers(14)]);
+    for (const p of [...deals, ...sellers]) {
       if (seen.has(p.id) || !p.image) continue;
       seen.add(p.id);
       recommended.push(map(p));
@@ -35,6 +36,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ mode: "recommended", results: recommended });
   }
 
-  const results = searchProducts(q, 14).map(map);
+  const results = (await searchProducts(q, 14)).map(map);
   return NextResponse.json({ mode: "results", results });
 }

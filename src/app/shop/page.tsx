@@ -20,7 +20,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   const category = one(sp.category);
   const type = one(sp.type) as "tyre" | "wheel" | undefined;
 
-  const result = queryProducts({
+  const result = await queryProducts({
     q,
     category,
     type,

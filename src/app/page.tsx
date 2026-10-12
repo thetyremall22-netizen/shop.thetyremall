@@ -18,10 +18,8 @@ import { BRANDS } from "@/lib/brands";
 import { Arrow } from "@/components/icons";
 
 
-export default function Home() {
-  const sellers = bestSellers(10);
-  const deals = dealProducts(8);
-  const mags = wheelProducts(10);
+export default async function Home() {
+  const [sellers, deals, mags] = await Promise.all([bestSellers(10), dealProducts(8), wheelProducts(10)]);
 
   return (
     <>

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   // Re-price every line from the server catalogue — never trust client prices.
   const lines: LineItem[] = [];
   for (const it of items) {
-    const p = getProduct(it.slug);
+    const p = await getProduct(it.slug);
     if (!p) continue;
     lines.push({
       id: p.id, slug: p.slug, name: p.name, brand: p.brand, price: p.price, type: p.type,

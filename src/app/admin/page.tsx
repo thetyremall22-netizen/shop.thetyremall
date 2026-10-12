@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { dashboardStats } from "@/lib/db/queries";
 import { listOrders } from "@/lib/orders";
+import { SyncWooButton } from "@/components/admin/SyncWooButton";
 
 export const instant = false;
 
@@ -23,6 +24,7 @@ export default async function AdminDashboard() {
   return (
     <AdminShell>
       <h1 className="font-display text-3xl">Dashboard</h1>
+      <div className="mt-3"><SyncWooButton /></div>
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {cards.map((c) => (
           <Link key={c.label} href={c.href} className={`card glow-hover p-5 ${c.warn ? "ring-1 ring-sale/50" : ""}`}>

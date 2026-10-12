@@ -26,14 +26,14 @@ function brandLogoSrc(brand: string): string | null {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const p = getProduct(slug);
+  const p = await getProduct(slug);
   if (!p) return { title: "Product not found" };
   return { title: p.name, description: p.shortDescription };
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const p = getProduct(slug);
+  const p = await getProduct(slug);
   if (!p) notFound();
 
   // Live stock + price from our database (falls back to the snapshot).
@@ -47,14 +47,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   const pct = discountPct(regularPrice, salePrice);
   const brandSrc = brandLogoSrc(p.brand);
-  const related = relatedProducts(p, 6);
+  const related = await relatedProducts(p, 6);
 
   // "We think you'll like these" — 4 tyres, guaranteed one on sale
-  let likePicks = relatedProducts(p, 16)
+  let likePicks = (await relatedProducts(p, 16))
     .filter((r) => r.type === "tyre" && r.image && r.id !== p.id)
     .slice(0, 4);
   if (!likePicks.some((r) => r.onSale)) {
-    const sale = dealProducts(60).find(
+    const sale = (await dealProducts(60)).find(
       (d) => d.type === "tyre" && d.image && d.id !== p.id && !likePicks.some((x) => x.id === d.id)
     );
     if (sale) likePicks = [sale, ...likePicks].slice(0, 4);

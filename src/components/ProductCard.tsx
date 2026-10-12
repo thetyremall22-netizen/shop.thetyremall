@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/lib/types";
 import { formatPrice, formatPriceShort, discountPct } from "@/lib/format";
-import { hasSetPricing, setPriceOf4 } from "@/lib/pricing";
+import { hasSetPricing, setPriceOf4, SET_OF_4_DISCOUNT } from "@/lib/pricing";
 import { CompareToggle } from "./CompareToggle";
 import type { CompareItem } from "@/lib/compare";
 import { Star, Arrow } from "./icons";
@@ -92,7 +92,10 @@ export function ProductCard({ p }: { p: Product }) {
               <div className="font-display text-lg leading-tight text-[#14171a]">{formatPrice(p.price)}</div>
             </div>
             <div className="shrink-0 rounded-lg bg-[#eef6e0] px-2.5 py-1.5 text-right ring-1 ring-[#8ac53f]/40">
-              <div className="text-[9px] font-extrabold uppercase tracking-wider text-[#4f7000]">Set of 4</div>
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4f7000]">Set of 4</span>
+                <span className="rounded bg-black px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">Save {formatPriceShort(SET_OF_4_DISCOUNT)}!</span>
+              </div>
               <div className="price-set font-display text-xl leading-tight">{formatPrice(setPriceOf4(p.price))}</div>
             </div>
           </div>

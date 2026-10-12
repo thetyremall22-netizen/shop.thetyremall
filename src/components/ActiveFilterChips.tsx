@@ -37,7 +37,7 @@ export function ActiveFilterChips({ search, categories }: { search: string; cate
     const next = new URLSearchParams(search);
     next.delete(key);
     next.delete("page");
-    router.push(next.toString() ? `/shop?${next.toString()}` : "/shop");
+    router.push(next.toString() ? `/shop?${next.toString()}` : "/shop", { scroll: false });
   };
 
   return (
@@ -53,7 +53,7 @@ export function ActiveFilterChips({ search, categories }: { search: string; cate
         </button>
       ))}
       {chips.length > 1 && (
-        <button onClick={() => router.push("/shop")} className="text-xs font-bold text-faint hover:text-sale">
+        <button onClick={() => router.push("/shop", { scroll: false })} className="text-xs font-bold text-faint hover:text-sale">
           Clear all
         </button>
       )}

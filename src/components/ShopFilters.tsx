@@ -68,7 +68,8 @@ function FilterBody({
         else next.set(key, value);
       }
       next.delete("page");
-      router.push(`/shop?${next.toString()}`);
+      // scroll:false keeps your place in the filter list — no jump to the top.
+      router.push(`/shop?${next.toString()}`, { scroll: false });
       onNavigate?.();
     },
     [search, router, onNavigate]
@@ -84,7 +85,7 @@ function FilterBody({
       {activeCount > 0 && (
         <button
           onClick={() => {
-            router.push("/shop");
+            router.push("/shop", { scroll: false });
             onNavigate?.();
           }}
           className="flex w-full items-center justify-between rounded-lg border border-line bg-surface px-3 py-2 text-sm text-muted hover:text-volt"

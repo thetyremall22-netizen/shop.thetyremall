@@ -6,6 +6,7 @@ import { findVehicle, factorySizes } from "@/lib/vehicles";
 import { ProductCard } from "@/components/ProductCard";
 import { ShopFilters } from "@/components/ShopFilters";
 import { ActiveFilterChips } from "@/components/ActiveFilterChips";
+import { NoResultsHelp } from "@/components/NoResultsHelp";
 import { SortSelect } from "@/components/SortSelect";
 import { ShopPromo } from "@/components/ShopPromo";
 import { Chevron, Truck } from "@/components/icons";
@@ -122,7 +123,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
         <aside className="lg:sticky lg:top-40 lg:h-fit">
           <ShopFilters
             categories={categories}
-            brands={result.facetBrands.length ? result.facetBrands : meta.brands}
+            brands={meta.brands}
             widths={meta.widths}
             profiles={meta.profiles}
             rims={meta.rims}
@@ -140,13 +141,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
           <ActiveFilterChips search={searchStr} categories={categories} />
 
           {result.items.length === 0 ? (
-            <div className="card grid place-items-center p-16 text-center">
-              <div>
-                <p className="font-display text-2xl">No tyres found</p>
-                <p className="mt-2 text-sm text-muted">Try a different size or clear your filters.</p>
-                <Link href="/shop" className="btn btn-volt mt-5">Browse all</Link>
-              </div>
-            </div>
+            <NoResultsHelp query={q || (vehicle ? `${vehicle.make} ${vehicle.model}` : "")} />
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
               {result.items.map((p) => (

@@ -21,6 +21,7 @@ export const ROAD_HAZARD_FEE = 9900; // R99,00 per tyre
 export const HAPPYPAY_URL = "https://happypay.co.za";
 
 /** Contact — WhatsApp (international format) and phone. */
+export const SHOP_EMAIL = "shop@thetyremall.co.za";
 export const SHOP_PHONE_DISPLAY = "078 0088 788";
 export const SHOP_PHONE_TEL = "0780088788";
 export const WHATSAPP_PHONE = "27780088788"; // +27 78 008 8788

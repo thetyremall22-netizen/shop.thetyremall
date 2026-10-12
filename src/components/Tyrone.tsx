@@ -135,6 +135,18 @@ export function Tyrone() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, typing, open]);
 
+  // Let other parts of the site open Tyrone (e.g. the no-results help panel)
+  // and optionally have him greet with a specific message.
+  useEffect(() => {
+    function onOpen(e: Event) {
+      setOpen(true);
+      const say = (e as CustomEvent<{ botSay?: string }>).detail?.botSay;
+      if (say) setMsgs((m) => (m.some((x) => x.text === say) ? m : [...m, { from: "bot", text: say }]));
+    }
+    window.addEventListener("ttm:tyrone", onOpen as EventListener);
+    return () => window.removeEventListener("ttm:tyrone", onOpen as EventListener);
+  }, []);
+
   async function send(text: string) {
     const t = text.trim();
     if (!t) return;

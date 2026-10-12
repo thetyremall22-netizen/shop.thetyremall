@@ -1,12 +1,15 @@
-// Full brand line-up shown in the mega menu and home brand wall.
-// A logo image is used where we have one; otherwise a clean wordmark tile.
-export const BRANDS: string[] = [
-  "Bridgestone", "Pirelli", "Goodyear", "Dunlop", "Continental", "Michelin",
-  "Radar", "Hankook", "Yokohama", "BFGoodrich", "Firestone", "General",
-  "Sumitomo", "Falken", "Landsail", "Windforce", "Tracmax", "Kapsen",
-  "Maxxis", "Kumho", "Apollo", "CEAT", "Firemax", "Annaite", "Landspider",
-  "Xcent", "Anchee", "Timax", "Sava", "Roadking", "Drivemaster", "American Road Star",
-];
+// Brand line-up for the mega menu and home brand wall — derived from the live
+// catalogue so every brand we actually stock is shown (and no dead brands).
+import metaData from "@/data/meta.json";
+
+export const brandSlug = (b: string) => b.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+// Not tyre brands: A-Line is mag wheels, "Tyre Mall" is our own house label.
+const EXCLUDE = new Set(["a-line", "tyre-mall"]);
+
+export const BRANDS: string[] = (metaData.brands as { name: string; count: number }[])
+  .filter((b) => b.count > 0 && !EXCLUDE.has(brandSlug(b.name)))
+  .map((b) => b.name);
 
 // Brands we have a real logo image file for (public/brand/logos/<slug>.*).
 const LOGO_SLUGS = new Set([
@@ -16,7 +19,6 @@ const LOGO_SLUGS = new Set([
   "annaite", "landspider", "anchee", "timax", "sava", "roadking",
 ]);
 
-export const brandSlug = (b: string) => b.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 export const hasBrandLogo = (b: string) => LOGO_SLUGS.has(brandSlug(b));
 export const brandLogoPath = (b: string) =>
   brandSlug(b) === "radar" ? "/brand/logos/radar.png" : `/brand/logos/${brandSlug(b)}.webp`;

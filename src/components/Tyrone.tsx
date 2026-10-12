@@ -233,12 +233,12 @@ export function Tyrone() {
           </button>
           <button
             onClick={() => { setOpen(true); setWaOpen(false); }}
-            className="flex items-center gap-2 rounded-full bg-volt py-2 pl-2 pr-4 text-volt-ink transition-transform hover:scale-105"
+            className="btn-chrome flex items-center gap-2 rounded-full py-2 pl-2 pr-4 transition-transform hover:scale-105"
             aria-label="Chat with Tyrone"
           >
             <span className="relative grid size-8 place-items-center rounded-full bg-ink text-volt">
               <Avatar />
-              <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-volt bg-pay" />
+              <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-white bg-pay" />
             </span>
             <span className="text-sm font-extrabold">Chat with Tyrone</span>
           </button>

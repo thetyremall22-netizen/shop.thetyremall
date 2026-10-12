@@ -751,3 +751,14 @@ body::before {
   border-radius: 10px;
   padding: 3px 9px;
 }
+
+/* metallic silver "chrome" button (e.g. the Chat with Tyrone launcher) */
+.btn-chrome {
+  background: linear-gradient(180deg, #ffffff 0%, #e4e8ec 36%, #b7bec5 60%, #d4d9df 100%);
+  color: #14171a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 3px 10px rgba(0, 0, 0, 0.4);
+  background-size: 100% 220%;
+  background-position: 0 0;
+  transition: background-position 0.5s ease, transform 0.2s ease;
+}
+.btn-chrome:hover { background-position: 0 100%; }

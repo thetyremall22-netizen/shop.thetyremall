@@ -14,8 +14,10 @@ import { ProductCustomiser } from "@/components/ProductCustomiser";
 import { ProductRailCard } from "@/components/ProductCard";
 import { CompareToggle } from "@/components/CompareToggle";
 import type { CompareItem } from "@/lib/compare";
+import type { Product } from "@/lib/types";
 import { YouMayLike } from "@/components/YouMayLike";
 import { TyreSizeExplainer } from "@/components/TyreSizeExplainer";
+import { OnPageCompare } from "@/components/OnPageCompare";
 import { Chevron, Check, Truck, Shield, Bolt, Star } from "@/components/icons";
 
 export const instant = false;
@@ -60,6 +62,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     price, regularPrice, salePrice, onSale,
     image: p.image, specs: p.specs, categories: p.categories, inStock, sku: p.sku,
   };
+  // live-priced copy of this product for the on-page comparison strip
+  const selfProduct: Product = { ...p, price, regularPrice, salePrice, onSale, inStock };
 
   // "We think you'll like these" — 4 tyres, guaranteed one on sale
   let likePicks = (await relatedProducts(p, 16))
@@ -128,13 +132,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <div className="mt-5 grid gap-8 lg:grid-cols-2">
         {/* gallery */}
         <div className="lg:sticky lg:top-40 lg:h-fit">
-          <div className="relative overflow-hidden rounded-3xl bg-[radial-gradient(75%_75%_at_50%_42%,#ffffff_0%,#f2f4f6_68%,#e7eaed_100%)] shadow-2xl shadow-black/50 ring-1 ring-black/5">
+          <div className="relative mx-auto w-full max-w-[420px] overflow-hidden rounded-3xl bg-[radial-gradient(75%_75%_at_50%_42%,#ffffff_0%,#f2f4f6_68%,#e7eaed_100%)] shadow-2xl shadow-black/50 ring-1 ring-black/5">
             <div className="relative aspect-square">
               {/* floating ground shadow */}
               <div className="float-shadow absolute bottom-10 left-1/2 h-5 w-3/5 rounded-[50%] bg-black/35 blur-xl" />
               {/* breathing tyre (transparent webp sits straight on the plate) */}
               {p.image && (
-                <Image src={p.image} alt={p.name} fill priority sizes="(max-width:1024px) 100vw, 50vw" className="float-breathe object-contain p-10" />
+                <Image src={p.image} alt={p.name} fill priority sizes="(max-width:1024px) 100vw, 420px" className="float-breathe object-contain p-7" />
               )}
               <div className="absolute left-3 top-3 flex flex-col gap-2">
                 {onSale && pct > 0 && <span className="badge badge-sale text-sm">SAVE {pct}%</span>}
@@ -287,6 +291,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </p>
         </section>
       )}
+
+      {/* on-page comparison strip — this product vs alternatives */}
+      <OnPageCompare
+        items={[selfProduct, ...(isTyre ? suggested : related.filter((r) => r.type === "wheel")).filter((r) => r.id !== p.id)].slice(0, 4)}
+        isTyre={isTyre}
+        currentId={p.id}
+      />
 
       {/* suggested tyres from other brands (item 9) / related */}
       {(suggested.length > 0 ? suggested : related).length > 0 && (

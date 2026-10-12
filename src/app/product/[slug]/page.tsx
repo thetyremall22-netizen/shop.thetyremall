@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Metadata } from "next";
@@ -40,6 +41,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  // Render per-request (not a long-lived edge cache) so live stock/price and
+  // new deploys show immediately on product pages.
+  await connection();
   const { slug } = await params;
   const p = await getProduct(slug);
   if (!p) notFound();

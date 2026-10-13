@@ -127,6 +127,9 @@ function localFlow(raw: string): Msg | null {
   if (!hasSize && (t === MENU.vehicle.toLowerCase() || t === "find by vehicle" || t === "by vehicle")) {
     return { from: "bot", text: "Sweet 🚗 — what do you drive? Give me the make, model & year, like “Toyota Hilux 2021” or “VW Polo 2018”, and I'll pull the right fitment and matching tyres.", buttons: [MENU.size, MENU.human] };
   }
+  if (t === MENU.wheels.toLowerCase()) {
+    return { from: "bot", text: "Nice — let's find mags! 🛞 Tell me your car (make, model & year, e.g. “Toyota Hilux 2021”) and I'll show wheels that fit its bolt pattern. Or tap to browse the whole range.", buttons: ["Show all mag wheels", MENU.size, MENU.human] };
+  }
   if (/not sure.*size|don'?t know.*size|unsure.*size/.test(t)) {
     return { from: "bot", text: "No worries! Your size is on the tyre sidewall — a code like 205/55R16. Or just tell me your car (make, model, year) and I'll sort it. 🙂", buttons: [MENU.vehicle, MENU.human] };
   }
@@ -162,6 +165,7 @@ export function Tyrone() {
   const [open, setOpen] = useState(false);
   const [waOpen, setWaOpen] = useState(false);
   const [input, setInput] = useState("");
+  const [mode, setMode] = useState<"wheels" | null>(null); // wheel-context after tapping "Mag wheels"
   const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", text: GREETING, buttons: MAIN_MENU }]);
   const [typing, setTyping] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
@@ -208,6 +212,11 @@ export function Tyrone() {
     setMsgs((m) => [...m, { from: "user", text: t }]);
     setInput("");
 
+    const low = t.toLowerCase();
+    // Track "mag wheels" context so a plain vehicle afterwards searches wheels.
+    if (low === MENU.wheels.toLowerCase()) setMode("wheels");
+    else if (MAIN_MENU.some((l) => l.toLowerCase() === low)) setMode(null);
+
     // Scripted menu flow (prompt or canned answer, no catalogue search)?
     const flow = localFlow(t);
     if (flow) {
@@ -216,6 +225,12 @@ export function Tyrone() {
       return;
     }
 
+    // If we're in wheel-context and the user gave a plain car/size (no wheel or
+    // tyre word), bias the search toward wheels; then clear the context.
+    const hasWheelOrTyreWord = /\b(mag|mags|wheel|wheels|rim|rims|alloy|alloys|tyre|tyres)\b/i.test(t);
+    const query = mode === "wheels" && !hasWheelOrTyreWord ? `${t} mags` : t;
+    if (mode === "wheels") setMode(null);
+
     setTyping(true);
     const started = Date.now();
     const fallbackText = matchRule(t);
@@ -223,11 +238,13 @@ export function Tyrone() {
     let reply: Msg = { from: "bot", text: fallbackText, buttons: isFallback ? MAIN_MENU : FOLLOWUPS };
     let firstProduct: TyroneProduct | undefined;
     try {
-      const res = await fetch(`/api/tyrone?msg=${encodeURIComponent(t)}`);
+      const res = await fetch(`/api/tyrone?msg=${encodeURIComponent(query)}`);
       const data = await res.json();
       if (Array.isArray(data.products) && data.products.length) {
         reply = { from: "bot", text: `${data.label}${data.note ? " — " + data.note : ""}:`, products: data.products, buttons: FOLLOWUPS };
         firstProduct = data.products[0];
+      } else if (data.message) {
+        reply = { from: "bot", text: data.message, buttons: [WA_BUTTON, MENU.size, MENU.human] };
       }
     } catch {
       /* fall back to the keyword reply */

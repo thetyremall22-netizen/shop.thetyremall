@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProducts, searchProducts, queryProducts, dealProducts } from "@/lib/catalogue";
-import { findVehicle } from "@/lib/vehicles";
+import { findVehicle, normPcd, rimDiameter } from "@/lib/vehicles";
 import { discountPct } from "@/lib/format";
 import type { Product } from "@/lib/types";
 
@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
   const size = sizePattern(msg);
   const vehicle = VEHICLE.find((v) => v.words.some((w) => msg.includes(w)));
   const wantsDeals = /\b(deal|deals|sale|cheap|cheapest|special|discount|budget|affordable)\b/.test(msg);
+  const wantsWheels = /\b(mag|mags|wheel|wheels|rim|rims|alloy|alloys)\b/.test(msg);
 
   let picks: Product[] = [];
   let label = "";
@@ -66,6 +67,29 @@ export async function GET(req: NextRequest) {
     picks = (await searchProducts(size, 30)).filter((p) => (p.specs.size ?? "").toUpperCase().includes(size.toUpperCase()));
     if (!picks.length) picks = await searchProducts(size, 12);
     label = `Here's what I found in ${size}`;
+  } else if (vehicleFit && wantsWheels) {
+    // Vehicle-aware WHEEL lookup — match mags to the car's bolt pattern (PCD),
+    // and surface the car's OE rim diameters first.
+    const pcd = normPcd(vehicleFit.pcd || "");
+    const rimDias = [...new Set(vehicleFit.rims.map(rimDiameter).filter((d): d is string => !!d))];
+    const pcdLabel = pcd.replace("X", "×");
+    if (pcd) {
+      const r = await queryProducts({ type: "wheel", pcd, perPage: 40 });
+      picks = r.items.slice().sort((a, b) => {
+        const ao = rimDias.includes(a.specs.rim ?? "") ? 0 : 1;
+        const bo = rimDias.includes(b.specs.rim ?? "") ? 0 : 1;
+        return ao - bo;
+      });
+    }
+    if (picks.length) {
+      label = `Mags that fit your ${vehicleFit.make} ${vehicleFit.model} — bolt pattern ${pcdLabel}`;
+      note = rimDias.length ? `OE rim ${rimDias.join('" / ')}" · all match your ${pcdLabel} PCD` : `All match your ${pcdLabel} PCD`;
+    } else {
+      const msgTxt = pcd
+        ? `I don't have mags in the ${pcdLabel} bolt pattern (your ${vehicleFit.make} ${vehicleFit.model}) in stock right now — but we can special-order. Want me to connect you to the team? 🛞`
+        : `I'd need your ${vehicleFit.make} ${vehicleFit.model}'s bolt pattern to match mags exactly. Tap “Talk to a human” and we'll sort the right fit. 🛞`;
+      return NextResponse.json({ message: msgTxt, products: [] });
+    }
   } else if (vehicleFit && vehicleFit.tyres.length) {
     const oe = vehicleFit.tyres[0].replace(/\s+/g, "").toUpperCase(); // 195/45R16
     picks = (await searchProducts(oe, 30)).filter((p) => (p.specs.size ?? "").toUpperCase().replace(/\s+/g, "").includes(oe));

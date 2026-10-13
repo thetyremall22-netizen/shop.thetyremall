@@ -68,8 +68,11 @@ function FilterBody({
         else next.set(key, value);
       }
       next.delete("page");
-      // scroll:false keeps your place in the filter list — no jump to the top.
+      // Apply the filter, then bring the page back to the top so the results
+      // (and the banner/heading) always start from the top — never left
+      // scrolled down past the end of a short result set.
       router.push(`/shop?${next.toString()}`, { scroll: false });
+      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
       onNavigate?.();
     },
     [search, router, onNavigate]
@@ -86,6 +89,7 @@ function FilterBody({
         <button
           onClick={() => {
             router.push("/shop", { scroll: false });
+            if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
             onNavigate?.();
           }}
           className="flex w-full items-center justify-between rounded-lg border border-line bg-surface px-3 py-2 text-sm text-muted hover:text-volt"

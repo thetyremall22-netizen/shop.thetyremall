@@ -132,6 +132,16 @@ export interface QueryResult {
   facetBrands: { name: string; count: number }[];
 }
 
+// Normalize sizes/PCDs so finder params match catalogue values:
+// wheel width "7J"/"7.5\"" → "7"/"7.5"; comma decimals → dot.
+function nWidth(v: unknown): string {
+  return String(v ?? "").toLowerCase().replace(",", ".").replace(/["'j\s]/g, "").trim();
+}
+// PCD "4X100"/"5*112"/"5/112" → "4x100"/"5x112".
+function nPcd(v: unknown): string {
+  return String(v ?? "").toLowerCase().replace(/[*/\s]/g, "x").replace(/x+/g, "x").trim();
+}
+
 function matches(p: Product, size: string | null, terms: string[]): boolean {
   if (size && p.specs.size !== size) return false;
   if (!terms.length) return true;
@@ -153,10 +163,10 @@ export async function queryProducts(q: Query): Promise<QueryResult> {
     if (q.category && !p.categories.includes(q.category)) return false;
     if (q.brand && p.brand.toLowerCase() !== q.brand.toLowerCase()) return false;
     if (q.type && p.type !== q.type) return false;
-    if (q.width && p.specs.width !== q.width) return false;
+    if (q.width && nWidth(p.specs.width) !== nWidth(q.width)) return false;
     if (q.profile && p.specs.profile !== q.profile) return false;
-    if (q.rim && p.specs.rim !== q.rim) return false;
-    if (q.pcd && p.specs.pcd !== q.pcd) return false;
+    if (q.rim && nWidth(p.specs.rim) !== nWidth(q.rim)) return false;
+    if (q.pcd && !String(p.specs.pcd ?? "").split("|").map(nPcd).includes(nPcd(q.pcd))) return false;
     if (q.onSale && !p.onSale) return false;
     if (q.inStock && !p.inStock) return false;
     if (q.minPrice != null && p.price < q.minPrice * 100) return false;

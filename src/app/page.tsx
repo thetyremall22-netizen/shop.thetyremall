@@ -32,12 +32,6 @@ export default async function Home() {
       <section className="container-x relative z-10 -mt-4 py-8">
         <Reveal>
           <TyreWheelSearch
-            widths={meta.widths}
-            profiles={meta.profiles}
-            rims={meta.rims}
-            wheelRims={meta.wheelRims}
-            wheelWidths={meta.wheelWidths}
-            pcds={meta.pcds}
             tyreBrands={meta.brands.map((b) => b.name)}
             wheelBrands={meta.wheelBrands}
           />

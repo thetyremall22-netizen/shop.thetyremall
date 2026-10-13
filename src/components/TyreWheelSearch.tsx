@@ -4,6 +4,15 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Search, ChevronDown } from "./icons";
 import { VehiclePicker, type Variant } from "./VehiclePicker";
+import tyreSizeMapRaw from "@/data/tyre-size-map.json";
+import wheelSizeMapRaw from "@/data/wheel-size-map.json";
+
+// { width: { profile: [rims] } } — only combinations that have ≥1 product.
+const TYRE_MAP = tyreSizeMapRaw as Record<string, Record<string, string[]>>;
+// { rim: { pcd: [rim widths] } }
+const WHEEL_MAP = wheelSizeMapRaw as Record<string, Record<string, string[]>>;
+
+const numSort = (xs: string[]) => [...xs].sort((a, b) => parseFloat(a) - parseFloat(b));
 
 type Mode = "size" | "vehicle" | "brand";
 
@@ -13,12 +22,14 @@ function Select({
   onChange,
   options,
   placeholder,
+  disabled,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: string[];
   placeholder: string;
+  disabled?: boolean;
 }) {
   return (
     <label className="block">
@@ -27,7 +38,8 @@ function Select({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-11 w-full appearance-none rounded-lg border border-line bg-ink px-3 pr-8 text-sm font-semibold text-fg outline-none focus:border-volt"
+          disabled={disabled}
+          className="h-11 w-full appearance-none rounded-lg border border-line bg-ink px-3 pr-8 text-sm font-semibold text-fg outline-none focus:border-volt disabled:cursor-not-allowed disabled:opacity-45"
         >
           <option value="">{placeholder}</option>
           {options.map((o) => (
@@ -118,31 +130,29 @@ function Panel({
 }
 
 export function TyreWheelSearch({
-  widths,
-  profiles,
-  rims,
-  wheelRims,
-  wheelWidths,
-  pcds,
   tyreBrands,
   wheelBrands,
 }: {
-  widths: string[];
-  profiles: string[];
-  rims: string[];
-  wheelRims: string[];
-  wheelWidths: string[];
-  pcds: string[];
   tyreBrands: string[];
   wheelBrands: string[];
 }) {
   const router = useRouter();
+  // tyre cascade: width → profile → rim
   const [tw, setTw] = useState("");
   const [tp, setTp] = useState("");
   const [tr, setTr] = useState("");
+  // wheel cascade: rim → pcd → width
   const [wr, setWr] = useState("");
   const [wpcd, setWpcd] = useState("");
   const [ww, setWw] = useState("");
+
+  const tyreWidths = numSort(Object.keys(TYRE_MAP));
+  const tyreProfiles = tw ? numSort(Object.keys(TYRE_MAP[tw] ?? {})) : [];
+  const tyreRims = tw && tp ? numSort(TYRE_MAP[tw]?.[tp] ?? []) : [];
+
+  const wheelRimOpts = numSort(Object.keys(WHEEL_MAP));
+  const wheelPcds = wr ? [...Object.keys(WHEEL_MAP[wr] ?? {})].sort() : [];
+  const wheelWidths = wr && wpcd ? numSort(WHEEL_MAP[wr]?.[wpcd] ?? []) : [];
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -152,18 +162,20 @@ export function TyreWheelSearch({
         cta="Search Tyres"
         brands={tyreBrands}
         icon={<TyreIcon />}
-        bigField={<Select label="Tyre Size" value={tw} onChange={setTw} options={widths} placeholder="Select width" />}
+        bigField={
+          <Select label="Tyre Width" value={tw} onChange={(v) => { setTw(v); setTp(""); setTr(""); }} options={tyreWidths} placeholder="Select width" />
+        }
         threeFields={(brandField) => (
           <>
-            <Select label="Profile" value={tp} onChange={setTp} options={profiles} placeholder="Profile" />
-            <Select label="Rim Size" value={tr} onChange={setTr} options={rims} placeholder="Rim" />
+            <Select label="Profile" value={tp} onChange={(v) => { setTp(v); setTr(""); }} options={tyreProfiles} placeholder={tw ? "Profile" : "Width first"} disabled={!tw} />
+            <Select label="Rim Size" value={tr} onChange={setTr} options={tyreRims} placeholder={tp ? "Rim" : "Profile first"} disabled={!tp} />
             {brandField}
           </>
         )}
         onSearch={(mode, brand, vehicle) => {
           if (mode === "vehicle") { router.push(vehicle ? vehicle.tyreHref : "/shop?type=tyre"); return; }
           const p = new URLSearchParams({ type: "tyre" });
-          if (mode === "brand" && brand) p.set("brand", brand);
+          if (mode === "brand") { if (brand) p.set("brand", brand); }
           else {
             if (tw) p.set("width", tw);
             if (tp) p.set("profile", tp);
@@ -180,18 +192,20 @@ export function TyreWheelSearch({
         cta="Search Wheels"
         brands={wheelBrands}
         icon={<WheelIcon />}
-        bigField={<Select label="Rim Size" value={wr} onChange={setWr} options={wheelRims} placeholder="Select rim size" />}
+        bigField={
+          <Select label="Rim Size" value={wr} onChange={(v) => { setWr(v); setWpcd(""); setWw(""); }} options={wheelRimOpts} placeholder="Select rim size" />
+        }
         threeFields={(brandField) => (
           <>
-            <Select label="PCD" value={wpcd} onChange={setWpcd} options={pcds} placeholder="Select PCD" />
-            <Select label="Width" value={ww} onChange={setWw} options={wheelWidths} placeholder="Select width" />
+            <Select label="PCD" value={wpcd} onChange={(v) => { setWpcd(v); setWw(""); }} options={wheelPcds} placeholder={wr ? "Select PCD" : "Rim first"} disabled={!wr} />
+            <Select label="Width" value={ww} onChange={setWw} options={wheelWidths} placeholder={wpcd ? "Width" : "PCD first"} disabled={!wpcd} />
             {brandField}
           </>
         )}
         onSearch={(mode, brand, vehicle) => {
           if (mode === "vehicle") { router.push(vehicle ? vehicle.wheelHref : "/shop?type=wheel"); return; }
           const p = new URLSearchParams({ type: "wheel" });
-          if (mode === "brand" && brand) p.set("brand", brand);
+          if (mode === "brand") { if (brand) p.set("brand", brand); }
           else {
             if (wr) p.set("rim", wr);
             if (wpcd) p.set("pcd", wpcd);

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 type Word = { t: string; g?: boolean };
 const MESSAGES: Word[][] = [
+  [{ t: "BIGGEST", g: true }, { t: "BRANDS" }, { t: "WIDEST", g: true }, { t: "RANGE" }, { t: "BEST", g: true }, { t: "PRICES" }],
   [{ t: "FREE" }, { t: "DELIVERY" }, { t: "ACROSS", g: true }, { t: "SA", g: true }],
   [{ t: "BUY" }, { t: "NOW," }, { t: "PAY", g: true }, { t: "LATER", g: true }],
   [{ t: "4.8★", g: true }, { t: "GOOGLE" }, { t: "RATING" }],
@@ -36,7 +37,7 @@ export function RotatingHeadline() {
   const words = MESSAGES[idx];
 
   return (
-    <div className="flex min-h-[110px] items-center overflow-hidden sm:min-h-[140px] lg:min-h-[170px]">
+    <div className="flex min-h-[120px] items-center overflow-hidden sm:min-h-[150px] lg:min-h-[192px]">
       <h2
         className="skew-italic flex flex-wrap items-baseline gap-x-[0.28em] gap-y-1 font-display leading-[0.85]"
         style={{ fontSize: "clamp(2.2rem, 8.5vw, 6rem)" }}

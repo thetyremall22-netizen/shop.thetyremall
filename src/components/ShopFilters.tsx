@@ -19,12 +19,15 @@ export function ShopFilters(props: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   return (
     <>
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="btn btn-dark w-full lg:hidden"
-      >
-        <Filter width={16} height={16} /> Filters
-      </button>
+      {/* mobile-only trigger — wrapped so .btn's own display can't override lg:hidden */}
+      <div className="lg:hidden">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="btn btn-dark w-full"
+        >
+          <Filter width={16} height={16} /> Filters
+        </button>
+      </div>
 
       <div className="hidden lg:block">
         <FilterBody {...props} />
@@ -85,18 +88,25 @@ function FilterBody({
 
   return (
     <div className="space-y-5">
-      {activeCount > 0 && (
-        <button
-          onClick={() => {
-            router.push("/shop", { scroll: false });
-            if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
-            onNavigate?.();
-          }}
-          className="flex w-full items-center justify-between rounded-lg border border-line bg-surface px-3 py-2 text-sm text-muted hover:text-volt"
-        >
-          Clear all filters <Close width={14} height={14} />
-        </button>
-      )}
+      {/* Constant-height header so toggling "Clear all" never pushes the
+          category list up/down — the Clear control swaps in/out on the right. */}
+      <div className="flex min-h-9 items-center justify-between border-b border-line pb-3">
+        <span className="text-xs font-bold uppercase tracking-wider text-fg">
+          {activeCount > 0 ? `${activeCount} filter${activeCount > 1 ? "s" : ""} applied` : "Filters"}
+        </span>
+        {activeCount > 0 && (
+          <button
+            onClick={() => {
+              router.push("/shop", { scroll: false });
+              if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+              onNavigate?.();
+            }}
+            className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-muted hover:border-volt hover:text-volt"
+          >
+            Clear all <Close width={13} height={13} />
+          </button>
+        )}
+      </div>
 
       <Group title="Size">
         <div className="grid grid-cols-3 gap-2">

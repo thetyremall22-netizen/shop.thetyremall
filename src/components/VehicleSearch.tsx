@@ -60,9 +60,21 @@ export function VehicleSearch() {
     if (make && model) fetch(`/api/vehicles?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`).then((r) => r.json()).then((d) => setVariants(d.variants || [])).catch(() => {});
   }, [make, model]);
 
-  // group variants into year-ranges (labels), then trims within the chosen year
-  const years = useMemo(() => [...new Set(variants.map((v) => v.label))], [variants]);
-  const trims = useMemo(() => variants.filter((v) => v.label === year), [variants, year]);
+  // Single years (newest first), expanded from each generation's year range,
+  // then the trims/engines available for the chosen year.
+  const years = useMemo(() => {
+    const s = new Set<number>();
+    for (const v of variants) {
+      const a = v.yearFrom, b = v.yearTo ?? v.yearFrom;
+      if (a != null && b != null) for (let y = b; y >= a; y--) s.add(y);
+    }
+    return [...s].sort((x, z) => z - x).map(String);
+  }, [variants]);
+  const trims = useMemo(() => {
+    if (!year) return [];
+    const y = Number(year);
+    return variants.filter((v) => (v.yearFrom ?? -1) <= y && (v.yearTo ?? 9999) >= y);
+  }, [variants, year]);
   const sel: Variant | undefined = trimIdx === "" ? undefined : trims[Number(trimIdx)];
 
   // auto-select the trim when a year has exactly one
@@ -88,7 +100,7 @@ export function VehicleSearch() {
           <Sel label="Make" value={make} onChange={setMake} placeholder="Select make" options={makes.map((m) => ({ v: m, t: m }))} />
           <Sel label="Model" value={model} onChange={setModel} placeholder={make ? "Select model" : "Pick make first"} disabled={!make} options={models.map((m) => ({ v: m, t: m }))} />
           <Sel label="Year" value={year} onChange={(v) => { setYear(v); setTrimIdx(""); }} placeholder={model ? "Select year" : "Pick model first"} disabled={!model} options={years.map((y) => ({ v: y, t: y }))} />
-          <Sel label="Trim / engine" value={trimIdx} onChange={setTrimIdx} placeholder={year ? "Select trim" : "Pick year first"} disabled={!year} options={trims.map((v, i) => ({ v: String(i), t: v.trim || "Standard" }))} />
+          <Sel label="Trim / engine" value={trimIdx} onChange={setTrimIdx} placeholder={year ? "Select trim" : "Pick year first"} disabled={!year} options={trims.map((v, i) => ({ v: String(i), t: `${v.trim || "Standard"}${v.gen ? ` · ${v.gen}` : ""}` }))} />
         </div>
       </div>
 
@@ -105,8 +117,8 @@ export function VehicleSearch() {
               )}
             </div>
             <div>
-              <h2 className="font-display text-2xl text-fg">{make} {model}</h2>
-              <p className="text-sm text-muted">{sel.label}{sel.trim ? ` · ${sel.trim}` : ""}</p>
+              <h2 className="font-display text-2xl text-fg">{make} {model} <span className="text-volt">{year}</span></h2>
+              <p className="text-sm text-muted">{sel.trim ? `${sel.trim} · ` : ""}{sel.label} generation</p>
 
               {factory ? (
                 <div className="mt-4 space-y-3">

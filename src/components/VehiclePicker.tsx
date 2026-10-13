@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown } from "./icons";
 
 export interface Variant {
@@ -42,39 +42,56 @@ export function VehiclePicker({ onSelect }: { onSelect: (v: Variant | null) => v
   const [variants, setVariants] = useState<Variant[]>([]);
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
-  const [vi, setVi] = useState("");
+  const [year, setYear] = useState("");
+  const [ti, setTi] = useState("0");
 
   useEffect(() => { fetch("/api/vehicles").then((r) => r.json()).then((d) => setMakes(d.makes || [])).catch(() => {}); }, []);
   useEffect(() => {
-    onSelect(null); setModel(""); setModels([]); setVariants([]); setVi("");
+    setModel(""); setModels([]); setVariants([]); setYear(""); setTi("0");
     if (make) fetch(`/api/vehicles?make=${encodeURIComponent(make)}`).then((r) => r.json()).then((d) => setModels(d.models || [])).catch(() => {});
-  }, [make]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [make]);
   useEffect(() => {
-    onSelect(null); setVariants([]); setVi("");
+    setVariants([]); setYear(""); setTi("0");
     if (make && model) fetch(`/api/vehicles?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`).then((r) => r.json()).then((d) => setVariants(d.variants || [])).catch(() => {});
-  }, [model]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [make, model]);
 
-  function pick(idx: string) {
-    setVi(idx);
-    onSelect(idx === "" ? null : variants[Number(idx)] ?? null);
-  }
+  // Single years (newest first), expanded from each generation's year range.
+  const years = useMemo(() => {
+    const s = new Set<number>();
+    for (const v of variants) {
+      const a = v.yearFrom, b = v.yearTo ?? v.yearFrom;
+      if (a != null && b != null) for (let y = b; y >= a; y--) s.add(y);
+    }
+    return [...s].sort((x, z) => z - x).map(String);
+  }, [variants]);
+  const yearVariants = useMemo(() => {
+    if (!year) return [];
+    const y = Number(year);
+    return variants.filter((v) => (v.yearFrom ?? -1) <= y && (v.yearTo ?? 9999) >= y);
+  }, [variants, year]);
+  const sel = yearVariants.length ? (yearVariants[Number(ti)] ?? yearVariants[0]) : null;
 
-  const sel = vi === "" ? null : variants[Number(vi)];
+  useEffect(() => { onSelect(sel); }, [sel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
         <Sel label="Make" value={make} onChange={setMake} placeholder="Select make" options={makes.map((m) => ({ v: m, t: m }))} />
         <Sel label="Model" value={model} onChange={setModel} placeholder={make ? "Select model" : "Pick make first"} disabled={!make} options={models.map((m) => ({ v: m, t: m }))} />
-        <Sel label="Year" value={vi} onChange={pick} placeholder={model ? "Select year" : "Pick model first"} disabled={!model}
-          options={variants.map((v, i) => ({ v: String(i), t: `${v.yearFrom ?? ""}${v.yearTo && v.yearTo !== v.yearFrom ? `–${v.yearTo}` : ""}${v.trim ? ` · ${v.trim}` : ""}` }))} />
+        <Sel label="Year" value={year} onChange={(v) => { setYear(v); setTi("0"); }} placeholder={model ? "Select year" : "Pick model first"} disabled={!model}
+          options={years.map((y) => ({ v: y, t: y }))} />
       </div>
+
+      {yearVariants.length > 1 && (
+        <Sel label="Trim / engine" value={ti} onChange={setTi} placeholder="Select trim"
+          options={yearVariants.map((v, i) => ({ v: String(i), t: `${v.trim || "Standard"}${v.gen ? ` · ${v.gen}` : ""}` }))} />
+      )}
 
       {sel && (
         <div className="flex items-center gap-3 rounded-xl border border-volt/30 bg-volt/5 p-3">
           {sel.image && <img src={sel.image} alt="" className="h-14 w-20 shrink-0 rounded-md object-cover" />}
           <div className="min-w-0 text-xs">
-            <div className="font-bold text-fg">{make} {model} <span className="text-muted">{sel.label}</span></div>
+            <div className="font-bold text-fg">{make} {model} <span className="text-volt">{year}</span></div>
             <div className="mt-0.5 text-muted">
               <span className="text-volt">Tyre:</span> {sel.tyres.join(" / ") || "—"}
             </div>

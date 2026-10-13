@@ -1,8 +1,25 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { Truck, Arrow, Flame } from "./icons";
 
 export function Hero() {
+  // Scene 1 = big "CHEAPEST TYRES" (image 1). Scene 2 = title shrinks and the
+  // Biggest Brands / Widest Range / Best Prices line flies in beneath it
+  // (image 2). SOUTH AFRICA'S and WITH FREE DELIVERY are shared — they enter
+  // once in scene 1 and simply stay put through scene 2.
+  const [scene, setScene] = useState(1);
+  useEffect(() => {
+    const t = setTimeout(() => setScene(2), 2200);
+    return () => clearTimeout(t);
+  }, []);
+
+  const titleSize =
+    scene >= 2 ? "text-5xl sm:text-6xl lg:text-7xl" : "text-7xl sm:text-8xl lg:text-9xl";
+  const titleCls = `ct-pop block ${titleSize} transition-[font-size] duration-700 ease-[cubic-bezier(0.2,0.7,0.2,1)]`;
+
   return (
     <section className="relative flex min-h-[560px] items-center overflow-hidden bg-ink lg:min-h-[660px]">
       {/* full-bleed cinematic background */}
@@ -25,21 +42,26 @@ export function Hero() {
       {/* copy */}
       <div className="container-x relative z-10 py-14">
         <div className="rise max-w-xl">
-          {/* 1 — small line */}
+          {/* 1 — small line (shared, stays through both scenes) */}
           <p className="sa-line font-display text-base tracking-[0.42em] text-fg/90 drop-shadow sm:text-lg">SOUTH AFRICA&apos;S</p>
-          {/* 2 — the big title (overshoots large, settles a touch smaller) */}
+          {/* 2 — the big title. Overshoots large in scene 1, then shrinks for scene 2. */}
           <h1 className="skew-italic mt-1 font-display leading-[0.82] tracking-tight">
-            <span className="ct-pop text-chrome block text-6xl sm:text-7xl lg:text-8xl" style={{ animationDelay: "0.5s" }}>CHEAPEST</span>
-            <span className="ct-pop text-volt-grad block text-6xl sm:text-7xl lg:text-8xl" style={{ animationDelay: "0.64s" }}>TYRES</span>
+            <span className={`${titleCls} text-chrome`} style={{ animationDelay: "0.5s" }}>CHEAPEST</span>
+            <span className={`${titleCls} text-volt-grad`} style={{ animationDelay: "0.64s" }}>TYRES</span>
           </h1>
-          {/* 2b — Biggest Brands · Widest Range · Best Prices rise up one after another */}
-          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-display text-lg uppercase italic tracking-tight drop-shadow sm:text-2xl lg:text-3xl">
-            <span className="hero-line" style={{ animationDelay: "1.05s" }}><span className="text-volt-grad">Biggest</span> <span className="text-chrome">Brands</span></span>
-            <span className="hero-line" style={{ animationDelay: "1.2s" }}><span className="text-volt">•</span> <span className="text-volt-grad">Widest</span> <span className="text-chrome">Range</span></span>
-            <span className="hero-line" style={{ animationDelay: "1.35s" }}><span className="text-volt">•</span> <span className="text-volt-grad">Best</span> <span className="text-chrome">Prices</span></span>
+          {/* 2b — scene 2 only: Biggest Brands · Widest Range · Best Prices rise up
+               one after another, in the space freed by the shrinking title. */}
+          <div className={`grid transition-all duration-500 ${scene >= 2 ? "mt-2 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+            <div className="overflow-hidden">
+              <div className="skew-italic flex flex-wrap items-center gap-x-2 gap-y-0.5 font-display text-base uppercase tracking-tight drop-shadow sm:text-xl lg:text-2xl">
+                <span className={scene >= 2 ? "hero-line" : "opacity-0"} style={{ animationDelay: "0.1s" }}><span className="text-volt-grad">Biggest</span> <span className="text-chrome">Brands</span></span>
+                <span className={scene >= 2 ? "hero-line" : "opacity-0"} style={{ animationDelay: "0.25s" }}><span className="text-volt">•</span> <span className="text-volt-grad">Widest</span> <span className="text-chrome">Range</span></span>
+                <span className={scene >= 2 ? "hero-line" : "opacity-0"} style={{ animationDelay: "0.4s" }}><span className="text-volt">•</span> <span className="text-volt-grad">Best</span> <span className="text-chrome">Prices</span></span>
+              </div>
+            </div>
           </div>
-          {/* 3 — comes in big and stays big */}
-          <div className="fd-pop mt-3 flex items-center gap-3" style={{ animationDelay: "1.6s" }}>
+          {/* 3 — shared: comes in big in scene 1 and stays big (no re-animation) */}
+          <div className="fd-pop mt-3 flex items-center gap-3" style={{ animationDelay: "1.2s" }}>
             <span className="grid size-12 shrink-0 place-items-center rounded-xl text-volt ring-1 ring-volt/40 backdrop-blur-sm">
               <Truck width={24} height={24} />
             </span>

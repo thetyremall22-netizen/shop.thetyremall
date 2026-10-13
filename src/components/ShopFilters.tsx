@@ -4,6 +4,10 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Close, Filter, ChevronDown } from "./icons";
 import type { Category } from "@/lib/types";
+import tyreSizeMapRaw from "@/data/tyre-size-map.json";
+
+const TYRE_MAP = tyreSizeMapRaw as Record<string, Record<string, string[]>>;
+const numSort = (xs: string[]) => [...xs].sort((a, b) => parseFloat(a) - parseFloat(b));
 
 interface Props {
   categories: Category[];
@@ -52,9 +56,6 @@ export function ShopFilters(props: Props) {
 function FilterBody({
   categories,
   brands,
-  widths,
-  profiles,
-  rims,
   search,
   onNavigate,
 }: Props & { onNavigate?: () => void }) {
@@ -85,6 +86,12 @@ function FilterBody({
   const current = (k: string) => params.get(k) ?? "";
   const activeCount = ["category", "brand", "width", "profile", "rim", "type", "onSale", "instock", "q", "runflat", "xl", "min", "max"].filter((k) => params.get(k)).length;
   const priceActive = (min: string, max: string) => current("min") === min && current("max") === max;
+  // Cascading tyre size options — only combinations that have products.
+  const selW = current("width");
+  const selP = current("profile");
+  const sizeWidths = numSort(Object.keys(TYRE_MAP));
+  const sizeProfiles = selW ? numSort(Object.keys(TYRE_MAP[selW] ?? {})) : [];
+  const sizeRims = selW && selP ? numSort(TYRE_MAP[selW]?.[selP] ?? []) : [];
 
   return (
     <div className="space-y-5">
@@ -110,9 +117,9 @@ function FilterBody({
 
       <Group title="Size">
         <div className="grid grid-cols-3 gap-2">
-          <MiniSelect label="Width" value={current("width")} options={widths} onChange={(v) => setParam("width", v)} />
-          <MiniSelect label="Profile" value={current("profile")} options={profiles} onChange={(v) => setParam("profile", v)} />
-          <MiniSelect label="Rim" value={current("rim")} options={rims} onChange={(v) => setParam("rim", v)} />
+          <MiniSelect label="Width" value={selW} options={sizeWidths} onChange={(v) => setParams({ width: v || null, profile: null, rim: null })} />
+          <MiniSelect label="Profile" value={selP} options={sizeProfiles} onChange={(v) => setParams({ profile: v || null, rim: null })} disabled={!selW} />
+          <MiniSelect label="Rim" value={current("rim")} options={sizeRims} onChange={(v) => setParam("rim", v)} disabled={!selP} />
         </div>
       </Group>
 
@@ -199,13 +206,14 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function MiniSelect({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
+function MiniSelect({ label, value, options, onChange, disabled }: { label: string; value: string; options: string[]; onChange: (v: string) => void; disabled?: boolean }) {
   return (
     <div className="relative">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-full appearance-none rounded-lg border border-line bg-surface-2 px-2 pr-6 text-sm font-semibold text-fg outline-none focus:border-volt"
+        disabled={disabled}
+        className="h-10 w-full appearance-none rounded-lg border border-line bg-surface-2 px-2 pr-6 text-sm font-semibold text-fg outline-none focus:border-volt disabled:cursor-not-allowed disabled:opacity-45"
       >
         <option value="">{label}</option>
         {options.map((o) => <option key={o} value={o}>{o}</option>)}

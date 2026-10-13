@@ -27,13 +27,19 @@ export function Hero() {
         <div className="rise max-w-xl">
           {/* 1 — small line */}
           <p className="sa-line font-display text-base tracking-[0.42em] text-fg/90 drop-shadow sm:text-lg">SOUTH AFRICA&apos;S</p>
-          {/* 2 — the big title (overshoots large, settles) */}
-          <h1 className="skew-italic mt-1 font-display leading-[0.8] tracking-tight">
-            <span className="ct-pop text-chrome block text-[4.5rem] sm:text-8xl lg:text-9xl" style={{ animationDelay: "0.5s" }}>CHEAPEST</span>
-            <span className="ct-pop text-volt-grad block text-[4.5rem] sm:text-8xl lg:text-9xl" style={{ animationDelay: "0.64s" }}>TYRES</span>
+          {/* 2 — the big title (overshoots large, settles a touch smaller) */}
+          <h1 className="skew-italic mt-1 font-display leading-[0.82] tracking-tight">
+            <span className="ct-pop text-chrome block text-6xl sm:text-7xl lg:text-8xl" style={{ animationDelay: "0.5s" }}>CHEAPEST</span>
+            <span className="ct-pop text-volt-grad block text-6xl sm:text-7xl lg:text-8xl" style={{ animationDelay: "0.64s" }}>TYRES</span>
           </h1>
+          {/* 2b — Biggest Brands · Widest Range · Best Prices rise up one after another */}
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-display text-lg uppercase italic tracking-tight drop-shadow sm:text-2xl lg:text-3xl">
+            <span className="hero-line" style={{ animationDelay: "1.05s" }}><span className="text-volt-grad">Biggest</span> <span className="text-chrome">Brands</span></span>
+            <span className="hero-line" style={{ animationDelay: "1.2s" }}><span className="text-volt">•</span> <span className="text-volt-grad">Widest</span> <span className="text-chrome">Range</span></span>
+            <span className="hero-line" style={{ animationDelay: "1.35s" }}><span className="text-volt">•</span> <span className="text-volt-grad">Best</span> <span className="text-chrome">Prices</span></span>
+          </div>
           {/* 3 — comes in big and stays big */}
-          <div className="fd-pop mt-3 flex items-center gap-3">
+          <div className="fd-pop mt-3 flex items-center gap-3" style={{ animationDelay: "1.6s" }}>
             <span className="grid size-12 shrink-0 place-items-center rounded-xl text-volt ring-1 ring-volt/40 backdrop-blur-sm">
               <Truck width={24} height={24} />
             </span>

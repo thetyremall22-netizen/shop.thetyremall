@@ -47,6 +47,11 @@ export default function ComparePage() {
   const { add } = useCart();
   const router = useRouter();
 
+  // Title reflects what's being compared: tyres, mags, or both.
+  const hasTyre = items.some((i) => i.type === "tyre");
+  const hasWheel = items.some((i) => i.type === "wheel");
+  const compareLabel = hasTyre && hasWheel ? "TYRES & MAGS" : hasWheel && !hasTyre ? "MAGS" : "TYRES";
+
   function addSet(i: CompareItem) {
     const isTyre = i.type === "tyre";
     add({ id: i.id, slug: i.slug, name: i.name, brand: i.brand, image: i.image, price: i.price, type: i.type, roadHazard: false }, isTyre ? 4 : 1);
@@ -62,7 +67,7 @@ export default function ComparePage() {
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <h1 className="skew-italic font-display text-4xl sm:text-6xl">
-          <span className="text-chrome">COMPARE</span> <span className="text-volt-grad">TYRES</span>
+          <span className="text-chrome">COMPARE</span> <span className="text-volt-grad">{compareLabel}</span>
         </h1>
         {items.length > 0 && (
           <button onClick={clear} className="text-sm font-semibold text-faint hover:text-sale">Clear all</button>

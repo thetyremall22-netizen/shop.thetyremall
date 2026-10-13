@@ -17,6 +17,7 @@ import { BrandTile } from "@/components/BrandTile";
 import { BRANDS } from "@/lib/brands";
 import { Arrow } from "@/components/icons";
 import { HappyPayLogo } from "@/components/HappyPayLogo";
+import { PromoBanner } from "@/components/PromoBanner";
 
 
 export default async function Home() {
@@ -38,6 +39,17 @@ export default async function Home() {
             pcds={meta.pcds}
             tyreBrands={meta.brands.map((b) => b.name)}
             wheelBrands={meta.wheelBrands}
+          />
+        </Reveal>
+      </section>
+
+      {/* ============ PROMO BANNER (monthly sale) ============ */}
+      <section className="container-x pb-10">
+        <Reveal variant="zoom">
+          <PromoBanner
+            src="/promo/radar-renegade-outdoorfest.webp"
+            href="/shop?q=Renegade"
+            alt="Radar Renegade Outdoor Fest — buy a set of 4 Renegades and stand a chance to win a braai. 4 weeks, 4 winners."
           />
         </Reveal>
       </section>

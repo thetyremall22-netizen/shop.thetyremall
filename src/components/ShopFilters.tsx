@@ -116,6 +116,11 @@ function FilterBody({
         </div>
       </Group>
 
+      <Group title="Availability &amp; offers">
+        <CheckRow checked={current("instock") === "1"} label="In stock only" onChange={() => setParam("instock", current("instock") === "1" ? null : "1")} />
+        <CheckRow checked={current("onSale") === "1"} label="On sale only" onChange={() => setParam("onSale", current("onSale") === "1" ? null : "1")} />
+      </Group>
+
       <Group title="Category">
         <ul className="space-y-1">
           <Radio name="type-cat" checked={!current("category") && !current("type")} label="All products" onChange={() => setParams({ type: null, category: null })} />
@@ -164,11 +169,6 @@ function FilterBody({
             <Radio key={label} name="price" checked={priceActive(min, max)} label={label} onChange={() => setParams({ min: min || null, max: max || null })} />
           ))}
         </ul>
-      </Group>
-
-      <Group title="Availability &amp; offers">
-        <CheckRow checked={current("instock") === "1"} label="In stock only" onChange={() => setParam("instock", current("instock") === "1" ? null : "1")} />
-        <CheckRow checked={current("onSale") === "1"} label="On sale only" onChange={() => setParam("onSale", current("onSale") === "1" ? null : "1")} />
       </Group>
     </div>
   );

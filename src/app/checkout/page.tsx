@@ -97,9 +97,9 @@ export default function CheckoutPage() {
     <div className="container-x py-8 lg:py-12">
       <h1 className="font-display text-4xl">Checkout</h1>
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_400px]">
+      <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)]">
         {/* form */}
-        <form className="space-y-8" onSubmit={handleSubmit}>
+        <form className="min-w-0 space-y-8" onSubmit={handleSubmit}>
           <Section n={1} title="Your details">
             <div className="grid gap-3 sm:grid-cols-2">
               <Field name="firstName" label="First name" required />
@@ -193,7 +193,7 @@ export default function CheckoutPage() {
         </form>
 
         {/* summary */}
-        <aside className="lg:sticky lg:top-40 lg:h-fit">
+        <aside className="min-w-0 lg:sticky lg:top-40 lg:h-fit">
           <div className="card p-5">
             <h2 className="font-display text-xl">Your order</h2>
             <ul className="mt-4 space-y-3">
@@ -207,7 +207,7 @@ export default function CheckoutPage() {
                     <div className="line-clamp-2 text-sm font-medium text-fg">{i.name}</div>
                     {i.roadHazard && <div className="flex items-center gap-1 text-[11px] text-volt"><Shield width={11} height={11} /> Road hazard cover</div>}
                   </div>
-                  <span className="text-sm font-semibold">{formatPrice(i.price * i.qty)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-sm font-semibold">{formatPrice(i.price * i.qty)}</span>
                 </li>
               ))}
             </ul>
@@ -224,9 +224,9 @@ export default function CheckoutPage() {
                 highlight={totals.delivery === 0}
               />
             </dl>
-            <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
-              <span className="font-bold">Total</span>
-              <span className="font-display text-2xl text-volt">{formatPrice(totals.total)}</span>
+            <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-line pt-3">
+              <span className="shrink-0 font-bold">Total</span>
+              <span className="min-w-0 whitespace-nowrap font-display text-2xl leading-tight text-volt">{formatPrice(totals.total)}</span>
             </div>
 
             <div className="mt-4 flex items-center gap-2 rounded-lg bg-surface px-3 py-2 text-xs text-muted">
@@ -269,9 +269,9 @@ function Field({ name, label, type = "text", required, onBlur }: { name: string;
 
 function SumRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between gap-3">
       <dt className="text-muted">{label}</dt>
-      <dd className={highlight ? "font-semibold text-pay" : "text-fg"}>{value}</dd>
+      <dd className={`shrink-0 whitespace-nowrap ${highlight ? "font-semibold text-pay" : "text-fg"}`}>{value}</dd>
     </div>
   );
 }

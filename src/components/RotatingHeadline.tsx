@@ -2,56 +2,49 @@
 
 import { useEffect, useState } from "react";
 
-type Word = { t: string; g?: boolean };
-const MESSAGES: Word[][] = [
-  [{ t: "FREE" }, { t: "DELIVERY" }, { t: "ACROSS", g: true }, { t: "SA", g: true }],
-  [{ t: "BUY" }, { t: "NOW," }, { t: "PAY", g: true }, { t: "LATER", g: true }],
-  [{ t: "4.8★", g: true }, { t: "GOOGLE" }, { t: "RATING" }],
-  [{ t: "SAFE" }, { t: "&" }, { t: "SECURE", g: true }],
-  [{ t: "25", g: true }, { t: "YEARS", g: true }, { t: "TRUSTED" }],
+type Line = { t: string; c: string };
+const SLIDES: Line[][] = [
+  [
+    { t: "CHEAPEST", c: "text-chrome" },
+    { t: "TYRES", c: "text-volt-grad" },
+  ],
+  [
+    { t: "BIGGEST BRANDS", c: "text-volt-grad" },
+    { t: "WIDEST RANGE", c: "text-chrome" },
+    { t: "BEST PRICES", c: "text-volt-grad" },
+  ],
 ];
 
-const STAGGER = 110;
-const ENTER = 550;
-const EXIT = 450;
-const HOLD = 1700;
-
 export function RotatingHeadline() {
-  const [idx, setIdx] = useState(0);
+  const [i, setI] = useState(0);
   const [phase, setPhase] = useState<"in" | "out">("in");
 
   useEffect(() => {
-    const n = MESSAGES[idx].length;
-    if (phase === "in") {
-      const t = setTimeout(() => setPhase("out"), (n - 1) * STAGGER + ENTER + HOLD);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(() => {
-      setIdx((i) => (i + 1) % MESSAGES.length);
-      setPhase("in");
-    }, (n - 1) * STAGGER + EXIT);
-    return () => clearTimeout(t);
-  }, [idx, phase]);
+    const id = setInterval(() => {
+      setPhase("out");
+      window.setTimeout(() => {
+        setI((p) => (p + 1) % SLIDES.length);
+        setPhase("in");
+      }, 420);
+    }, 3800);
+    return () => clearInterval(id);
+  }, []);
 
-  const words = MESSAGES[idx];
+  const slide = SLIDES[i];
+  const big = slide.length <= 2;
+  const sizeCls = big
+    ? "text-[4.5rem] sm:text-8xl lg:text-9xl"
+    : "text-5xl sm:text-7xl lg:text-8xl";
 
   return (
-    <div className="flex min-h-[110px] items-center overflow-hidden sm:min-h-[140px] lg:min-h-[170px]">
-      <h2
-        className="skew-italic flex flex-wrap items-baseline gap-x-[0.28em] gap-y-1 font-display leading-[0.85]"
-        style={{ fontSize: "clamp(2.2rem, 8.5vw, 6rem)" }}
-        aria-label={words.map((w) => w.t).join(" ")}
-      >
-        {words.map((w, i) => (
-          <span
-            key={`${idx}-${phase}-${i}`}
-            className={`fly-word ${phase}`}
-            style={{ ["--delay" as string]: `${i * STAGGER}ms` }}
-          >
-            <span className={w.g ? "text-volt-grad" : "text-chrome"}>{w.t}</span>
+    <div className="relative mt-1 min-h-[7.5rem] sm:min-h-[10.5rem] lg:min-h-[13.5rem]">
+      <h1 className={`absolute inset-0 skew-italic font-display leading-[0.82] tracking-tight ${phase === "out" ? "headline-out" : "headline-in"}`}>
+        {slide.map((l, idx) => (
+          <span key={idx} className={`block ${l.c} ${sizeCls}`} style={{ animationDelay: `${idx * 0.08}s` }}>
+            {l.t}
           </span>
         ))}
-      </h2>
+      </h1>
     </div>
   );
 }

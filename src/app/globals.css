@@ -816,3 +816,18 @@ body::before {
 @media (prefers-reduced-motion: reduce) {
   .bursting { animation: none; }
 }
+
+/* ---- Hero rotating headline: fly-out then staggered fly-in ---- */
+@keyframes headlineIn {
+  from { opacity: 0; transform: translateX(-40px) scaleX(0.96); }
+  to { opacity: 1; transform: translateX(0) scaleX(1); }
+}
+@keyframes headlineOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(60px) skewX(-4deg); }
+}
+.headline-in > span { opacity: 0; animation: headlineIn 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.headline-out { animation: headlineOut 0.4s ease-in both; }
+@media (prefers-reduced-motion: reduce) {
+  .headline-in > span, .headline-out { animation: none; opacity: 1; }
+}

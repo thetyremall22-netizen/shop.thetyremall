@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Truck, Arrow, Flame } from "./icons";
+import { RotatingHeadline } from "./RotatingHeadline";
 
 export function Hero() {
   return (
@@ -27,11 +28,8 @@ export function Hero() {
         <div className="rise max-w-xl">
           {/* 1 — small line */}
           <p className="sa-line font-display text-base tracking-[0.42em] text-fg/90 drop-shadow sm:text-lg">SOUTH AFRICA&apos;S</p>
-          {/* 2 — the big title (overshoots large, settles) */}
-          <h1 className="skew-italic mt-1 font-display leading-[0.8] tracking-tight">
-            <span className="ct-pop text-chrome block text-[4.5rem] sm:text-8xl lg:text-9xl" style={{ animationDelay: "0.5s" }}>CHEAPEST</span>
-            <span className="ct-pop text-volt-grad block text-[4.5rem] sm:text-8xl lg:text-9xl" style={{ animationDelay: "0.64s" }}>TYRES</span>
-          </h1>
+          {/* 2 — the big title rotates: CHEAPEST TYRES ⇄ BIGGEST BRANDS / WIDEST RANGE / BEST PRICES */}
+          <RotatingHeadline />
           {/* 3 — comes in big and stays big */}
           <div className="fd-pop mt-3 flex items-center gap-3">
             <span className="grid size-12 shrink-0 place-items-center rounded-xl text-volt ring-1 ring-volt/40 backdrop-blur-sm">

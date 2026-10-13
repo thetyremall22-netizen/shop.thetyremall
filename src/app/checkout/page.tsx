@@ -199,9 +199,11 @@ export default function CheckoutPage() {
             <ul className="mt-4 space-y-3">
               {items.map((i) => (
                 <li key={i.id} className="flex gap-3">
-                  <span className="plate relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg">
-                    {i.image && <Image src={i.image} alt="" width={56} height={56} className="size-14 object-contain p-1" />}
-                    <span className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-volt text-[11px] font-black text-volt-ink">{i.qty}</span>
+                  <span className="relative size-14 shrink-0">
+                    <span className="plate grid size-14 place-items-center overflow-hidden rounded-lg">
+                      {i.image && <Image src={i.image} alt="" width={56} height={56} className="size-14 object-contain p-1" />}
+                    </span>
+                    <span className="absolute -right-1.5 -top-1.5 z-10 grid size-5 place-items-center rounded-full bg-volt text-[11px] font-black text-volt-ink">{i.qty}</span>
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="line-clamp-2 text-sm font-medium text-fg">{i.name}</div>

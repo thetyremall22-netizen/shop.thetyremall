@@ -10,8 +10,12 @@ const SECURE = (process.env.SMTP_SECURE ?? "false") === "true"; // true for 465,
 const FROM = process.env.MAIL_FROM ?? "The Tyre Mall <shop@thetyremall.co.za>";
 export const SHOP_EMAIL = process.env.SHOP_EMAIL ?? "shop@thetyremall.co.za";
 
+// Preferred on Vercel: Resend's HTTP API (no SMTP ports, no M365 basic-auth
+// blocks). If RESEND_API_KEY is set we use it; otherwise we fall back to SMTP.
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+
 export function emailConfigured(): boolean {
-  return Boolean(HOST && USER && PASS);
+  return Boolean(RESEND_API_KEY || (HOST && USER && PASS));
 }
 
 // Testing: copy every outgoing email to these addresses so the look & feel can
@@ -35,12 +39,28 @@ function getTransport() {
   return transporter;
 }
 
+async function sendViaResend(to: string, subject: string, html: string, cc: string[]): Promise<void> {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: FROM, to: [to], ...(cc.length ? { cc } : {}), subject, html }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Resend ${res.status}: ${body.slice(0, 300)}`);
+  }
+}
+
 export async function sendMail(to: string, subject: string, html: string): Promise<void> {
   if (!emailConfigured()) {
-    console.warn(`[email] SMTP not configured — skipped "${subject}" to ${to}`);
+    console.warn(`[email] not configured (set RESEND_API_KEY or SMTP_*) — skipped "${subject}" to ${to}`);
     return;
   }
   const cc = CC_LIST.filter((a) => a.toLowerCase() !== to.toLowerCase());
+  if (RESEND_API_KEY) {
+    await sendViaResend(to, subject, html, cc);
+    return;
+  }
   await getTransport().sendMail({ from: FROM, to, subject, html, ...(cc.length ? { cc } : {}) });
 }
 

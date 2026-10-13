@@ -801,3 +801,18 @@ body::before {
   .mega-panel { transition: none; opacity: 1; transform: none; }
   .mega-card { animation: none; opacity: 1; }
 }
+
+/* ---- Card "burst" on tap, before navigating to the product page ---- */
+@keyframes burstPop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.11); }
+  100% { transform: scale(1.04); }
+}
+.bursting {
+  animation: burstPop 0.17s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  position: relative;
+  z-index: 30;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bursting { animation: none; }
+}

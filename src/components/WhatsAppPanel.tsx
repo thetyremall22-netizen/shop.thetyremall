@@ -11,10 +11,15 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
   const [tab, setTab] = useState<Tab>("quote");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [consent, setConsent] = useState(true); // POPIA — pre-ticked
   const [f, setF] = useState({ name: "", email: "", phone: "", vehicle: VEHICLE_TYPES[0], tyreSize: "", rimSize: "", message: "" });
 
   if (!open) return null;
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setErr(null);
+    setF((s) => ({ ...s, [k]: e.target.value }));
+  };
 
   function buildMessage() {
     return [
@@ -24,18 +29,24 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
       f.tyreSize && `Tyre size: ${f.tyreSize}`,
       f.rimSize && `Rim / wheel: ${f.rimSize}`,
       f.message && `Notes: ${f.message}`,
+      `Consent to contact (POPIA): ${consent ? "Yes" : "No"}`,
     ].filter(Boolean).join("\n");
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!f.email && !f.phone) return;
+    // Native `required` covers name/email/phone; enforce at-least-one size here
+    // (a tyre buyer has no rim size and vice-versa, so we can't demand both).
+    if (!f.tyreSize.trim() && !f.rimSize.trim()) {
+      setErr("Please fill in your tyre size or your rim / wheel size.");
+      return;
+    }
     setBusy(true);
     try {
       await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source: "whatsapp-quote", name: f.name, email: f.email, phone: f.phone, message: buildMessage() }),
+        body: JSON.stringify({ source: "whatsapp-quote", name: f.name, email: f.email, phone: f.phone, message: buildMessage(), contactConsent: consent }),
         keepalive: true,
       });
       setSent(true);
@@ -89,23 +100,29 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
             </div>
           ) : (
             <form onSubmit={submit} className="space-y-3">
-              <p className="text-xs text-muted">Tell us what you need and we&apos;ll send you a price. One of email or mobile is required.</p>
-              <Field label="Name" value={f.name} onChange={set("name")} placeholder="Your name" />
-              <Field label="Email" type="email" value={f.email} onChange={set("email")} placeholder="you@email.com" />
-              <Field label="Mobile" type="tel" value={f.phone} onChange={set("phone")} placeholder="082 …" />
+              <p className="text-xs text-muted">Tell us what you need and we&apos;ll send you a price. All fields are required.</p>
+              <Field label="Name" value={f.name} onChange={set("name")} placeholder="Your name" required />
+              <Field label="Email" type="email" value={f.email} onChange={set("email")} placeholder="you@email.com" required />
+              <Field label="Mobile" type="tel" value={f.phone} onChange={set("phone")} placeholder="082 …" required />
               <label className="block">
-                <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted">Vehicle type</span>
-                <select value={f.vehicle} onChange={set("vehicle")} className="h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt">
+                <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted">Vehicle type <span className="text-sale">*</span></span>
+                <select required value={f.vehicle} onChange={set("vehicle")} className="h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt">
                   {VEHICLE_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>
               </label>
               <Field label="Tyre size" value={f.tyreSize} onChange={set("tyreSize")} placeholder="e.g. 205/55R16" />
               <Field label="Rim / wheel size" value={f.rimSize} onChange={set("rimSize")} placeholder="e.g. 17&quot; · 5x114.3" />
+              <p className="-mt-1.5 text-[10px] text-faint">Fill in at least one of tyre size or rim / wheel size.</p>
               <label className="block">
-                <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted">Notes (optional)</span>
+                <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted">Notes</span>
                 <textarea value={f.message} onChange={set("message")} rows={2} placeholder="Anything else?" className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-fg outline-none focus:border-volt" />
               </label>
-              <button type="submit" disabled={busy || (!f.email && !f.phone)} className="btn btn-volt h-11 w-full disabled:opacity-50">
+              <label className="flex cursor-pointer items-start gap-2 rounded-lg bg-surface-2 p-2.5">
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 size-4 accent-volt" />
+                <span className="text-[11px] leading-snug text-muted">Please contact me about my quote. I agree to be contacted in line with the <a href="/terms" target="_blank" className="font-semibold text-fg underline hover:text-volt">privacy policy</a> (POPIA).</span>
+              </label>
+              {err && <p className="rounded-lg border border-sale/40 bg-sale/10 p-2 text-[11px] font-semibold text-sale">{err}</p>}
+              <button type="submit" disabled={busy} className="btn btn-volt h-11 w-full disabled:opacity-50">
                 {busy ? "Sending…" : "Request quote"}
               </button>
             </form>
@@ -126,11 +143,11 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
   );
 }
 
-function Field({ label, value, onChange, type = "text", placeholder }: { label: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; type?: string; placeholder?: string }) {
+function Field({ label, value, onChange, type = "text", placeholder, required }: { label: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; type?: string; placeholder?: string; required?: boolean }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted">{label}</span>
-      <input type={type} value={value} onChange={onChange} placeholder={placeholder} className="h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" />
+      <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted">{label}{required && <span className="text-sale"> *</span>}</span>
+      <input type={type} value={value} onChange={onChange} placeholder={placeholder} required={required} className="h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" />
     </label>
   );
 }

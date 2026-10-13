@@ -52,10 +52,10 @@ export function ContactForm() {
       <div className="grid gap-3 sm:grid-cols-2">
         <Input name="name" label="Your name" required />
         <Input name="email" label="Email" type="email" required />
-        <Input name="phone" label="Mobile" type="tel" />
+        <Input name="phone" label="Mobile" type="tel" required />
         <label className="block">
-          <span className="mb-1.5 block text-xs font-semibold text-muted">Reason</span>
-          <select name="reason" className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt">
+          <span className="mb-1.5 block text-xs font-semibold text-muted">Reason <span className="text-sale">*</span></span>
+          <select name="reason" required className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt">
             {REASONS.map((r) => <option key={r}>{r}</option>)}
           </select>
         </label>
@@ -63,6 +63,10 @@ export function ContactForm() {
       <label className="block">
         <span className="mb-1.5 block text-xs font-semibold text-muted">Message <span className="text-sale">*</span></span>
         <textarea name="message" required rows={5} className="w-full rounded-lg border border-line bg-surface-2 p-3 text-sm text-fg outline-none focus:border-volt" placeholder="How can we help?" />
+      </label>
+      <label className="flex cursor-pointer items-start gap-2.5 rounded-lg bg-surface-2 p-3">
+        <input type="checkbox" name="contactConsent" defaultChecked value="yes" className="mt-0.5 size-4 accent-volt" />
+        <span className="text-xs leading-snug text-muted">Please contact me. I agree to be contacted about my enquiry in line with the <a href="/terms" target="_blank" className="font-semibold text-fg underline hover:text-volt">privacy policy</a> (POPIA).</span>
       </label>
       {error && <div className="rounded-lg border border-sale/40 bg-sale/10 p-2.5 text-sm font-semibold text-sale">{error}</div>}
       <button type="submit" disabled={sending} className="btn btn-volt w-full py-3.5 disabled:opacity-60">

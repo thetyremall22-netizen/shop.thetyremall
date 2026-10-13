@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import { Search, Close, Flame } from "./icons";
 import { formatPrice } from "@/lib/format";
 import { cleanVoiceQuery } from "@/lib/voice-search";
 import { MicButton } from "./MicButton";
+import { DragScroll } from "./DragScroll";
+import { BurstLink } from "./BurstLink";
 
 interface Hit {
   name: string;
@@ -201,14 +202,14 @@ export function MegaSearch() {
               {hits.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted">No matches — try a tyre size like “265/60R18”.</p>
               ) : (
-                <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1">
+                <DragScroll className="no-scrollbar flex gap-3 overflow-x-auto py-2">
                   {hits.map((h, i) => (
-                    <Link
+                    <BurstLink
                       key={h.slug}
                       href={`/product/${h.slug}`}
-                      onClick={() => { pushRecent(q || h.brand); setOpen(false); }}
+                      onActivate={() => { pushRecent(q || h.brand); setOpen(false); }}
                       style={{ animationDelay: `${Math.min(i, 10) * 35}ms` }}
-                      className="mega-card glow-hover flex w-40 shrink-0 flex-col overflow-hidden rounded-xl bg-white text-[#14171a] shadow-lg shadow-black/20 ring-1 ring-black/5"
+                      className="mega-card glow-hover-tight flex w-40 shrink-0 flex-col overflow-hidden rounded-xl bg-white text-[#14171a] shadow-lg shadow-black/20 ring-1 ring-black/5"
                     >
                       <div className="relative aspect-square w-full bg-white">
                         {h.thumb && <Image src={h.thumb} alt={h.name} fill sizes="160px" className="object-contain p-2" />}
@@ -223,9 +224,9 @@ export function MegaSearch() {
                           <span className="font-display text-sm text-[#14171a]">{formatPrice(h.price)}</span>
                         </div>
                       </div>
-                    </Link>
+                    </BurstLink>
                   ))}
-                </div>
+                </DragScroll>
               )}
             </div>
           </div>

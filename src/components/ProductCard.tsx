@@ -6,6 +6,7 @@ import { hasSetPricing, setPriceOf4 } from "@/lib/pricing";
 import { CompareToggle } from "./CompareToggle";
 import type { CompareItem } from "@/lib/compare";
 import { Star, Arrow } from "./icons";
+import { BurstLink } from "./BurstLink";
 
 function toCompareItem(p: Product): CompareItem {
   return {
@@ -142,7 +143,7 @@ export function ProductCard({ p }: { p: Product }) {
 export function ProductRailCard({ p }: { p: Product }) {
   const pct = discountPct(p.regularPrice, p.salePrice);
   return (
-    <Link
+    <BurstLink
       href={`/product/${p.slug}`}
       className="glow-hover-tight group flex w-44 shrink-0 flex-col overflow-hidden rounded-[14px] bg-white text-[#14171a] shadow-lg shadow-black/20 ring-1 ring-black/5"
     >
@@ -158,6 +159,6 @@ export function ProductRailCard({ p }: { p: Product }) {
         <div className="line-clamp-2 text-xs font-medium leading-snug text-[#14171a]">{p.name}</div>
         <div className="mt-1.5 font-display text-base text-[#14171a]">{formatPrice(p.price)}</div>
       </div>
-    </Link>
+    </BurstLink>
   );
 }

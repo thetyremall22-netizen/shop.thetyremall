@@ -13,6 +13,7 @@ import { hasSetPricing, setPriceOf4 } from "@/lib/pricing";
 import { parseTyreSpec, keyFeatures } from "@/lib/tyre-spec";
 import { ProductCustomiser } from "@/components/ProductCustomiser";
 import { ProductRailCard } from "@/components/ProductCard";
+import { DragScroll } from "@/components/DragScroll";
 import { CompareToggle } from "@/components/CompareToggle";
 import type { CompareItem } from "@/lib/compare";
 import type { Product } from "@/lib/types";
@@ -312,10 +313,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           {suggested.length > 0 && tyreSpec.size && (
             <p className="mt-1 text-sm text-muted">Same {tyreSpec.size} size, different brands &amp; price points.</p>
           )}
-          <div className="no-scrollbar -mx-4 mt-3 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 py-6 [&>a]:snap-start">
+          <DragScroll className="no-scrollbar -mx-4 mt-3 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 py-6 [&>a]:snap-start">
             {(suggested.length > 0 ? suggested : related).map((r) => <ProductRailCard key={r.id} p={r} />)}
             <span className="w-1 shrink-0" aria-hidden />
-          </div>
+          </DragScroll>
         </section>
       )}
     </div>

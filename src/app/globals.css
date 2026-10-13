@@ -573,6 +573,11 @@ body::before {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* branded loading spinner (TyreSpinner) */
+.tyre-spin { transform-origin: 50% 50%; animation: tyreSpin 0.9s linear infinite; }
+@keyframes tyreSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .tyre-spin { animation-duration: 2.4s; } }
+
 /* ============================================================
    HERO TYRE MOTION (home page only)
    A tyre rolls in toward the viewer, spinning, then settles.

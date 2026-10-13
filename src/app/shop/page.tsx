@@ -55,6 +55,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
     minPrice: priceNum(one(sp.min)),
     maxPrice: priceNum(one(sp.max)),
     onSale: one(sp.onSale) === "1",
+    inStock: one(sp.instock) === "1",
     sort: (one(sp.sort) as "relevance" | "price-asc" | "price-desc" | "name" | "newest") ?? "relevance",
     page,
     perPage: 24,

@@ -123,7 +123,7 @@ export interface Query {
   q?: string; category?: string; brand?: string; type?: "tyre" | "wheel";
   width?: string; profile?: string; rim?: string; pcd?: string;
   sizes?: string[]; runFlat?: boolean; extraLoad?: boolean;
-  minPrice?: number; maxPrice?: number; onSale?: boolean;
+  minPrice?: number; maxPrice?: number; onSale?: boolean; inStock?: boolean;
   sort?: "relevance" | "price-asc" | "price-desc" | "name" | "newest";
   page?: number; perPage?: number;
 }
@@ -158,6 +158,7 @@ export async function queryProducts(q: Query): Promise<QueryResult> {
     if (q.rim && p.specs.rim !== q.rim) return false;
     if (q.pcd && p.specs.pcd !== q.pcd) return false;
     if (q.onSale && !p.onSale) return false;
+    if (q.inStock && !p.inStock) return false;
     if (q.minPrice != null && p.price < q.minPrice * 100) return false;
     if (q.maxPrice != null && p.price > q.maxPrice * 100) return false;
     if (needSpec) {

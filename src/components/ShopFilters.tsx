@@ -83,7 +83,7 @@ function FilterBody({
   const setParam = useCallback((key: string, value: string | null) => setParams({ [key]: value }), [setParams]);
 
   const current = (k: string) => params.get(k) ?? "";
-  const activeCount = ["category", "brand", "width", "profile", "rim", "type", "onSale", "q", "runflat", "xl", "min", "max"].filter((k) => params.get(k)).length;
+  const activeCount = ["category", "brand", "width", "profile", "rim", "type", "onSale", "instock", "q", "runflat", "xl", "min", "max"].filter((k) => params.get(k)).length;
   const priceActive = (min: string, max: string) => current("min") === min && current("max") === max;
 
   return (
@@ -166,8 +166,9 @@ function FilterBody({
         </ul>
       </Group>
 
-      <Group title="Offers">
-        <Radio name="sale" checked={current("onSale") === "1"} label="On sale only" onChange={() => setParam("onSale", current("onSale") === "1" ? null : "1")} />
+      <Group title="Availability &amp; offers">
+        <CheckRow checked={current("instock") === "1"} label="In stock only" onChange={() => setParam("instock", current("instock") === "1" ? null : "1")} />
+        <CheckRow checked={current("onSale") === "1"} label="On sale only" onChange={() => setParam("onSale", current("onSale") === "1" ? null : "1")} />
       </Group>
     </div>
   );

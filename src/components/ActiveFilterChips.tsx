@@ -30,6 +30,7 @@ export function ActiveFilterChips({ search, categories }: { search: string; cate
   if (params.get("min")) chips.push({ key: "min", label: `Min R${params.get("min")}` });
   if (params.get("max")) chips.push({ key: "max", label: `Max R${params.get("max")}` });
   if (params.get("onSale") === "1") chips.push({ key: "onSale", label: "On sale" });
+  if (params.get("instock") === "1") chips.push({ key: "instock", label: "In stock only" });
 
   if (chips.length === 0) return null;
 

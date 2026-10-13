@@ -16,7 +16,15 @@ interface GarageItem {
 }
 
 const GARAGE_KEY = "ttm-garage-v1";
-const shopHref = (size: string) => `/shop?q=${encodeURIComponent(size)}`;
+// Structured tyre link (width/profile/rim) so the catalogue filters to the
+// exact fitment — falls back to text search for anything non-standard.
+function tyreHref(size: string): string {
+  const m = size.match(/(\d{3})\s*\/\s*(\d{2})\s*r?\s*(\d{2})/i);
+  const u = new URLSearchParams({ type: "tyre" });
+  if (m) { u.set("width", m[1]); u.set("profile", m[2]); u.set("rim", m[3]); }
+  else u.set("q", size);
+  return `/shop?${u.toString()}`;
+}
 
 function Sel({ label, value, onChange, options, placeholder, disabled }: {
   label: string; value: string; onChange: (v: string) => void;
@@ -125,7 +133,7 @@ export function VehicleSearch() {
                   <div>
                     <div className="text-[11px] font-bold uppercase tracking-wider text-volt">Factory size</div>
                     <div className="mt-1 flex flex-wrap gap-2">
-                      <Link href={shopHref(factory)} className="btn btn-volt h-10 px-4 text-sm">
+                      <Link href={tyreHref(factory)} className="btn btn-volt h-10 px-4 text-sm">
                         {factory.replace(/\s+/g, " ")} — shop tyres
                       </Link>
                     </div>
@@ -135,17 +143,31 @@ export function VehicleSearch() {
                       <div className="text-[11px] font-bold uppercase tracking-wider text-muted">Optional / plus sizes</div>
                       <div className="mt-1 flex flex-wrap gap-2">
                         {optional.map((s) => (
-                          <Link key={s} href={shopHref(s)} className="btn btn-ghost h-10 px-4 text-sm">{s.replace(/\s+/g, " ")}</Link>
+                          <Link key={s} href={tyreHref(s)} className="btn btn-ghost h-10 px-4 text-sm">{s.replace(/\s+/g, " ")}</Link>
                         ))}
                       </div>
                     </div>
                   )}
                   {(sel.rims.length > 0 || sel.pcd) && (
-                    <p className="text-xs text-muted">
-                      {sel.rims.length > 0 && <>Rim: {sel.rims.join(" / ")} </>}
-                      {sel.pcd && <>· PCD {sel.pcd.replace(/\*/g, "×")}</>}
-                      {sel.rims[0] && <> · <Link href={sel.wheelHref} className="font-semibold text-volt hover:underline">matching mag wheels →</Link></>}
-                    </p>
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-muted">Mag wheels</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        {sel.rims[0] && (
+                          <Link href={sel.wheelHref} className="btn btn-dark h-10 px-4 text-sm">
+                            Shop matching wheels →
+                          </Link>
+                        )}
+                        {!sel.pcd && (
+                          <span className="rounded-md border border-[#f0b429]/40 bg-[#f0b429]/10 px-2.5 py-1 text-[11px] font-semibold text-[#f0b429]">
+                            Fitment to be verified
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1.5 text-xs text-muted">
+                        {sel.rims.length > 0 && <>Rim: {sel.rims.join(" / ")} </>}
+                        {sel.pcd ? <>· PCD {sel.pcd.replace(/\*/g, "×")}</> : <>· PCD not listed — confirm bolt pattern before ordering</>}
+                      </p>
+                    </div>
                   )}
                   <button onClick={toggleGarage} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${inGarage ? "border-volt bg-volt/10 text-volt" : "border-line text-muted hover:text-fg"}`}>
                     <Check width={15} height={15} /> {inGarage ? "Saved to My Garage" : "Save to My Garage"}
@@ -185,7 +207,7 @@ export function VehicleSearch() {
                   <div className="truncate text-xs text-muted">{g.label}{g.trim ? ` · ${g.trim}` : ""}</div>
                   <div className="mt-1 flex items-center gap-2">
                     {g.tyres[0] ? (
-                      <Link href={shopHref(g.tyres[0])} className="text-xs font-bold text-volt hover:underline">Shop {g.tyres[0].replace(/\s+/g, " ")} →</Link>
+                      <Link href={tyreHref(g.tyres[0])} className="text-xs font-bold text-volt hover:underline">Shop {g.tyres[0].replace(/\s+/g, " ")} →</Link>
                     ) : (
                       <span className="text-xs text-muted">No listed size</span>
                     )}

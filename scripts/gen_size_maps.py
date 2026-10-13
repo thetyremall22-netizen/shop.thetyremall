@@ -27,6 +27,10 @@ def parse_tyre(size):
 # ================= TYRE MAP: width -> profile -> [rims] =================
 tmap = defaultdict(lambda: defaultdict(set))
 tcount = 0
+# per-option product counts (for "45 (12)" labels in the size filters)
+cnt_w = defaultdict(int)     # width            -> # products
+cnt_wp = defaultdict(int)    # width|profile     -> # products
+cnt_wpr = defaultdict(int)   # width|profile|rim -> # products
 for p in prods:
     if p.get("type") != "tyre": continue
     s = p.get("specs") or {}
@@ -37,6 +41,9 @@ for p in prods:
     if w and pr and r:
         tmap[w][pr].add(r)
         tcount += 1
+        cnt_w[w] += 1
+        cnt_wp[f"{w}|{pr}"] += 1
+        cnt_wpr[f"{w}|{pr}|{r}"] += 1
 
 tyre_out = {}
 for w in sort_nums(tmap.keys()):
@@ -44,6 +51,10 @@ for w in sort_nums(tmap.keys()):
 combos = sum(len(rs) for w in tyre_out.values() for rs in w.values())
 json.dump(tyre_out, open("src/data/tyre-size-map.json", "w"), ensure_ascii=False, separators=(",", ":"))
 print(f"TYRE map: {len(tyre_out)} widths, {combos} (width,profile,rim) combos, {tcount} skus mapped")
+
+counts_out = {"w": dict(cnt_w), "wp": dict(cnt_wp), "wpr": dict(cnt_wpr)}
+json.dump(counts_out, open("src/data/tyre-size-counts.json", "w"), ensure_ascii=False, separators=(",", ":"))
+print(f"TYRE counts: {len(cnt_w)} widths, {len(cnt_wp)} width|profile, {len(cnt_wpr)} width|profile|rim")
 
 # ================= WHEEL MAP: rim -> pcd -> [rim widths] =================
 def norm_pcd(v):
@@ -64,12 +75,15 @@ for r in sort_nums(wmap.keys()):
 json.dump(wheel_out, open("src/data/wheel-size-map.json", "w"), ensure_ascii=False, separators=(",", ":"))
 print(f"WHEEL map: {len(wheel_out)} rim sizes")
 
-# ---- compare to attached fixtures ----
+# ---- compare to attached fixtures (optional — skipped if the fixture is absent) ----
 def flatten_tyre(m):
     return {(norm(w), norm(pr), norm(r)) for w,prs in m.items() for pr,rs in prs.items() for r in rs}
-fix = json.load(open("/Users/tracymargetts/Downloads/tyre-size-map.json"))
-gen_set, fix_set = flatten_tyre(tyre_out), flatten_tyre(fix)
-print(f"TYRE vs fixture: generated {len(gen_set)} combos, fixture {len(fix_set)}, overlap {len(gen_set & fix_set)}, only-in-gen {len(gen_set-fix_set)}, only-in-fix {len(fix_set-gen_set)}")
+try:
+    fix = json.load(open("/Users/tracymargetts/Downloads/tyre-size-map.json"))
+    gen_set, fix_set = flatten_tyre(tyre_out), flatten_tyre(fix)
+    print(f"TYRE vs fixture: generated {len(gen_set)} combos, fixture {len(fix_set)}, overlap {len(gen_set & fix_set)}, only-in-gen {len(gen_set-fix_set)}, only-in-fix {len(fix_set-gen_set)}")
+except FileNotFoundError:
+    print("TYRE vs fixture: skipped (no Downloads fixture)")
 # spot checks from acceptance tests
 print("225 profiles:", list(tyre_out.get("225",{}).keys()))
 print("225/45 rims:", tyre_out.get("225",{}).get("45"))

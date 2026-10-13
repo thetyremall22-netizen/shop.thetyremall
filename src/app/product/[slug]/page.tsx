@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Metadata } from "next";
-import { getProduct, relatedProducts, dealProducts, similarTyres } from "@/lib/catalogue";
+import { getProduct, relatedProducts, dealProducts, similarTyres, crossFitment } from "@/lib/catalogue";
 import { getLive } from "@/lib/db/queries";
 import { vehiclesForSize } from "@/lib/vehicles";
 import { formatPrice, discountPct } from "@/lib/format";
@@ -95,6 +95,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const features = isTyre ? keyFeatures(p, tyreSpec) : [];
   const fits = isTyre && tyreSpec.size ? vehiclesForSize(tyreSpec.size, 12) : [];
   const suggested = isTyre ? await similarTyres(p, 8) : [];
+  // Cross-sell the opposite category by rim diameter (tyres ↔ mag wheels).
+  const cross = await crossFitment(p, 10);
+  const crossRim = (p.specs.rim || "").replace(/[^0-9.]/g, "");
 
   const kmh = (v?: string) => (v === "240+" ? "240+" : v);
   const specs = (
@@ -294,6 +297,38 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <p className="mt-3 text-xs text-muted">
             Always confirm against your vehicle&apos;s door-jamb placard — alternative fitments may also apply.
           </p>
+        </section>
+      )}
+
+      {/* cross-fitment: tyres ↔ mag wheels that share the same rim diameter */}
+      {cross.length > 0 && (
+        <section className="mt-14">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h2 className="font-display text-2xl sm:text-3xl">
+                {isTyre ? "Mag wheels that fit" : "Tyres for these wheels"}
+              </h2>
+              <p className="mt-1 text-sm text-muted">
+                {crossRim
+                  ? isTyre
+                    ? `${crossRim}" mags that take this rim size — complete the look.`
+                    : `${crossRim}" tyres to match — grab a set and roll.`
+                  : isTyre
+                    ? "Mags that take this rim size — complete the look."
+                    : "Matching tyres — grab a set and roll."}
+              </p>
+            </div>
+            <Link
+              href={crossRim ? `/shop?type=${isTyre ? "wheel" : "tyre"}&rim=${crossRim}` : `/shop?type=${isTyre ? "wheel" : "tyre"}`}
+              className="btn btn-ghost shrink-0"
+            >
+              View all
+            </Link>
+          </div>
+          <DragScroll className="no-scrollbar -mx-4 mt-3 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 py-6 [&>a]:snap-start">
+            {cross.map((r) => <ProductRailCard key={r.id} p={r} />)}
+            <span className="w-1 shrink-0" aria-hidden />
+          </DragScroll>
         </section>
       )}
 

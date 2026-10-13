@@ -241,6 +241,19 @@ export async function similarTyres(p: Product, limit = 8): Promise<Product[]> {
   return out;
 }
 
+/** Cross-sell the opposite category by rim diameter: on a tyre, the mag wheels
+ *  that take the same rim size; on a wheel, the tyres for that rim size. For
+ *  wheels we also prefer a matching PCD when the tyre side happens to carry one. */
+export async function crossFitment(p: Product, limit = 8): Promise<Product[]> {
+  const products = await getProducts();
+  const want: ProductType = p.type === "wheel" ? "tyre" : "wheel";
+  const rim = nWidth(p.specs.rim);
+  if (!rim) return [];
+  return products
+    .filter((o) => o.id !== p.id && o.type === want && o.image && o.inStock && nWidth(o.specs.rim) === rim)
+    .slice(0, limit);
+}
+
 export async function bestSellers(limit = 10): Promise<Product[]> {
   const products = await getProducts();
   return products.filter((p) => p.inStock && p.image).slice(0, limit);

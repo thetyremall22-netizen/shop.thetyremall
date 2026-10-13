@@ -5,8 +5,10 @@ import { useCallback, useState } from "react";
 import { Close, Filter, ChevronDown } from "./icons";
 import type { Category } from "@/lib/types";
 import tyreSizeMapRaw from "@/data/tyre-size-map.json";
+import tyreSizeCountsRaw from "@/data/tyre-size-counts.json";
 
 const TYRE_MAP = tyreSizeMapRaw as Record<string, Record<string, string[]>>;
+const COUNTS = tyreSizeCountsRaw as { w: Record<string, number>; wp: Record<string, number>; wpr: Record<string, number> };
 const numSort = (xs: string[]) => [...xs].sort((a, b) => parseFloat(a) - parseFloat(b));
 
 interface Props {
@@ -89,9 +91,9 @@ function FilterBody({
   // Cascading tyre size options — only combinations that have products.
   const selW = current("width");
   const selP = current("profile");
-  const sizeWidths = numSort(Object.keys(TYRE_MAP));
-  const sizeProfiles = selW ? numSort(Object.keys(TYRE_MAP[selW] ?? {})) : [];
-  const sizeRims = selW && selP ? numSort(TYRE_MAP[selW]?.[selP] ?? []) : [];
+  const widthOpts = numSort(Object.keys(TYRE_MAP)).map((w) => ({ value: w, count: COUNTS.w[w] }));
+  const profileOpts = (selW ? numSort(Object.keys(TYRE_MAP[selW] ?? {})) : []).map((pr) => ({ value: pr, count: COUNTS.wp[`${selW}|${pr}`] }));
+  const rimOpts = (selW && selP ? numSort(TYRE_MAP[selW]?.[selP] ?? []) : []).map((r) => ({ value: r, count: COUNTS.wpr[`${selW}|${selP}|${r}`] }));
 
   return (
     <div className="space-y-5">
@@ -117,9 +119,9 @@ function FilterBody({
 
       <Group title="Size">
         <div className="grid grid-cols-3 gap-2">
-          <MiniSelect label="Width" value={selW} options={sizeWidths} onChange={(v) => setParams({ width: v || null, profile: null, rim: null })} />
-          <MiniSelect label="Profile" value={selP} options={sizeProfiles} onChange={(v) => setParams({ profile: v || null, rim: null })} disabled={!selW} />
-          <MiniSelect label="Rim" value={current("rim")} options={sizeRims} onChange={(v) => setParam("rim", v)} disabled={!selP} />
+          <MiniSelect label="Width" value={selW} options={widthOpts} onChange={(v) => setParams({ width: v || null, profile: null, rim: null })} />
+          <MiniSelect label="Profile" value={selP} options={profileOpts} onChange={(v) => setParams({ profile: v || null, rim: null })} disabled={!selW} />
+          <MiniSelect label="Rim" value={current("rim")} options={rimOpts} onChange={(v) => setParam("rim", v)} disabled={!selP} />
         </div>
       </Group>
 
@@ -206,7 +208,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function MiniSelect({ label, value, options, onChange, disabled }: { label: string; value: string; options: string[]; onChange: (v: string) => void; disabled?: boolean }) {
+function MiniSelect({ label, value, options, onChange, disabled }: { label: string; value: string; options: { value: string; count?: number }[]; onChange: (v: string) => void; disabled?: boolean }) {
   return (
     <div className="relative">
       <select
@@ -216,7 +218,7 @@ function MiniSelect({ label, value, options, onChange, disabled }: { label: stri
         className="h-10 w-full appearance-none rounded-lg border border-line bg-surface-2 px-2 pr-6 text-sm font-semibold text-fg outline-none focus:border-volt disabled:cursor-not-allowed disabled:opacity-45"
       >
         <option value="">{label}</option>
-        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+        {options.map((o) => <option key={o.value} value={o.value}>{o.count != null ? `${o.value} (${o.count})` : o.value}</option>)}
       </select>
       <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-muted" width={13} height={13} />
     </div>

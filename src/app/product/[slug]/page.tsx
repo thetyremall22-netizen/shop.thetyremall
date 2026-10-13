@@ -202,9 +202,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               )}
               {hasSetPricing(p.type) ? (
                 <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
-                  <div>
+                  <div className="px-0.5 py-2">
                     <div className="text-[10px] font-extrabold uppercase tracking-wider text-muted">Per tyre</div>
-                    <div className="font-display text-4xl leading-none text-fg">{formatPrice(price)}</div>
+                    <div className="font-display text-3xl leading-none text-fg">{formatPrice(price)}</div>
                   </div>
                   <div className="rounded-xl bg-volt/10 px-3.5 py-2 ring-1 ring-volt/30">
                     <div className="text-[10px] font-extrabold uppercase tracking-wider text-volt">Set of 4</div>

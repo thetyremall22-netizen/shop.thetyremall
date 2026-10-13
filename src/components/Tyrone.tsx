@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/format";
 import { cleanVoiceQuery } from "@/lib/voice-search";
 import { MicButton } from "./MicButton";
 import { WhatsAppPanel } from "./WhatsAppPanel";
+import { useCart } from "@/lib/cart";
 
 interface TyroneProduct {
   name: string;
@@ -164,6 +165,7 @@ function matchRule(input: string): string {
 export function Tyrone() {
   const [open, setOpen] = useState(false);
   const [waOpen, setWaOpen] = useState(false);
+  const { drawerOpen } = useCart(); // cart side-drawer — slide the dock clear of it
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<"wheels" | null>(null); // wheel-context after tapping "Mag wheels"
   const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", text: GREETING, buttons: MAIN_MENU }]);
@@ -291,7 +293,7 @@ export function Tyrone() {
       {/* launcher dock — WhatsApp + Tyrone on a solid black row so page
           content is never hidden behind the two chat buttons */}
       {!open && !waOpen && (
-        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-black p-1.5 shadow-xl shadow-black/50 ring-1 ring-white/10">
+        <div className={`fixed bottom-4 z-50 flex items-center gap-2 rounded-full bg-black p-1.5 shadow-xl shadow-black/50 ring-1 ring-white/10 transition-all duration-300 ${drawerOpen ? "right-4 max-sm:hidden sm:right-[calc(28rem+1rem)]" : "right-4"}`}>
           <button
             onClick={() => { setWaOpen(true); setOpen(false); }}
             className="grid size-11 place-items-center rounded-full bg-[#25D366] text-black transition-transform hover:scale-105"

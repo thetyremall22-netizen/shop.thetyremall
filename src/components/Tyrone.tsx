@@ -19,7 +19,7 @@ interface TyroneProduct {
   thumb: string | null;
   size: string;
 }
-type Msg = { from: "bot" | "user"; text: string; products?: TyroneProduct[] };
+type Msg = { from: "bot" | "user"; text: string; products?: TyroneProduct[]; buttons?: string[] };
 
 interface Rule {
   keys: string[];
@@ -99,14 +99,48 @@ const RULES: Rule[] = [
 ];
 
 const GREETING =
-  "Hey there! 👋 I'm Tyrone, your tyre guy at The Tyre Mall. Ask me anything — finding the right tyres, delivery, payment, fitment, you name it. How can I help today?";
+  "Hey there! 👋 I'm Tyrone, your tyre guy at The Tyre Mall. What can I help you with today? Pick an option below, or just type or say what you need.";
 
-const SUGGESTIONS = [
-  "Tyres for my SUV",
-  "I need 265/60R18",
-  "Show me the deals",
-  "How does delivery work?",
-];
+// Guided menu (blueprint: by size · by vehicle · wheels · fitment & delivery ·
+// track order · talk to a human). Labels double as the button text.
+const MENU = {
+  size: "🔍 Find tyres by size",
+  vehicle: "🚗 Find tyres by vehicle",
+  wheels: "🛞 Mag wheels & rims",
+  info: "🚚 Fitment & delivery",
+  order: "📦 Track my order",
+  human: "💬 Talk to a human",
+};
+const MAIN_MENU = [MENU.size, MENU.vehicle, MENU.wheels, MENU.info, MENU.order, MENU.human];
+const WA_BUTTON = "💬 Chat on WhatsApp";
+const FOLLOWUPS = [MENU.size, MENU.vehicle, MENU.human];
+
+/** Scripted menu flows that just need a prompt or a canned answer (no catalogue
+ *  search). Returns a bot reply with quick-reply buttons, or null to let the
+ *  product search / keyword Q&A handle the message. */
+function localFlow(raw: string): Msg | null {
+  const t = raw.trim().toLowerCase();
+  const hasSize = /\d{3}\s*[\/x]\s*\d{2}/.test(t);
+  if (!hasSize && (t === MENU.size.toLowerCase() || t === "find by size" || t === "search by size")) {
+    return { from: "bot", text: "Cool — what size do you need? 🔍 Type it like 205/55R16 (width / profile / rim). It's printed on your tyre's sidewall. Not sure? Tell me your car and I'll find it.", buttons: [MENU.vehicle, "I'm not sure of my size", MENU.human] };
+  }
+  if (!hasSize && (t === MENU.vehicle.toLowerCase() || t === "find by vehicle" || t === "by vehicle")) {
+    return { from: "bot", text: "Sweet 🚗 — what do you drive? Give me the make, model & year, like “Toyota Hilux 2021” or “VW Polo 2018”, and I'll pull the right fitment and matching tyres.", buttons: [MENU.size, MENU.human] };
+  }
+  if (/not sure.*size|don'?t know.*size|unsure.*size/.test(t)) {
+    return { from: "bot", text: "No worries! Your size is on the tyre sidewall — a code like 205/55R16. Or just tell me your car (make, model, year) and I'll sort it. 🙂", buttons: [MENU.vehicle, MENU.human] };
+  }
+  if (t === MENU.info.toLowerCase() || /fitment.*delivery|delivery.*fitment/.test(t)) {
+    return { from: "bot", text: "Here's the quick version 🚚🔧\n\n• Delivery: FREE nationwide on 2+ tyres (R200 for a single), about 1–4 working days.\n• Fitment: FREE at our Joburg partner centres (Supa Quick, HiQ, Dunlop Zone). Optional wheel alignment R450, balance & valve R100/tyre — we'll call to book your slot.", buttons: ["Payment & Happy Pay", "Warranties", "Returns", MENU.size] };
+  }
+  if (t === MENU.order.toLowerCase() || /track.*order|order status|where.*my order/.test(t)) {
+    return { from: "bot", text: "Happy to help track your order 📦. Pop in your order number (it looks like TTM-12345) and I'll check — or I can connect you to the team to sort it fast.", buttons: [MENU.human] };
+  }
+  if (t === MENU.human.toLowerCase() || /talk to.*(human|someone|agent|sales|person)|speak to.*(human|someone|agent|sales|person)|real person|customer service/.test(t)) {
+    return { from: "bot", text: "Of course — our team's ready to help 💬. WhatsApp or call 078 0088 788 (Mon–Fri 8:00–17:00, Sat 8:00–13:00), or email shop@thetyremall.co.za. Tap below to start a WhatsApp quote.", buttons: [WA_BUTTON, MENU.info] };
+  }
+  return null;
+}
 
 function matchRule(input: string): string {
   const q = ` ${input.toLowerCase()} `;
@@ -128,7 +162,7 @@ export function Tyrone() {
   const [open, setOpen] = useState(false);
   const [waOpen, setWaOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", text: GREETING }]);
+  const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", text: GREETING, buttons: MAIN_MENU }]);
   const [typing, setTyping] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const lastMsgRef = useRef<HTMLDivElement>(null);
@@ -162,20 +196,37 @@ export function Tyrone() {
     return () => window.removeEventListener("ttm:tyrone", onOpen as EventListener);
   }, []);
 
+  function onButton(label: string) {
+    // "Chat on WhatsApp" hands off to the existing WhatsApp quote panel.
+    if (label === WA_BUTTON) { setOpen(false); setWaOpen(true); return; }
+    send(label);
+  }
+
   async function send(text: string) {
     const t = text.trim();
     if (!t) return;
     setMsgs((m) => [...m, { from: "user", text: t }]);
     setInput("");
+
+    // Scripted menu flow (prompt or canned answer, no catalogue search)?
+    const flow = localFlow(t);
+    if (flow) {
+      setTyping(true);
+      window.setTimeout(() => { setTyping(false); setMsgs((m) => [...m, flow]); }, 350);
+      return;
+    }
+
     setTyping(true);
     const started = Date.now();
-    let reply: Msg = { from: "bot", text: matchRule(t) };
+    const fallbackText = matchRule(t);
+    const isFallback = fallbackText.startsWith("I'm not totally sure");
+    let reply: Msg = { from: "bot", text: fallbackText, buttons: isFallback ? MAIN_MENU : FOLLOWUPS };
     let firstProduct: TyroneProduct | undefined;
     try {
       const res = await fetch(`/api/tyrone?msg=${encodeURIComponent(t)}`);
       const data = await res.json();
       if (Array.isArray(data.products) && data.products.length) {
-        reply = { from: "bot", text: `${data.label}${data.note ? " — " + data.note : ""}:`, products: data.products };
+        reply = { from: "bot", text: `${data.label}${data.note ? " — " + data.note : ""}:`, products: data.products, buttons: FOLLOWUPS };
         firstProduct = data.products[0];
       }
     } catch {
@@ -271,7 +322,7 @@ export function Tyrone() {
                 className={`flex scroll-mt-2 flex-col ${m.from === "user" ? "items-end" : "items-start"}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                  className={`max-w-[85%] whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                     m.from === "user"
                       ? "rounded-br-sm bg-volt text-volt-ink"
                       : "rounded-bl-sm bg-surface text-fg"
@@ -307,6 +358,19 @@ export function Tyrone() {
                     ))}
                   </div>
                 )}
+                {m.from === "bot" && m.buttons && m.buttons.length > 0 && i === msgs.length - 1 && !typing && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {m.buttons.map((b) => (
+                      <button
+                        key={b}
+                        onClick={() => onButton(b)}
+                        className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-fg transition-colors hover:border-volt hover:text-volt"
+                      >
+                        {b}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             {typing && (
@@ -314,15 +378,6 @@ export function Tyrone() {
                 <div className="rounded-2xl rounded-bl-sm bg-surface px-3.5 py-3">
                   <span className="tyrone-dot" /><span className="tyrone-dot" /><span className="tyrone-dot" />
                 </div>
-              </div>
-            )}
-            {msgs.length <= 1 && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {SUGGESTIONS.map((s) => (
-                  <button key={s} onClick={() => send(s)} className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-fg transition-colors hover:border-volt hover:text-volt">
-                    {s}
-                  </button>
-                ))}
               </div>
             )}
             <div ref={endRef} />

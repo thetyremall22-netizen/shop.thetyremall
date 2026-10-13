@@ -110,21 +110,12 @@ export function MicButton({
     }
   }
 
-  // Pre-flight the microphone permission so the browser reliably shows its
-  // prompt (some browsers never prompt from recognition.start() alone, so the
-  // mic appeared to "do nothing"). Then start recognition.
-  async function start() {
-    const md = navigator.mediaDevices;
-    if (md?.getUserMedia) {
-      try {
-        const stream = await md.getUserMedia({ audio: true });
-        // release immediately — recognition opens its own capture
-        stream.getTracks().forEach((t) => t.stop());
-      } catch {
-        flash(MSG["not-allowed"]);
-        return;
-      }
-    }
+  // Start recognition synchronously inside the click/tap. The Web Speech API
+  // requires recognition.start() to run in the user-gesture context; an `await`
+  // before it (e.g. getUserMedia) loses that gesture on Safari/iOS and the mic
+  // silently did nothing. The browser shows its own mic-permission prompt, and
+  // onerror ("not-allowed") reports it if the user blocks it.
+  function start() {
     begin();
   }
 

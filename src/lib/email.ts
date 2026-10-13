@@ -14,6 +14,14 @@ export function emailConfigured(): boolean {
   return Boolean(HOST && USER && PASS);
 }
 
+// Testing: copy every outgoing email to these addresses so the look & feel can
+// be reviewed. Set EMAIL_CC="" in Vercel env vars to turn this off once signed
+// off. Any address that is already the primary recipient is skipped.
+const CC_LIST = (process.env.EMAIL_CC ?? "tracy@iheartdigital.co.za, shop@thetyremall.co.za")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 let transporter: Transporter | null = null;
 function getTransport() {
   if (!transporter) {
@@ -32,7 +40,8 @@ export async function sendMail(to: string, subject: string, html: string): Promi
     console.warn(`[email] SMTP not configured — skipped "${subject}" to ${to}`);
     return;
   }
-  await getTransport().sendMail({ from: FROM, to, subject, html });
+  const cc = CC_LIST.filter((a) => a.toLowerCase() !== to.toLowerCase());
+  await getTransport().sendMail({ from: FROM, to, subject, html, ...(cc.length ? { cc } : {}) });
 }
 
 const SITE_URL = process.env.SITE_URL ?? "https://thetyremall.co.za";

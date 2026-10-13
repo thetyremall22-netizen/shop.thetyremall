@@ -62,6 +62,8 @@ export async function GET(req: NextRequest) {
   let note = "";
 
   const vehicleFit = !size ? findVehicle(msg) : null;
+  // The exact year the customer mentioned — shown instead of the generation range.
+  const askedYear = msg.match(/\b(19|20)\d{2}\b/)?.[0] ?? null;
 
   if (size) {
     picks = (await searchProducts(size, 30)).filter((p) => (p.specs.size ?? "").toUpperCase().includes(size.toUpperCase()));
@@ -82,7 +84,7 @@ export async function GET(req: NextRequest) {
       });
     }
     if (picks.length) {
-      label = `Mags that fit your ${vehicleFit.make} ${vehicleFit.model} — bolt pattern ${pcdLabel}`;
+      label = `Mags that fit your ${vehicleFit.make} ${vehicleFit.model}${askedYear ? ` ${askedYear}` : ""} — bolt pattern ${pcdLabel}`;
       note = rimDias.length ? `OE rim ${rimDias.join('" / ')}" · all match your ${pcdLabel} PCD` : `All match your ${pcdLabel} PCD`;
     } else {
       const msgTxt = pcd
@@ -94,7 +96,7 @@ export async function GET(req: NextRequest) {
     const oe = vehicleFit.tyres[0].replace(/\s+/g, "").toUpperCase(); // 195/45R16
     picks = (await searchProducts(oe, 30)).filter((p) => (p.specs.size ?? "").toUpperCase().replace(/\s+/g, "").includes(oe));
     if (!picks.length) picks = await searchProducts(oe, 12);
-    label = `For your ${vehicleFit.make} ${vehicleFit.model}${vehicleFit.label ? ` (${vehicleFit.label})` : ""}, the fitment is ${vehicleFit.tyres.join(" or ")}`;
+    label = `For your ${vehicleFit.make} ${vehicleFit.model}${askedYear ? ` ${askedYear}` : (vehicleFit.label ? ` (${vehicleFit.label})` : "")}, the fitment is ${vehicleFit.tyres.join(" or ")}`;
     if (vehicleFit.rims.length) note = `Rim ${vehicleFit.rims.join(" / ")}${vehicleFit.pcd ? ` · PCD ${vehicleFit.pcd.replace(/\*/g, "×")}` : ""}`;
   } else if (brandHit) {
     const r = await queryProducts({ brand: brandHit, onSale: wantsDeals || undefined, perPage: 24 });

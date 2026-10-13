@@ -80,13 +80,13 @@ export function VehicleSearch() {
   // auto-select the trim when a year has exactly one
   useEffect(() => { setTrimIdx(trims.length === 1 ? "0" : ""); }, [year, trims.length]);
 
-  const inGarage = sel && garage.some((g) => g.make === make && g.model === model && g.label === sel.label && g.trim === sel.trim);
+  const inGarage = sel && garage.some((g) => g.make === make && g.model === model && g.label === year && g.trim === sel.trim);
   function toggleGarage() {
     if (!sel) return;
     if (inGarage) {
-      saveGarage(garage.filter((g) => !(g.make === make && g.model === model && g.label === sel.label && g.trim === sel.trim)));
+      saveGarage(garage.filter((g) => !(g.make === make && g.model === model && g.label === year && g.trim === sel.trim)));
     } else {
-      saveGarage([{ make, model, label: sel.label, trim: sel.trim, image: sel.image, tyres: sel.tyres, rims: sel.rims, pcd: sel.pcd }, ...garage].slice(0, 6));
+      saveGarage([{ make, model, label: year, trim: sel.trim, image: sel.image, tyres: sel.tyres, rims: sel.rims, pcd: sel.pcd }, ...garage].slice(0, 6));
     }
   }
 
@@ -118,7 +118,7 @@ export function VehicleSearch() {
             </div>
             <div>
               <h2 className="font-display text-2xl text-fg">{make} {model} <span className="text-volt">{year}</span></h2>
-              <p className="text-sm text-muted">{sel.trim ? `${sel.trim} · ` : ""}{sel.label} generation</p>
+              <p className="text-sm text-muted">{sel.trim || "Standard"}{sel.gen ? ` · ${sel.gen}` : ""}</p>
 
               {factory ? (
                 <div className="mt-4 space-y-3">

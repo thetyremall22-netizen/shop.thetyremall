@@ -131,7 +131,7 @@ export function MegaSearch() {
       {/* permanent bar */}
       <form
         onSubmit={(e) => { e.preventDefault(); go(q); }}
-        className="flex h-11 items-center overflow-hidden rounded-xl bg-surface-2 ring-1 ring-line focus-within:ring-2 focus-within:ring-volt"
+        className="flex h-10 items-center overflow-hidden rounded-xl bg-surface-2 ring-1 ring-line focus-within:ring-2 focus-within:ring-volt"
       >
         <Search className="ml-4 shrink-0 text-muted" width={20} height={20} />
         <input
@@ -153,7 +153,7 @@ export function MegaSearch() {
           onInterim={(t) => { setOpen(true); setQ(t); }}
           onResult={(t) => { const c = cleanVoiceQuery(t); setQ(c); go(c); }}
         />
-        <button type="submit" className="btn btn-volt m-1.5 shrink-0 px-6">Search</button>
+        <button type="submit" className="btn btn-volt m-1 shrink-0 px-5">Search</button>
       </form>
 
       {/* mega panel — full viewport width */}

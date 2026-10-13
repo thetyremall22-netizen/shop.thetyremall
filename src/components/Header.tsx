@@ -42,80 +42,19 @@ export function Header() {
 
       {/* main bar */}
       <div className="border-b border-line bg-ink/95 backdrop-blur">
-        <div className="container-x flex items-center gap-4 py-2">
+        <div className="container-x flex flex-wrap items-center gap-x-4 gap-y-2 py-2.5">
           <button className="grid size-10 shrink-0 place-items-center rounded-lg text-fg lg:hidden" onClick={() => setMenuOpen(true)} aria-label="Open menu">
             <Menu />
           </button>
 
+          {/* Logo — larger */}
           <Logo className="shrink-0" priority />
 
-          {/* desktop nav */}
-          <nav className="mx-auto hidden items-center gap-1 lg:flex">
-            <div className="group relative mr-1">
-              <Link
-                href="/shop"
-                className="flex items-center gap-1 rounded-lg border border-volt/60 px-3.5 py-2 text-sm font-bold text-volt transition-colors group-hover:bg-volt group-hover:text-volt-ink"
-              >
-                All Categories <Chevron width={14} height={14} className="transition-transform group-hover:rotate-180" />
-              </Link>
-              <div className="invisible absolute left-0 top-full z-50 w-56 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
-                <div className="overflow-hidden rounded-xl border border-line bg-ink-2 shadow-2xl shadow-black/60">
-                  {NAV_PRIMARY.filter((c) => c.slug !== "wheel-rims").map((c) => (
-                    <Link
-                      key={c.slug}
-                      href={`/shop?category=${c.slug}`}
-                      className="block px-4 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface hover:text-volt"
-                    >
-                      {c.label} Tyres
-                    </Link>
-                  ))}
-                  <Link href="/shop" className="block border-t border-line px-4 py-2.5 text-sm font-bold text-volt transition-colors hover:bg-surface">
-                    View all →
-                  </Link>
-                </div>
-              </div>
-            </div>
-            <Link href="/" className="rounded-md px-3.5 py-2 text-sm font-bold tracking-wide text-fg transition-colors hover:text-volt">Home</Link>
-
-            {/* Shop by Brands — click goes to shop, hover opens the brand mega menu */}
-            <div className="group relative">
-              <Link href="/shop" className="flex items-center gap-1 rounded-md px-3.5 py-2 text-sm font-bold tracking-wide text-fg transition-colors group-hover:text-volt">
-                Shop by Brands <Chevron width={14} height={14} className="transition-transform group-hover:rotate-180" />
-              </Link>
-              <div className="invisible absolute left-1/2 top-full z-50 w-screen max-w-3xl -translate-x-1/2 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
-                <div className="overflow-hidden rounded-2xl border border-line bg-ink-2 p-5 shadow-2xl shadow-black/70">
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="eyebrow">Shop by tyre brand</span>
-                    <Link href="/shop" className="text-xs font-bold text-volt hover:underline">View all →</Link>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2.5 lg:grid-cols-6">
-                    {BRANDS.map((b) => (
-                      <BrandTile key={b} brand={b} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {NAV.filter((n) => n.label !== "Home").map((n) => (
-              <Link
-                key={n.label}
-                href={n.href}
-                className="rounded-md px-3.5 py-2 text-sm font-bold tracking-wide text-fg transition-colors hover:text-volt"
-              >
-                {n.label}
-              </Link>
-            ))}
-          </nav>
-
-          {/* right icons */}
-          <div className="ml-auto flex items-center gap-1">
+          {/* mobile actions (desktop shows these inside the column below) */}
+          <div className="ml-auto flex items-center gap-1 lg:hidden">
             <ThemeToggle />
             <Link href="/coming-soon?for=Account" className="grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Account">
               <User />
-            </Link>
-            <Link href="/coming-soon?for=Wishlist" className="hidden size-10 place-items-center rounded-lg text-fg hover:text-volt sm:grid" aria-label="Wishlist">
-              <Heart />
             </Link>
             <button onClick={() => setDrawerOpen(true)} className="relative grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Open cart">
               <Cart />
@@ -126,11 +65,89 @@ export function Header() {
               )}
             </button>
           </div>
-        </div>
 
-        {/* permanent search bar (always visible under the menu) */}
-        <div className="border-t border-line bg-ink">
-          <div className="container-x py-2">
+          {/* right column: nav + icons on top (desktop), compact search below.
+              On mobile this wraps to full width beneath the logo. */}
+          <div className="order-last flex w-full flex-col gap-2 lg:order-none lg:w-auto lg:flex-1">
+            <div className="hidden items-center gap-1 lg:flex">
+              <nav className="flex items-center gap-1">
+                <div className="group relative mr-1">
+                  <Link
+                    href="/shop"
+                    className="flex items-center gap-1 rounded-lg border border-volt/60 px-3.5 py-2 text-sm font-bold text-volt transition-colors group-hover:bg-volt group-hover:text-volt-ink"
+                  >
+                    All Categories <Chevron width={14} height={14} className="transition-transform group-hover:rotate-180" />
+                  </Link>
+                  <div className="invisible absolute left-0 top-full z-50 w-56 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
+                    <div className="overflow-hidden rounded-xl border border-line bg-ink-2 shadow-2xl shadow-black/60">
+                      {NAV_PRIMARY.filter((c) => c.slug !== "wheel-rims").map((c) => (
+                        <Link
+                          key={c.slug}
+                          href={`/shop?category=${c.slug}`}
+                          className="block px-4 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface hover:text-volt"
+                        >
+                          {c.label} Tyres
+                        </Link>
+                      ))}
+                      <Link href="/shop" className="block border-t border-line px-4 py-2.5 text-sm font-bold text-volt transition-colors hover:bg-surface">
+                        View all →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+                <Link href="/" className="rounded-md px-3 py-2 text-sm font-bold tracking-wide text-fg transition-colors hover:text-volt">Home</Link>
+
+                {/* Shop by Brands — click goes to shop, hover opens the brand mega menu */}
+                <div className="group relative">
+                  <Link href="/shop" className="flex items-center gap-1 rounded-md px-3 py-2 text-sm font-bold tracking-wide text-fg transition-colors group-hover:text-volt">
+                    Shop by Brands <Chevron width={14} height={14} className="transition-transform group-hover:rotate-180" />
+                  </Link>
+                  <div className="invisible absolute left-1/2 top-full z-50 w-screen max-w-3xl -translate-x-1/2 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
+                    <div className="overflow-hidden rounded-2xl border border-line bg-ink-2 p-5 shadow-2xl shadow-black/70">
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="eyebrow">Shop by tyre brand</span>
+                        <Link href="/shop" className="text-xs font-bold text-volt hover:underline">View all →</Link>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2.5 lg:grid-cols-6">
+                        {BRANDS.map((b) => (
+                          <BrandTile key={b} brand={b} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {NAV.filter((n) => n.label !== "Home").map((n) => (
+                  <Link
+                    key={n.label}
+                    href={n.href}
+                    className="rounded-md px-3 py-2 text-sm font-bold tracking-wide text-fg transition-colors hover:text-volt"
+                  >
+                    {n.label}
+                  </Link>
+                ))}
+              </nav>
+
+              {/* desktop icons */}
+              <div className="ml-auto flex items-center gap-1">
+                <ThemeToggle />
+                <Link href="/coming-soon?for=Account" className="grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Account">
+                  <User />
+                </Link>
+                <Link href="/coming-soon?for=Wishlist" className="grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Wishlist">
+                  <Heart />
+                </Link>
+                <button onClick={() => setDrawerOpen(true)} className="relative grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Open cart">
+                  <Cart />
+                  {totals.itemCount > 0 && (
+                    <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-volt px-1 text-[11px] font-black text-volt-ink">
+                      {totals.itemCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+
             <MegaSearch />
           </div>
         </div>

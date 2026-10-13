@@ -121,7 +121,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
         {/* sidebar */}
-        <aside className="lg:sticky lg:top-40 lg:h-fit">
+        <aside className="lg:sticky lg:top-40 lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto lg:pr-1">
           <ShopFilters
             categories={categories}
             brands={meta.brands}

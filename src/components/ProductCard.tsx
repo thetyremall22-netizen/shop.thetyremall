@@ -147,7 +147,7 @@ export function ProductRailCard({ p }: { p: Product }) {
   return (
     <Link
       href={`/product/${p.slug}`}
-      className="glow-hover group flex w-44 shrink-0 flex-col overflow-hidden rounded-[14px] bg-white text-[#14171a] shadow-lg shadow-black/20 ring-1 ring-black/5"
+      className="glow-hover-tight group flex w-44 shrink-0 flex-col overflow-hidden rounded-[14px] bg-white text-[#14171a] shadow-lg shadow-black/20 ring-1 ring-black/5"
     >
       <div className="relative aspect-square w-full bg-white">
         {p.image && (

@@ -34,6 +34,31 @@ export interface Order {
 
 type Row = typeof schema.orders.$inferSelect;
 
+// Create the orders + meta tables on demand (matches the pattern used by
+// enquiries/contacts/abandoned). This makes the in-memory fallback DB usable
+// on Vercel before Turso is connected, so checkout can still reach PayFast.
+let ensured = false;
+async function ensureSchema() {
+  if (ensured) return;
+  await libsql.execute(`CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id TEXT NOT NULL UNIQUE,
+    reference TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    customer TEXT NOT NULL DEFAULT '{}',
+    delivery TEXT NOT NULL DEFAULT '{}',
+    items TEXT NOT NULL DEFAULT '[]',
+    totals TEXT NOT NULL DEFAULT '{}',
+    payment_method TEXT NOT NULL DEFAULT '',
+    pf_payment_id TEXT,
+    created_at INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0
+  )`);
+  await libsql.execute(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')`);
+  await libsql.execute(`INSERT OR IGNORE INTO meta (key, value) VALUES ('order_seq', '0')`);
+  ensured = true;
+}
+
 function rowToOrder(r: Row): Order {
   return {
     id: r.orderId,
@@ -51,6 +76,7 @@ function rowToOrder(r: Row): Order {
 }
 
 export async function saveOrder(order: Order): Promise<void> {
+  await ensureSchema();
   const now = Date.now();
   await db
     .insert(schema.orders)
@@ -83,6 +109,7 @@ export async function saveOrder(order: Order): Promise<void> {
 }
 
 export async function getOrder(id: string): Promise<Order | null> {
+  await ensureSchema();
   const rows = await db.select().from(schema.orders).where(eq(schema.orders.orderId, id)).limit(1);
   return rows[0] ? rowToOrder(rows[0]) : null;
 }
@@ -97,6 +124,7 @@ export async function updateOrder(id: string, patch: Partial<Order>): Promise<Or
 
 /** Atomic incrementing order reference via the meta counter. */
 export async function nextReference(): Promise<string> {
+  await ensureSchema();
   const res = await libsql.execute(
     "UPDATE meta SET value = CAST(value AS INTEGER) + 1 WHERE key = 'order_seq' RETURNING value"
   );
@@ -106,6 +134,7 @@ export async function nextReference(): Promise<string> {
 
 // ---- admin ------------------------------------------------------------------
 export async function listOrders(opts: { page?: number; perPage?: number; status?: string } = {}) {
+  await ensureSchema();
   const page = Math.max(1, opts.page ?? 1);
   const perPage = opts.perPage ?? 25;
   const where = opts.status ? eq(schema.orders.status, opts.status) : undefined;

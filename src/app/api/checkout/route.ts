@@ -54,7 +54,15 @@ export async function POST(req: NextRequest) {
   const method: DeliveryMethod = delivery?.method === "fitment" ? "fitment" : "delivery";
   const totals = computeTotals(lines, method);
 
-  const reference = await nextReference();
+  // Order persistence is best-effort: if the database isn't available yet
+  // (e.g. before Turso is connected on Vercel) we still let the customer pay —
+  // we just can't record the order until the DB is set up.
+  let reference: string;
+  try {
+    reference = await nextReference();
+  } catch {
+    reference = `TTM-${1000 + (Date.now() % 100000)}`;
+  }
   const id = `${reference}-${Date.now().toString(36)}`;
   const now = new Date().toISOString();
   const order: Order = {
@@ -62,7 +70,11 @@ export async function POST(req: NextRequest) {
     customer, delivery: { ...delivery, method }, items: lines, totals,
     paymentMethod, createdAt: now, updatedAt: now,
   };
-  await saveOrder(order);
+  try {
+    await saveOrder(order);
+  } catch (e) {
+    console.error("[checkout] saveOrder failed — proceeding to PayFast without a saved order:", (e as Error).message);
+  }
 
   if (paymentMethod !== "payfast") {
     // HappyPay / Mobicred gateways come in a later step.

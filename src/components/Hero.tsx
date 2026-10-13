@@ -17,7 +17,7 @@ export function Hero() {
   }, []);
 
   const titleSize =
-    scene >= 2 ? "text-5xl sm:text-6xl lg:text-7xl" : "text-7xl sm:text-8xl lg:text-9xl";
+    scene >= 2 ? "text-5xl sm:text-7xl lg:text-8xl" : "text-7xl sm:text-8xl lg:text-9xl";
   const titleCls = `ct-pop block ${titleSize} transition-[font-size] duration-700 ease-[cubic-bezier(0.2,0.7,0.2,1)]`;
 
   return (
@@ -44,19 +44,35 @@ export function Hero() {
         <div className="rise max-w-xl">
           {/* 1 — small line (shared, stays through both scenes) */}
           <p className="sa-line font-display text-base tracking-[0.42em] text-fg/90 drop-shadow sm:text-lg">SOUTH AFRICA&apos;S</p>
-          {/* 2 — the big title. Overshoots large in scene 1, then shrinks for scene 2. */}
-          <h1 className="skew-italic mt-1 font-display leading-[0.82] tracking-tight">
-            <span className={`${titleCls} text-chrome`} style={{ animationDelay: "0.5s" }}>CHEAPEST</span>
-            <span className={`${titleCls} text-volt-grad`} style={{ animationDelay: "0.64s" }}>TYRES</span>
-          </h1>
-          {/* 2b — scene 2 only: Biggest Brands · Widest Range · Best Prices rise up
-               one after another, in the space freed by the shrinking title. */}
-          <div className={`grid transition-all duration-500 ${scene >= 2 ? "mt-2 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-            <div className="overflow-hidden">
-              <div className="skew-italic flex flex-wrap items-center gap-x-2 gap-y-0.5 font-display text-base uppercase tracking-tight drop-shadow sm:text-xl lg:text-2xl">
-                <span className={scene >= 2 ? "hero-line" : "opacity-0"} style={{ animationDelay: "0.1s" }}><span className="text-volt-grad">Biggest</span> <span className="text-chrome">Brands</span></span>
-                <span className={scene >= 2 ? "hero-line" : "opacity-0"} style={{ animationDelay: "0.25s" }}><span className="text-volt">•</span> <span className="text-volt-grad">Widest</span> <span className="text-chrome">Range</span></span>
-                <span className={scene >= 2 ? "hero-line" : "opacity-0"} style={{ animationDelay: "0.4s" }}><span className="text-volt">•</span> <span className="text-volt-grad">Best</span> <span className="text-chrome">Prices</span></span>
+          {/* 2 — title zone. An invisible sizer reserves the scene-1 (large)
+               title footprint so this zone's height never changes — everything
+               above (SOUTH AFRICA'S) and below (WITH FREE DELIVERY, the blurb,
+               the buttons) stays pinned in the exact same place across scenes.
+               The real, animated title + Biggest Brands row are overlaid on top
+               (absolutely positioned), so only they move: the title shrinks and
+               the Biggest Brands row slots into the space it frees. */}
+          <div className="relative mt-1">
+            {/* invisible sizer — reserves the large title's height */}
+            <div aria-hidden className="invisible skew-italic font-display leading-[0.82] tracking-tight">
+              <span className="block text-7xl sm:text-8xl lg:text-9xl">CHEAPEST</span>
+              <span className="block text-7xl sm:text-8xl lg:text-9xl">TYRES</span>
+            </div>
+            {/* real animated content — overlaid, does not affect layout */}
+            <div className="absolute inset-x-0 top-0">
+              <h1 className="skew-italic font-display leading-[0.82] tracking-tight">
+                <span className={`${titleCls} text-chrome`} style={{ animationDelay: "0.5s" }}>CHEAPEST</span>
+                <span className={`${titleCls} text-volt-grad`} style={{ animationDelay: "0.64s" }}>TYRES</span>
+              </h1>
+              {/* scene 2 only: Biggest Brands · Widest Range · Best Prices rise up
+                   one after another into the space freed by the shrinking title. */}
+              <div className={`grid transition-all duration-500 ${scene >= 2 ? "mt-2 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                <div className="overflow-hidden">
+                  <div className="skew-italic flex flex-wrap items-center gap-x-2 gap-y-0.5 font-display text-base uppercase tracking-tight drop-shadow sm:text-xl lg:text-2xl">
+                    <span className={scene >= 2 ? "hero-line" : "opacity-0"} style={{ animationDelay: "0.1s" }}><span className="text-volt-grad">Biggest</span> <span className="text-chrome">Brands</span></span>
+                    <span className={scene >= 2 ? "hero-line" : "opacity-0"} style={{ animationDelay: "0.25s" }}><span className="text-volt">•</span> <span className="text-volt-grad">Widest</span> <span className="text-chrome">Range</span></span>
+                    <span className={scene >= 2 ? "hero-line" : "opacity-0"} style={{ animationDelay: "0.4s" }}><span className="text-volt">•</span> <span className="text-volt-grad">Best</span> <span className="text-chrome">Prices</span></span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

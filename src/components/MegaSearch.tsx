@@ -35,8 +35,11 @@ export function MegaSearch() {
   const [hits, setHits] = useState<Hit[]>([]);
   const [mode, setMode] = useState<"recommended" | "results">("recommended");
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false); // panel in the DOM (for exit anim)
+  const [show, setShow] = useState(false); // panel visible (triggers transition)
   const [recent, setRecent] = useState<string[]>([]);
   const boxRef = useRef<HTMLDivElement>(null);
+  const prefetched = useRef(false);
 
   useEffect(() => {
     try {
@@ -44,6 +47,33 @@ export function MegaSearch() {
       if (raw) setRecent(JSON.parse(raw));
     } catch {}
   }, []);
+
+  // Prefetch the recommended list on mount so the panel is instant on first
+  // tap (previously it only started fetching once opened → felt slow).
+  useEffect(() => {
+    if (prefetched.current) return;
+    prefetched.current = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/search?q=`);
+        const data = await res.json();
+        setHits(data.results ?? []);
+        setMode(data.mode ?? "recommended");
+      } catch {}
+    })();
+  }, []);
+
+  // Mount/unmount with entrance + exit animation.
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      const r = requestAnimationFrame(() => setShow(true));
+      return () => cancelAnimationFrame(r);
+    }
+    setShow(false);
+    const t = setTimeout(() => setMounted(false), 200);
+    return () => clearTimeout(t);
+  }, [open]);
 
   // fetch (recommended when empty, results when typing)
   useEffect(() => {
@@ -100,7 +130,7 @@ export function MegaSearch() {
       {/* permanent bar */}
       <form
         onSubmit={(e) => { e.preventDefault(); go(q); }}
-        className="flex h-12 items-center overflow-hidden rounded-xl bg-surface-2 ring-1 ring-line focus-within:ring-2 focus-within:ring-volt"
+        className="flex h-11 items-center overflow-hidden rounded-xl bg-surface-2 ring-1 ring-line focus-within:ring-2 focus-within:ring-volt"
       >
         <Search className="ml-4 shrink-0 text-muted" width={20} height={20} />
         <input
@@ -126,9 +156,9 @@ export function MegaSearch() {
       </form>
 
       {/* mega panel — full viewport width */}
-      {open && (
+      {mounted && (
         <div className="absolute left-[calc(-50vw+50%)] top-full z-50 mt-2 w-screen">
-          <div className="border-y border-line bg-ink-2 shadow-2xl shadow-black/60">
+          <div className="mega-panel border-y border-line bg-ink-2 shadow-2xl shadow-black/60" data-show={show}>
           <div className="grid w-full gap-0 px-5 py-1 lg:grid-cols-[260px_1fr] lg:px-8">
             {/* left: searches */}
             <div className="border-b border-line p-4 lg:border-b-0 lg:border-r lg:pr-6">
@@ -172,12 +202,13 @@ export function MegaSearch() {
                 <p className="py-8 text-center text-sm text-muted">No matches — try a tyre size like “265/60R18”.</p>
               ) : (
                 <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1">
-                  {hits.map((h) => (
+                  {hits.map((h, i) => (
                     <Link
                       key={h.slug}
                       href={`/product/${h.slug}`}
                       onClick={() => { pushRecent(q || h.brand); setOpen(false); }}
-                      className="glow-hover flex w-40 shrink-0 flex-col overflow-hidden rounded-xl bg-white text-[#14171a] shadow-lg shadow-black/20 ring-1 ring-black/5"
+                      style={{ animationDelay: `${Math.min(i, 10) * 35}ms` }}
+                      className="mega-card glow-hover flex w-40 shrink-0 flex-col overflow-hidden rounded-xl bg-white text-[#14171a] shadow-lg shadow-black/20 ring-1 ring-black/5"
                     >
                       <div className="relative aspect-square w-full bg-white">
                         {h.thumb && <Image src={h.thumb} alt={h.name} fill sizes="160px" className="object-contain p-2" />}

@@ -16,6 +16,7 @@ import { AboutTeam } from "@/components/AboutTeam";
 import { BrandTile } from "@/components/BrandTile";
 import { BRANDS } from "@/lib/brands";
 import { Arrow } from "@/components/icons";
+import { HappyPayLogo } from "@/components/HappyPayLogo";
 
 
 export default async function Home() {
@@ -80,13 +81,8 @@ export default async function Home() {
             <div className="checker pointer-events-none absolute right-0 top-0 h-full w-28 opacity-10" />
             <div className="relative flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                {/* HappyPay logo (styled wordmark — swap for the official asset) */}
-                <div className="inline-flex items-center gap-2 rounded-full bg-black px-3.5 py-1.5">
-                  <span className="grid size-5 place-items-center rounded-full bg-[#FFD400] text-[11px] font-black text-black">☺</span>
-                  <span className="font-display text-lg font-extrabold tracking-tight text-white">
-                    happy<span className="text-[#FFD400]">pay</span>
-                  </span>
-                </div>
+                {/* Official HappyPay wordmark */}
+                <HappyPayLogo className="h-9 w-auto text-black sm:h-11" />
                 <h3 className="skew-italic mt-4 font-display text-5xl font-black leading-[0.82] tracking-tight text-black sm:text-7xl">
                   BUY NOW
                   <br />

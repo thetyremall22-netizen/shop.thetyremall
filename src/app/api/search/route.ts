@@ -33,9 +33,17 @@ export async function GET(req: NextRequest) {
       recommended.push(map(p));
       if (recommended.length >= 12) break;
     }
-    return NextResponse.json({ mode: "recommended", results: recommended });
+    // Recommended list barely changes — let the browser/CDN cache it so the
+    // mega-menu opens instantly on repeat taps.
+    return NextResponse.json(
+      { mode: "recommended", results: recommended },
+      { headers: { "Cache-Control": "public, max-age=120, s-maxage=300, stale-while-revalidate=600" } },
+    );
   }
 
   const results = (await searchProducts(q, 14)).map(map);
-  return NextResponse.json({ mode: "results", results });
+  return NextResponse.json(
+    { mode: "results", results },
+    { headers: { "Cache-Control": "public, max-age=30, s-maxage=120, stale-while-revalidate=300" } },
+  );
 }

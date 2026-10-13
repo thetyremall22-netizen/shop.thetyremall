@@ -776,3 +776,28 @@ body::before {
 @media (prefers-reduced-motion: reduce) {
   .glow-hover-tight:hover { transform: none; }
 }
+
+/* ---- Mega search panel: smooth entrance / exit + staggered cards ---- */
+.mega-panel {
+  transform-origin: top center;
+  opacity: 0;
+  transform: translateY(-6px) scale(0.985);
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change: opacity, transform;
+}
+.mega-panel[data-show="true"] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+@keyframes megaCardIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.mega-card {
+  opacity: 0;
+  animation: megaCardIn 0.26s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mega-panel { transition: none; opacity: 1; transform: none; }
+  .mega-card { animation: none; opacity: 1; }
+}

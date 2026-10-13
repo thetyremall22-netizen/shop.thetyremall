@@ -34,7 +34,7 @@ export function Header() {
     <header className="sticky top-0 z-40">
       {/* promo ticker */}
       <div className="bg-volt text-volt-ink">
-        <div className="container-x flex h-8 items-center justify-center gap-2 overflow-hidden text-center">
+        <div className="container-x flex h-7 items-center justify-center gap-2 overflow-hidden text-center">
           <Bolt width={13} height={13} className="shrink-0" />
           <p key={promoIdx} className="rise text-[11px] font-extrabold tracking-wide">{PROMOS[promoIdx]}</p>
         </div>
@@ -42,7 +42,7 @@ export function Header() {
 
       {/* main bar */}
       <div className="border-b border-line bg-ink/95 backdrop-blur">
-        <div className="container-x flex items-center gap-4 py-3">
+        <div className="container-x flex items-center gap-4 py-2">
           <button className="grid size-10 shrink-0 place-items-center rounded-lg text-fg lg:hidden" onClick={() => setMenuOpen(true)} aria-label="Open menu">
             <Menu />
           </button>
@@ -130,7 +130,7 @@ export function Header() {
 
         {/* permanent search bar (always visible under the menu) */}
         <div className="border-t border-line bg-ink">
-          <div className="container-x py-2.5">
+          <div className="container-x py-2">
             <MegaSearch />
           </div>
         </div>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Close, Arrow, WhatsApp } from "./icons";
 import { formatPrice } from "@/lib/format";
-import { cleanVoiceQuery } from "@/lib/voice-search";
+import { cleanVoiceQuery, correctBrands } from "@/lib/voice-search";
 import { MicButton } from "./MicButton";
 import { WhatsAppPanel } from "./WhatsAppPanel";
 import { useCart } from "@/lib/cart";
@@ -295,7 +295,9 @@ export function Tyrone() {
     // If we're in wheel-context and the user gave a plain car/size (no wheel or
     // tyre word), bias the search toward wheels; then clear the context.
     const hasWheelOrTyreWord = /\b(mag|mags|wheel|wheels|rim|rims|alloy|alloys|tyre|tyres)\b/i.test(t);
-    const query = mode === "wheels" && !hasWheelOrTyreWord ? `${t} mags` : t;
+    // Fix misheard/approx brand names so typed + voice both find products.
+    const fixed = correctBrands(t);
+    const query = mode === "wheels" && !hasWheelOrTyreWord ? `${fixed} mags` : fixed;
     if (mode === "wheels") setMode(null);
 
     setTyping(true);

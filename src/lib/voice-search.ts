@@ -7,6 +7,102 @@
 // Pure functions, safe on client and server. The mic transcript and the search
 // box both run through cleanVoiceQuery() so voice and typing behave the same.
 
+import metaData from "@/data/meta.json";
+
+// ---- phonetic brand correction ----------------------------------------------
+// Speech recognition often mishears brand names ("bridge stone", "breadstone",
+// "mishlin"). correctBrands() maps those back to the real catalogue brand so the
+// search actually finds products.
+
+const BRAND_NAMES: string[] = (((metaData as { brands?: { name: string }[] }).brands) ?? [])
+  .map((b) => b.name)
+  .filter((n) => n && n.toLowerCase() !== "tyre mall");
+
+const CANON = new Map(BRAND_NAMES.map((n) => [n.toLowerCase(), n]));
+const BRAND_BY_KEY = new Map(BRAND_NAMES.map((n) => [n.toLowerCase().replace(/[^a-z0-9]/g, ""), n]));
+
+// High-confidence common mishears → canonical brand (only applied if the brand
+// is actually in the catalogue).
+const BRAND_ALIASES: Record<string, string> = {
+  bridgestone: "Bridgestone", bridgstone: "Bridgestone", breadstone: "Bridgestone", bridgeston: "Bridgestone", bridgston: "Bridgestone",
+  michelin: "Michelin", mishlin: "Michelin", mitchelin: "Michelin", michelan: "Michelin", mishelin: "Michelin", mishleen: "Michelin",
+  pirelli: "Pirelli", perelli: "Pirelli", pirrelli: "Pirelli", pirell: "Pirelli", pireli: "Pirelli",
+  goodyear: "Goodyear", goodyr: "Goodyear", goodear: "Goodyear",
+  dunlop: "Dunlop", dunlap: "Dunlop", dunlopp: "Dunlop", donlop: "Dunlop",
+  continental: "Continental", conti: "Continental", contintal: "Continental", continetal: "Continental",
+  yokohama: "Yokohama", yokahama: "Yokohama", yokohoma: "Yokohama", yocohama: "Yokohama",
+  firestone: "Firestone", firstone: "Firestone", fireston: "Firestone",
+  bfgoodrich: "BFGoodrich", goodrich: "BFGoodrich", beefgoodrich: "BFGoodrich",
+  sumitomo: "Sumitomo", sumitimo: "Sumitomo",
+  landsail: "Landsail", landsale: "Landsail", windforce: "Windforce", windforс: "Windforce",
+  tracmax: "Tracmax", trackmax: "Tracmax", radar: "Radar", sava: "Sava", ceat: "CEAT", seat: "CEAT",
+};
+
+// Words that must never be treated as a (single-word) brand guess.
+const BRAND_STOP = new Set([
+  "tyre", "tyres", "tire", "tires", "wheel", "wheels", "mag", "mags", "rim", "rims",
+  "alloy", "alloys", "size", "sizes", "price", "prices", "cheap", "cheapest", "best",
+  "good", "year", "need", "want", "have", "looking", "please", "some", "new", "the",
+  "for", "and", "you", "set", "front", "rear", "about", "store", "with",
+]);
+
+/** Loose phonetic key: drop non-leading vowels, collapse doubles, fold y→i. */
+function phonKey(s: string): string {
+  return s.toLowerCase().replace(/[^a-z]/g, "")
+    .replace(/ph/g, "f")
+    .replace(/(.)\1+/g, "$1")
+    .replace(/(?!^)[aeiou]/g, "")
+    .replace(/y/g, "i");
+}
+
+const BRAND_PHON = BRAND_NAMES.map((n) => ({ name: n, key: phonKey(n.replace(/\s+/g, "")) }));
+
+function lev(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+/** Map misheard / approximate brand words in a query to real catalogue brands.
+ *  Tries 2-word then 1-word windows (so "bridge stone"/"good year" join up). */
+export function correctBrands(query: string): string {
+  if (!query) return query;
+  const words = query.split(/\s+/).filter(Boolean);
+  const out: string[] = [];
+  for (let i = 0; i < words.length; i++) {
+    let hit: { name: string; take: number } | null = null;
+    for (const take of [2, 1]) {
+      if (i + take > words.length) continue;
+      const cand = words.slice(i, i + take).join("").toLowerCase().replace(/[^a-z]/g, "");
+      if (cand.length < 4) continue;
+      if (take === 1 && BRAND_STOP.has(cand)) continue;
+      // 1) explicit alias
+      const alias = BRAND_ALIASES[cand];
+      if (alias && CANON.has(alias.toLowerCase())) { hit = { name: CANON.get(alias.toLowerCase())!, take }; break; }
+      // 2) exact brand (spaces removed)
+      const exact = BRAND_BY_KEY.get(cand);
+      if (exact) { hit = { name: exact, take }; break; }
+      // 3) nearest phonetic brand within a small edit distance
+      const ck = phonKey(cand);
+      if (ck.length < 3) continue;
+      let best: { name: string; d: number } | null = null;
+      for (const b of BRAND_PHON) { const d = lev(ck, b.key); if (!best || d < best.d) best = { name: b.name, d }; }
+      if (best && best.d <= (ck.length <= 4 ? 0 : 1)) { hit = { name: best.name, take }; break; }
+    }
+    if (hit) { out.push(hit.name); i += hit.take - 1; }
+    else out.push(words[i]);
+  }
+  return out.join(" ");
+}
+
 const ONES: Record<string, string> = {
   zero: "0", oh: "0", o: "0", nought: "0",
   one: "1", two: "2", three: "3", four: "4", five: "5",
@@ -103,5 +199,7 @@ export function cleanVoiceQuery(raw: string): string {
   for (const f of FILLERS) s = s.replace(new RegExp(`\\s${f}\\s`, "g"), " ");
   s = s.replace(/\b(a|an|my|the|some|for|of)\b/g, " ");
   s = s.replace(/\s+/g, " ").trim();
+  // Fix misheard brand names ("bridge stone" -> "Bridgestone").
+  s = correctBrands(s);
   return s || raw.trim();
 }

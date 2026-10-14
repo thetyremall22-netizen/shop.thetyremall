@@ -725,6 +725,17 @@ body::before {
   0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
   40% { opacity: 1; transform: translateY(-2px); }
 }
+/* typewriter caret while Tyrone "types" a reply */
+.tyrone-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--color-volt, #8ac53f);
+  animation: tyrone-caret-blink 0.9s steps(1) infinite;
+}
+@keyframes tyrone-caret-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
 
 /* blog article body — readable long-form content from the CMS/markdown */
 .prose-ttm { color: var(--color-muted); font-size: 1rem; line-height: 1.75; }

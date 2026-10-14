@@ -170,6 +170,11 @@ export function Tyrone() {
   const [mode, setMode] = useState<"wheels" | null>(null); // wheel-context after tapping "Mag wheels"
   const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", text: GREETING, buttons: MAIN_MENU }]);
   const [typing, setTyping] = useState(false);
+  // Typewriter reveal: `stream` is the bot message index currently being typed
+  // out and how many characters are shown so far. Products/buttons for that
+  // message hold back until the text finishes.
+  const [stream, setStream] = useState<{ idx: number; n: number } | null>(null);
+  const streamedRef = useRef(-1);
   const endRef = useRef<HTMLDivElement>(null);
   const lastMsgRef = useRef<HTMLDivElement>(null);
 
@@ -188,6 +193,31 @@ export function Tyrone() {
   useEffect(() => {
     if (typing) endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [typing]);
+
+  // When a new bot message arrives (and the panel is open), type it out. The
+  // greeting types on first open too. Honours reduced-motion by skipping it.
+  useEffect(() => {
+    if (!open) return;
+    const idx = msgs.length - 1;
+    if (idx < 0 || idx <= streamedRef.current) return;
+    const m = msgs[idx];
+    if (m.from !== "bot") return;
+    streamedRef.current = idx;
+    const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (m.text && !reduce) setStream({ idx, n: 0 });
+  }, [msgs, open]);
+
+  // Advance the typewriter a few characters at a time.
+  useEffect(() => {
+    if (!stream) return;
+    const full = msgs[stream.idx]?.text ?? "";
+    if (stream.n >= full.length) { setStream(null); return; }
+    const step = full.length > 150 ? 3 : 2;
+    const id = window.setTimeout(() => {
+      setStream((s) => (s ? { idx: s.idx, n: Math.min(full.length, s.n + step) } : null));
+    }, 22);
+    return () => window.clearTimeout(id);
+  }, [stream, msgs]);
 
   // Let other parts of the site open Tyrone (e.g. the no-results help panel)
   // and optionally have him greet with a specific message.
@@ -347,9 +377,13 @@ export function Tyrone() {
                       : "rounded-bl-sm bg-surface text-fg"
                   }`}
                 >
-                  {m.text}
+                  {stream && stream.idx === i ? (
+                    <>{m.text.slice(0, stream.n)}<span className="tyrone-caret" /></>
+                  ) : (
+                    m.text
+                  )}
                 </div>
-                {m.products && m.products.length > 0 && (
+                {m.products && m.products.length > 0 && !(stream && stream.idx === i) && (
                   <div className="mt-2 w-full space-y-2">
                     {m.products.map((p) => (
                       <Link
@@ -377,7 +411,7 @@ export function Tyrone() {
                     ))}
                   </div>
                 )}
-                {m.from === "bot" && m.buttons && m.buttons.length > 0 && i === msgs.length - 1 && !typing && (
+                {m.from === "bot" && m.buttons && m.buttons.length > 0 && i === msgs.length - 1 && !typing && !(stream && stream.idx === i) && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {m.buttons.map((b) => (
                       <button

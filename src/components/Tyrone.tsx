@@ -116,6 +116,24 @@ const MAIN_MENU = [MENU.size, MENU.vehicle, MENU.wheels, MENU.info, MENU.order, 
 const WA_BUTTON = "💬 Chat on WhatsApp";
 const FOLLOWUPS = [MENU.size, MENU.vehicle, MENU.human];
 
+// Filler words stripped before deciding whether a message is just a broad
+// category word ("tyres", "I need some mags", "do you have wheels").
+const CAT_FILLERS =
+  /\b(i|need|want|wanna|looking|look|for|a|an|some|new|the|me|show|get|got|find|please|pls|hi|hey|hello|yo|do|you|have|any|my|buy|price|prices|on|of|to|see|browse|check|cheap|cheapest|best|good|great|there|and|or|help|with)\b/g;
+
+/** If a message boils down to just a category word (tyres / wheels / mags) with
+ *  no size, brand or vehicle, return which catalogue it's about so Tyrone can
+ *  guide the user instead of hitting the generic fallback. */
+function categoryIntent(t: string): "tyre" | "wheel" | null {
+  const cleaned = t.replace(/[^a-z0-9\s]/g, " ").replace(CAT_FILLERS, " ").replace(/\s+/g, " ").trim();
+  if (!cleaned) return null;
+  const words = cleaned.split(" ");
+  const isTyre = (w: string) => /^(tyres?|tires?)$/.test(w);
+  const isWheel = (w: string) => /^(wheels?|mags?|rims?|alloys?)$/.test(w);
+  if (!words.every((w) => isTyre(w) || isWheel(w))) return null; // has a real query term → let search handle it
+  return words.some(isWheel) && !words.some(isTyre) ? "wheel" : "tyre";
+}
+
 /** Scripted menu flows that just need a prompt or a canned answer (no catalogue
  *  search). Returns a bot reply with quick-reply buttons, or null to let the
  *  product search / keyword Q&A handle the message. */
@@ -142,6 +160,23 @@ function localFlow(raw: string): Msg | null {
   }
   if (t === MENU.human.toLowerCase() || /talk to.*(human|someone|agent|sales|person)|speak to.*(human|someone|agent|sales|person)|real person|customer service/.test(t)) {
     return { from: "bot", text: "Of course — our team's ready to help 💬. WhatsApp or call 078 0088 788 (Mon–Fri 8:00–17:00, Sat 8:00–13:00), or email shop@thetyremall.co.za. Tap below to start a WhatsApp quote.", buttons: [WA_BUTTON, MENU.info] };
+  }
+  // Broad category words ("tyres", "wheels", "mags", "I need rims") with no
+  // size / brand / vehicle — guide the user instead of the generic fallback.
+  const cat = categoryIntent(t);
+  if (cat === "tyre") {
+    return {
+      from: "bot",
+      text: "Let's get you sorted! 🛞 To find the right tyres I just need one thing — your size or your car:\n\n• Type your size like 205/55R16 (it's printed on the sidewall), or\n• Tell me your car, e.g. “Toyota Hilux 2021”.\n\nAfter mags too? Just say “mags for my Hilux” and I'll pull those as well. 👍",
+      buttons: [MENU.size, MENU.vehicle, MENU.wheels, MENU.human],
+    };
+  }
+  if (cat === "wheel") {
+    return {
+      from: "bot",
+      text: "Let's find you some mags! 🛞 Tell me your car — make, model & year, e.g. “Toyota Hilux 2021” — and I'll show wheels that fit its bolt pattern. Want matching tyres in the same go? Just say so and I'll sort both. 👍",
+      buttons: [MENU.vehicle, MENU.size, MENU.human],
+    };
   }
   return null;
 }

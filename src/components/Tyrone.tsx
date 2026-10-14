@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Close, Arrow, WhatsApp } from "./icons";
 import { formatPrice } from "@/lib/format";
-import { cleanVoiceQuery, correctBrands } from "@/lib/voice-search";
+import { cleanVoiceQuery, correctBrands, detectTyreSize } from "@/lib/voice-search";
 import { parseSize, sizeToShopHref } from "@/lib/tyre-size";
 import { MicButton } from "./MicButton";
 import { WhatsAppPanel } from "./WhatsAppPanel";
@@ -262,6 +262,18 @@ function parseVehicle(t: string, makes: string[], index: Record<string, string[]
   return { make: make ?? undefined, model: model ?? undefined, year };
 }
 
+/** True when the message is essentially JUST a tyre size (no brand/vehicle/other
+ *  words) — so we confirm what was parsed before searching, catching mishears. */
+function isBareSize(t: string): boolean {
+  const residual = t.toLowerCase()
+    .replace(/\d+/g, " ")
+    .replace(/[\/x\-.,]/g, " ")
+    .replace(/\b(zr|r|c|xl)\b/g, " ")
+    .replace(/\b(tyre|tyres|tire|tires|size|sizes|for|a|an|my|the|some|please|pls|need|want|show|me|find|new|get|got|do|you|have|in|of|looking)\b/g, " ")
+    .replace(/\s+/g, " ").trim();
+  return residual.length === 0;
+}
+
 export function Tyrone() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -443,6 +455,25 @@ export function Tyrone() {
     botReply({ from: "bot", text: total ? `We've got ${total} ${total === 1 ? "tyre" : "tyres"} in ${size} for your ${v}. 👇` : `Here's ${size} for your ${v}:`, products, links, buttons: [HUMAN] }, 450);
   }
 
+  /** Search a confirmed bare size and reply with real cards + a "see all" link. */
+  async function searchSizeAndReply(size: string) {
+    let data: { label?: string; note?: string; total?: number; products?: TyroneProduct[] } = {};
+    try { data = await fetch(`/api/tyrone?msg=${encodeURIComponent(size)}`).then((r) => r.json()); } catch {}
+    const products = data.products || [];
+    const total = data.total ?? products.length;
+    if (!products.length) {
+      botReply({ from: "bot", text: `I couldn't find ${size} in stock right now — but we can special-order. Want me to connect you to the team? 🙂`, buttons: [WA_BUTTON, MENU.vehicle, HUMAN] }, 450);
+      return;
+    }
+    botReply({
+      from: "bot",
+      text: `We've got ${total} ${total === 1 ? "tyre" : "tyres"} in ${size}. 👇`,
+      products,
+      links: [{ label: `See all ${size} tyres →`, href: sizeToShopHref(size, { type: "tyre" }) }],
+      buttons: FOLLOWUPS,
+    }, 450);
+  }
+
   /** Mid-flow parser — runs before the generic intent table. Returns true when
    *  it handled the message (so send() stops), false to let normal handling run. */
   async function handleFlow(t: string): Promise<boolean> {
@@ -520,6 +551,21 @@ export function Tyrone() {
     if (!/\d{3}\s*[\/x]\s*\d{2}/.test(t)) {
       await loadIndex();
       if (parseVehicle(t, makesRef.current, indexRef.current).make) { await startFromText(t); return; }
+    }
+
+    // ---- bare size: confirm what we parsed before searching (catches mishears) ----
+    const confirmMatch = t.match(/^✅ show (.+)$/i);
+    if (confirmMatch) { await searchSizeAndReply(confirmMatch[1].trim()); return; }
+    if (low === "that's not right" || low === "thats not right") {
+      botReply({ from: "bot", text: "No worries — type your size again (like 205/55R16), or tell me your car and I'll find the right fitment.", buttons: [MENU.vehicle, MENU.human] });
+      return;
+    }
+    const bareSize = isBareSize(t) ? detectTyreSize(t) : null;
+    if (bareSize) {
+      const p = parseSize(bareSize);
+      const parsed = p.width && p.rim ? `Width ${p.width}${p.profile ? ` · Profile ${p.profile}` : ""} · Rim ${p.rim}` : bareSize;
+      botReply({ from: "bot", text: `Got it — I read that as ${parsed} (${bareSize}). Shall I show those tyres?`, buttons: [`✅ Show ${bareSize}`, "That's not right", HUMAN] });
+      return;
     }
 
     // Track "mag wheels" context so a plain vehicle afterwards searches wheels.

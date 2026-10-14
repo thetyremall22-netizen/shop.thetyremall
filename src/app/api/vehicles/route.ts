@@ -1,27 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMakes, getModels, getVariants, tyreSearchHref, wheelSearchHref } from "@/lib/vehicles";
+import { getMakes, getModels, getYears, getRecords } from "@/lib/vehicles";
 
+// GET /api/vehicles                                  -> { makes }
+// GET /api/vehicles?make=Toyota                       -> { models }
+// GET /api/vehicles?make=Toyota&model=Hilux           -> { years }   (discrete, newest first)
+// GET /api/vehicles?make=Toyota&model=Hilux&year=2021 -> { records } (exact-year match)
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const make = sp.get("make");
   const model = sp.get("model");
+  const year = sp.get("year");
 
+  if (make && model && year && /^\d{4}$/.test(year)) {
+    return NextResponse.json({ records: getRecords(make, model, Number(year)) });
+  }
   if (make && model) {
-    const variants = getVariants(make, model).map((v) => ({
-      gen: v.gen,
-      trim: v.trim,
-      yearFrom: v.yearFrom,
-      yearTo: v.yearTo,
-      label: v.label,
-      tyres: v.tyres,
-      rims: v.rims,
-      pcd: v.pcd,
-      bore: v.bore,
-      image: v.image ? `/vehicles/${v.image}.webp` : null,
-      tyreHref: v.tyres[0] ? tyreSearchHref(v.tyres[0]) : "/shop",
-      wheelHref: v.rims[0] ? wheelSearchHref(v.rims[0], v.pcd) : "/shop?type=wheel",
-    }));
-    return NextResponse.json({ variants });
+    return NextResponse.json({ years: getYears(make, model) });
   }
   if (make) {
     return NextResponse.json({ models: getModels(make) });

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { queryProducts, categories, meta, getCategory } from "@/lib/catalogue";
 import { detectTyreSize } from "@/lib/voice-search";
 import { findVehicle, factorySizes } from "@/lib/vehicles";
+import { canonicalSize } from "@/lib/tyre-size";
 import { ProductCard } from "@/components/ProductCard";
 import { ShopFilters } from "@/components/ShopFilters";
 import { ActiveFilterChips } from "@/components/ActiveFilterChips";
@@ -25,6 +26,12 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   const type = one(sp.type) as "tyre" | "wheel" | undefined;
   const priceNum = (v: string | undefined) => (v && !Number.isNaN(Number(v)) ? Number(v) : undefined);
 
+  // Multi-size union (from the vehicle "show all sizes" CTA): ?sizes=265/60 R18|265/65 R17
+  const sizesParam = one(sp.sizes);
+  const sizeList = sizesParam ? sizesParam.split("|").map((s) => s.trim()).filter(Boolean) : [];
+  const canonSizes = [...new Set(sizeList.map((s) => canonicalSize(s)).filter((s): s is string => !!s))];
+  const vehicleCtx = one(sp.vehicle); // display-only "2021 Toyota Hilux …"
+
   // Item 18: a query that isn't a size but names a vehicle (e.g. "hilux",
   // "toyota hilux 2021") shows that vehicle's factory-fitment tyres.
   let vehicle: ReturnType<typeof findVehicle> = null;
@@ -42,7 +49,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
 
   const result = await queryProducts({
     q: vehicle ? "" : q,
-    sizes: vehicleSizes,
+    sizes: canonSizes.length ? canonSizes : vehicleSizes,
     category,
     type,
     brand: one(sp.brand),
@@ -64,7 +71,9 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   const cat = category ? getCategory(category) : undefined;
   const heading = vehicle
     ? `Tyres for your ${vehicle.make} ${vehicle.model}`
-    : q
+    : vehicleCtx
+      ? `Tyres for your ${vehicleCtx}`
+      : q
       ? `Results for “${q}”`
       : cat
         ? cat.name
@@ -116,6 +125,29 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
             {vehicleSizes?.map((s) => s.replace("R", " R")).join(" · ")}
           </span>
           <Link href="/shop" className="ml-auto text-xs font-bold text-volt hover:underline">Clear</Link>
+        </div>
+      )}
+
+      {sizeList.length > 0 && (
+        <div className="mt-4 rounded-xl border border-volt/30 bg-volt/10 px-4 py-3 text-sm">
+          <span className="font-semibold text-fg">
+            Showing {result.total.toLocaleString()} {result.total === 1 ? "tyre" : "tyres"} in {sizeList.length} {sizeList.length === 1 ? "size" : "sizes"}
+            {vehicleCtx ? ` for your ${vehicleCtx}` : ""}:
+          </span>
+          <span className="mt-2 flex flex-wrap gap-2">
+            {sizeList.map((s) => {
+              const others = sizeList.filter((x) => x !== s);
+              const u = new URLSearchParams();
+              u.set("type", "tyre");
+              if (others.length) u.set("sizes", others.join("|"));
+              if (vehicleCtx) u.set("vehicle", vehicleCtx);
+              return (
+                <Link key={s} href={`/shop?${u.toString()}`} className="inline-flex items-center gap-1.5 rounded-full border border-volt/40 bg-volt/10 px-3 py-1 text-xs font-semibold text-volt hover:bg-volt/20">
+                  {s} <span aria-hidden>✕</span>
+                </Link>
+              );
+            })}
+          </span>
         </div>
       )}
 

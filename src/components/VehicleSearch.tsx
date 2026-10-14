@@ -1,30 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { ChevronDown, Truck, Check, Close, WhatsApp } from "./icons";
-import { whatsappHref } from "@/lib/shop-config";
-
-interface Variant {
-  gen: string; trim: string; yearFrom: number | null; yearTo: number | null;
-  label: string; tyres: string[]; rims: string[]; pcd: string; bore: string;
-  image: string | null; tyreHref: string; wheelHref: string;
-}
-interface GarageItem {
-  make: string; model: string; label: string; trim: string;
-  image: string | null; tyres: string[]; rims: string[]; pcd: string;
-}
-
-const GARAGE_KEY = "ttm-garage-v1";
-// Structured tyre link (width/profile/rim) so the catalogue filters to the
-// exact fitment — falls back to text search for anything non-standard.
-function tyreHref(size: string): string {
-  const m = size.match(/(\d{3})\s*\/\s*(\d{2})\s*r?\s*(\d{2})/i);
-  const u = new URLSearchParams({ type: "tyre" });
-  if (m) { u.set("width", m[1]); u.set("profile", m[2]); u.set("rim", m[3]); }
-  else u.set("q", size);
-  return `/shop?${u.toString()}`;
-}
+import { ChevronDown } from "./icons";
+import { VehicleSizeChoice, Garage, type VehicleRecord } from "./VehicleSizeChoice";
 
 function Sel({ label, value, onChange, options, placeholder, disabled }: {
   label: string; value: string; onChange: (v: string) => void;
@@ -48,57 +26,36 @@ function Sel({ label, value, onChange, options, placeholder, disabled }: {
 export function VehicleSearch() {
   const [makes, setMakes] = useState<string[]>([]);
   const [models, setModels] = useState<string[]>([]);
-  const [variants, setVariants] = useState<Variant[]>([]);
+  const [years, setYears] = useState<number[]>([]);
+  const [records, setRecords] = useState<VehicleRecord[]>([]);
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
-  const [year, setYear] = useState("");   // label (year range)
-  const [trimIdx, setTrimIdx] = useState(""); // index into trims-for-year
-  const [garage, setGarage] = useState<GarageItem[]>([]);
+  const [year, setYear] = useState("");
+  const [recIdx, setRecIdx] = useState("");
 
   useEffect(() => { fetch("/api/vehicles").then((r) => r.json()).then((d) => setMakes(d.makes || [])).catch(() => {}); }, []);
-  useEffect(() => { try { const r = localStorage.getItem(GARAGE_KEY); if (r) setGarage(JSON.parse(r)); } catch {} }, []);
-  const saveGarage = (g: GarageItem[]) => { setGarage(g); try { localStorage.setItem(GARAGE_KEY, JSON.stringify(g)); } catch {} };
 
   useEffect(() => {
-    setModel(""); setModels([]); setVariants([]); setYear(""); setTrimIdx("");
+    setModel(""); setModels([]); setYears([]); setYear(""); setRecords([]); setRecIdx("");
     if (make) fetch(`/api/vehicles?make=${encodeURIComponent(make)}`).then((r) => r.json()).then((d) => setModels(d.models || [])).catch(() => {});
   }, [make]);
+
   useEffect(() => {
-    setVariants([]); setYear(""); setTrimIdx("");
-    if (make && model) fetch(`/api/vehicles?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`).then((r) => r.json()).then((d) => setVariants(d.variants || [])).catch(() => {});
+    setYears([]); setYear(""); setRecords([]); setRecIdx("");
+    if (make && model) fetch(`/api/vehicles?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`).then((r) => r.json()).then((d) => setYears(d.years || [])).catch(() => {});
   }, [make, model]);
 
-  // Single years (newest first), expanded from each generation's year range,
-  // then the trims/engines available for the chosen year.
-  const years = useMemo(() => {
-    const s = new Set<number>();
-    for (const v of variants) {
-      const a = v.yearFrom, b = v.yearTo ?? v.yearFrom;
-      if (a != null && b != null) for (let y = b; y >= a; y--) s.add(y);
-    }
-    return [...s].sort((x, z) => z - x).map(String);
-  }, [variants]);
-  const trims = useMemo(() => {
-    if (!year) return [];
-    const y = Number(year);
-    return variants.filter((v) => (v.yearFrom ?? -1) <= y && (v.yearTo ?? 9999) >= y);
-  }, [variants, year]);
-  const sel: Variant | undefined = trimIdx === "" ? undefined : trims[Number(trimIdx)];
+  useEffect(() => {
+    setRecords([]); setRecIdx("");
+    if (make && model && year) fetch(`/api/vehicles?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${year}`).then((r) => r.json()).then((d) => setRecords(d.records || [])).catch(() => {});
+  }, [make, model, year]);
 
-  // auto-select the trim when a year has exactly one
-  useEffect(() => { setTrimIdx(trims.length === 1 ? "0" : ""); }, [year, trims.length]);
+  // auto-select when a year has exactly one record
+  useEffect(() => { setRecIdx(records.length === 1 ? "0" : ""); }, [records]);
 
-  const inGarage = sel && garage.some((g) => g.make === make && g.model === model && g.label === year && g.trim === sel.trim);
-  function toggleGarage() {
-    if (!sel) return;
-    if (inGarage) {
-      saveGarage(garage.filter((g) => !(g.make === make && g.model === model && g.label === year && g.trim === sel.trim)));
-    } else {
-      saveGarage([{ make, model, label: year, trim: sel.trim, image: sel.image, tyres: sel.tyres, rims: sel.rims, pcd: sel.pcd }, ...garage].slice(0, 6));
-    }
-  }
-
-  const [factory, ...optional] = sel?.tyres ?? [];
+  const record = recIdx === "" ? undefined : records[Number(recIdx)];
+  const noData = !!(make && model && year && records.length === 0);
+  const availableYears = useMemo(() => years.map((y) => ({ v: String(y), t: String(y) })), [years]);
 
   return (
     <div className="space-y-6">
@@ -107,120 +64,36 @@ export function VehicleSearch() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Sel label="Make" value={make} onChange={setMake} placeholder="Select make" options={makes.map((m) => ({ v: m, t: m }))} />
           <Sel label="Model" value={model} onChange={setModel} placeholder={make ? "Select model" : "Pick make first"} disabled={!make} options={models.map((m) => ({ v: m, t: m }))} />
-          <Sel label="Year" value={year} onChange={(v) => { setYear(v); setTrimIdx(""); }} placeholder={model ? "Select year" : "Pick model first"} disabled={!model} options={years.map((y) => ({ v: y, t: y }))} />
-          <Sel label="Trim / engine" value={trimIdx} onChange={setTrimIdx} placeholder={year ? "Select trim" : "Pick year first"} disabled={!year} options={trims.map((v, i) => ({ v: String(i), t: `${v.trim || "Standard"}${v.gen ? ` · ${v.gen}` : ""}` }))} />
+          <Sel label="Year" value={year} onChange={(v) => { setYear(v); setRecIdx(""); }} placeholder={model ? "Select year" : "Pick model first"} disabled={!model} options={availableYears} />
+          <Sel
+            label="Trim / engine"
+            value={recIdx}
+            onChange={setRecIdx}
+            placeholder={year ? (records.length ? "Select trim" : "—") : "Pick year first"}
+            disabled={!year || records.length <= 1}
+            options={records.map((r, i) => ({ v: String(i), t: `${r.trim || "Standard"}${r.generation ? ` · ${r.generation}` : ""}` }))}
+          />
         </div>
+        {records.length > 1 && recIdx === "" && (
+          <p className="mt-2 text-xs text-muted">This {year} {make} {model} has {records.length} trims — pick yours to see its exact sizes.</p>
+        )}
       </div>
 
-      {/* result */}
-      {sel && (
-        <div className="card overflow-hidden p-0">
-          <div className="grid gap-5 p-5 sm:grid-cols-[200px_1fr]">
-            <div className="plate grid aspect-[4/3] place-items-center overflow-hidden rounded-xl">
-              {sel.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={sel.image} alt={`${make} ${model}`} className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-sm text-neutral-400">No photo</span>
-              )}
-            </div>
-            <div>
-              <h2 className="font-display text-2xl text-fg">{make} {model} <span className="text-volt">{year}</span></h2>
-              <p className="text-sm text-muted">{sel.trim || "Standard"}{sel.gen ? ` · ${sel.gen}` : ""}</p>
-
-              {factory ? (
-                <div className="mt-4 space-y-3">
-                  <div>
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-volt">Factory size</div>
-                    <div className="mt-1 flex flex-wrap gap-2">
-                      <Link href={tyreHref(factory)} className="btn btn-volt h-10 px-4 text-sm">
-                        {factory.replace(/\s+/g, " ")} — shop tyres
-                      </Link>
-                    </div>
-                  </div>
-                  {optional.length > 0 && (
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-muted">Optional / plus sizes</div>
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        {optional.map((s) => (
-                          <Link key={s} href={tyreHref(s)} className="btn btn-ghost h-10 px-4 text-sm">{s.replace(/\s+/g, " ")}</Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {(sel.rims.length > 0 || sel.pcd) && (
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-muted">Mag wheels</div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2">
-                        {sel.rims[0] && (
-                          <Link href={sel.wheelHref} className="btn btn-dark h-10 px-4 text-sm">
-                            Shop matching wheels →
-                          </Link>
-                        )}
-                        {!sel.pcd && (
-                          <span className="rounded-md border border-[#f0b429]/40 bg-[#f0b429]/10 px-2.5 py-1 text-[11px] font-semibold text-[#f0b429]">
-                            Fitment to be verified
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-1.5 text-xs text-muted">
-                        {sel.rims.length > 0 && <>Rim: {sel.rims.join(" / ")} </>}
-                        {sel.pcd ? <>· PCD {sel.pcd.replace(/\*/g, "×")}</> : <>· PCD not listed — confirm bolt pattern before ordering</>}
-                      </p>
-                    </div>
-                  )}
-                  <button onClick={toggleGarage} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${inGarage ? "border-volt bg-volt/10 text-volt" : "border-line text-muted hover:text-fg"}`}>
-                    <Check width={15} height={15} /> {inGarage ? "Saved to My Garage" : "Save to My Garage"}
-                  </button>
-                </div>
-              ) : (
-                // Item 25 — no listed factory size
-                <div className="mt-4 rounded-xl border border-volt/30 bg-volt/5 p-4 text-sm">
-                  <p className="font-semibold text-fg">We don&apos;t have a listed factory size for this exact variant yet.</p>
-                  <p className="mt-1 text-muted">Send us your vehicle details and we&apos;ll confirm the right fitment.</p>
-                  <a href={whatsappHref(`Hi The Tyre Mall! What tyre size fits my ${make} ${model} ${sel.label}${sel.trim ? ` ${sel.trim}` : ""}?`)} target="_blank" rel="noopener noreferrer" className="btn mt-3 h-10 border border-[#25D366]/60 bg-[#25D366]/10 px-4 text-sm text-[#25D366] hover:bg-[#25D366]/20">
-                    <WhatsApp width={16} height={16} /> Ask on WhatsApp
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
+      {/* no exact-year data — show honest empty state + the years that exist */}
+      {noData && (
+        <div className="card p-5 text-sm">
+          <p className="font-semibold text-fg">We don&apos;t have {year} data for the {make} {model}.</p>
+          {years.length > 0 && (
+            <p className="mt-1 text-muted">Years we do have: {years.slice(0, 16).join(", ")}{years.length > 16 ? "…" : ""}.</p>
+          )}
         </div>
       )}
 
-      {/* My Garage */}
-      {garage.length > 0 && (
-        <div>
-          <h2 className="font-display text-xl">My Garage</h2>
-          <p className="mt-1 text-sm text-muted">Your saved vehicles — jump straight to the right tyres.</p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {garage.map((g, i) => (
-              <div key={`${g.make}-${g.model}-${g.label}-${i}`} className="card glow-hover flex items-center gap-3 p-3">
-                <span className="plate grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg">
-                  {g.image && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={g.image} alt="" className="h-full w-full object-cover" />
-                  )}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-display text-base text-fg">{g.make} {g.model}</div>
-                  <div className="truncate text-xs text-muted">{g.label}{g.trim ? ` · ${g.trim}` : ""}</div>
-                  <div className="mt-1 flex items-center gap-2">
-                    {g.tyres[0] ? (
-                      <Link href={tyreHref(g.tyres[0])} className="text-xs font-bold text-volt hover:underline">Shop {g.tyres[0].replace(/\s+/g, " ")} →</Link>
-                    ) : (
-                      <span className="text-xs text-muted">No listed size</span>
-                    )}
-                  </div>
-                </div>
-                <button onClick={() => saveGarage(garage.filter((_, j) => j !== i))} aria-label="Remove" className="shrink-0 text-faint hover:text-sale">
-                  <Close width={16} height={16} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* size choice */}
+      {record && <VehicleSizeChoice record={record} />}
+
+      {/* garage */}
+      <Garage />
     </div>
   );
 }

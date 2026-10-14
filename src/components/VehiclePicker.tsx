@@ -1,22 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown } from "./icons";
-
-export interface Variant {
-  gen: string;
-  trim: string;
-  yearFrom: number | null;
-  yearTo: number | null;
-  label: string;
-  tyres: string[];
-  rims: string[];
-  pcd: string;
-  bore: string;
-  image: string | null;
-  tyreHref: string;
-  wheelHref: string;
-}
+import { VehicleSizeChoice, type VehicleRecord } from "./VehicleSizeChoice";
 
 function Sel({ label, value, onChange, options, placeholder, disabled }: {
   label: string; value: string; onChange: (v: string) => void; options: { v: string; t: string }[]; placeholder: string; disabled?: boolean;
@@ -36,69 +22,53 @@ function Sel({ label, value, onChange, options, placeholder, disabled }: {
   );
 }
 
-export function VehiclePicker({ onSelect }: { onSelect: (v: Variant | null) => void }) {
+/** Self-contained Make→Model→Year→Trim picker that renders the size-choice
+ *  panel inline. Nothing navigates until the size-choice CTA is pressed. */
+export function VehiclePicker() {
   const [makes, setMakes] = useState<string[]>([]);
   const [models, setModels] = useState<string[]>([]);
-  const [variants, setVariants] = useState<Variant[]>([]);
+  const [years, setYears] = useState<number[]>([]);
+  const [records, setRecords] = useState<VehicleRecord[]>([]);
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
-  const [ti, setTi] = useState("0");
+  const [recIdx, setRecIdx] = useState("");
 
   useEffect(() => { fetch("/api/vehicles").then((r) => r.json()).then((d) => setMakes(d.makes || [])).catch(() => {}); }, []);
   useEffect(() => {
-    setModel(""); setModels([]); setVariants([]); setYear(""); setTi("0");
+    setModel(""); setModels([]); setYears([]); setYear(""); setRecords([]); setRecIdx("");
     if (make) fetch(`/api/vehicles?make=${encodeURIComponent(make)}`).then((r) => r.json()).then((d) => setModels(d.models || [])).catch(() => {});
   }, [make]);
   useEffect(() => {
-    setVariants([]); setYear(""); setTi("0");
-    if (make && model) fetch(`/api/vehicles?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`).then((r) => r.json()).then((d) => setVariants(d.variants || [])).catch(() => {});
+    setYears([]); setYear(""); setRecords([]); setRecIdx("");
+    if (make && model) fetch(`/api/vehicles?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`).then((r) => r.json()).then((d) => setYears(d.years || [])).catch(() => {});
   }, [make, model]);
+  useEffect(() => {
+    setRecords([]); setRecIdx("");
+    if (make && model && year) fetch(`/api/vehicles?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${year}`).then((r) => r.json()).then((d) => setRecords(d.records || [])).catch(() => {});
+  }, [make, model, year]);
+  useEffect(() => { setRecIdx(records.length === 1 ? "0" : ""); }, [records]);
 
-  // Single years (newest first), expanded from each generation's year range.
-  const years = useMemo(() => {
-    const s = new Set<number>();
-    for (const v of variants) {
-      const a = v.yearFrom, b = v.yearTo ?? v.yearFrom;
-      if (a != null && b != null) for (let y = b; y >= a; y--) s.add(y);
-    }
-    return [...s].sort((x, z) => z - x).map(String);
-  }, [variants]);
-  const yearVariants = useMemo(() => {
-    if (!year) return [];
-    const y = Number(year);
-    return variants.filter((v) => (v.yearFrom ?? -1) <= y && (v.yearTo ?? 9999) >= y);
-  }, [variants, year]);
-  const sel = yearVariants.length ? (yearVariants[Number(ti)] ?? yearVariants[0]) : null;
-
-  useEffect(() => { onSelect(sel); }, [sel]); // eslint-disable-line react-hooks/exhaustive-deps
+  const record = recIdx === "" ? undefined : records[Number(recIdx)];
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <Sel label="Make" value={make} onChange={setMake} placeholder="Select make" options={makes.map((m) => ({ v: m, t: m }))} />
         <Sel label="Model" value={model} onChange={setModel} placeholder={make ? "Select model" : "Pick make first"} disabled={!make} options={models.map((m) => ({ v: m, t: m }))} />
-        <Sel label="Year" value={year} onChange={(v) => { setYear(v); setTi("0"); }} placeholder={model ? "Select year" : "Pick model first"} disabled={!model}
-          options={years.map((y) => ({ v: y, t: y }))} />
+        <Sel label="Year" value={year} onChange={(v) => { setYear(v); setRecIdx(""); }} placeholder={model ? "Select year" : "Pick model first"} disabled={!model} options={years.map((y) => ({ v: String(y), t: String(y) }))} />
+        <Sel label="Trim / engine" value={recIdx} onChange={setRecIdx} placeholder={year ? (records.length ? "Select trim" : "—") : "Pick year first"} disabled={!year || records.length <= 1}
+          options={records.map((r, i) => ({ v: String(i), t: `${r.trim || "Standard"}${r.generation ? ` · ${r.generation}` : ""}` }))} />
       </div>
 
-      {yearVariants.length > 1 && (
-        <Sel label="Trim / engine" value={ti} onChange={setTi} placeholder="Select trim"
-          options={yearVariants.map((v, i) => ({ v: String(i), t: `${v.trim || "Standard"}${v.gen ? ` · ${v.gen}` : ""}` }))} />
+      {records.length > 1 && recIdx === "" && (
+        <p className="text-xs text-muted">{records.length} trims for this {year} {make} {model} — pick yours.</p>
+      )}
+      {make && model && year && records.length === 0 && (
+        <p className="text-xs text-muted">No {year} data for the {make} {model}.{years.length ? ` Try: ${years.slice(0, 10).join(", ")}.` : ""}</p>
       )}
 
-      {sel && (
-        <div className="flex items-center gap-3 rounded-xl border border-volt/30 bg-volt/5 p-3">
-          {sel.image && <img src={sel.image} alt="" className="h-14 w-20 shrink-0 rounded-md object-cover" />}
-          <div className="min-w-0 text-xs">
-            <div className="font-bold text-fg">{make} {model} <span className="text-volt">{year}</span></div>
-            <div className="mt-0.5 text-muted">
-              <span className="text-volt">Tyre:</span> {sel.tyres.join(" / ") || "—"}
-            </div>
-            <div className="text-muted"><span className="text-volt">Rim:</span> {sel.rims.join(" / ") || "—"}{sel.pcd ? ` · PCD ${sel.pcd.replace(/\*/g, "×")}` : ""}</div>
-          </div>
-        </div>
-      )}
+      {record && <VehicleSizeChoice record={record} compact />}
     </div>
   );
 }

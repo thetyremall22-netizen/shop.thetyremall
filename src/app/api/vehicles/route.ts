@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMakes, getModels, getYears, getRecords } from "@/lib/vehicles";
+import { getMakes, getModels, getYears, getRecords, getMakeModelIndex } from "@/lib/vehicles";
 
+// GET /api/vehicles?index=1 -> { makes, index } (make -> models, for the chat)
 // GET /api/vehicles                                  -> { makes }
 // GET /api/vehicles?make=Toyota                       -> { models }
 // GET /api/vehicles?make=Toyota&model=Hilux           -> { years }   (discrete, newest first)
@@ -11,6 +12,9 @@ export async function GET(req: NextRequest) {
   const model = sp.get("model");
   const year = sp.get("year");
 
+  if (sp.get("index")) {
+    return NextResponse.json({ makes: getMakes(), index: getMakeModelIndex() });
+  }
   if (make && model && year && /^\d{4}$/.test(year)) {
     return NextResponse.json({ records: getRecords(make, model, Number(year)) });
   }

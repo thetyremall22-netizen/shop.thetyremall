@@ -34,6 +34,15 @@ export function getModels(make: string): string[] {
   return [...new Set(vehicles.filter((v) => v.make.toLowerCase() === m).map((v) => v.model))].sort();
 }
 
+/** make -> sorted models, for the chat's free-text parsing + model buttons. */
+export function getMakeModelIndex(): Record<string, string[]> {
+  const idx: Record<string, Set<string>> = {};
+  for (const v of vehicles) (idx[v.make] ??= new Set()).add(v.model);
+  const out: Record<string, string[]> = {};
+  for (const k of Object.keys(idx).sort()) out[k] = [...idx[k]].sort();
+  return out;
+}
+
 /** Distinct years that exist for a make+model, newest first (never a range). */
 export function getYears(make: string, model: string): number[] {
   const mk = make.toLowerCase(), md = model.toLowerCase();

@@ -60,6 +60,9 @@ export async function GET(req: NextRequest) {
   let picks: Product[] = [];
   let label = "";
   let note = "";
+  // True catalogue total for an exact size (for the chat's "n tyres in {size}").
+  const normS = (s: string | undefined) => (s ?? "").toUpperCase().replace(/\s+/g, "");
+  const total = size ? allProducts.filter((p) => normS(p.specs.size) === normS(size)).length : undefined;
 
   const vehicleFit = !size ? findVehicle(msg) : null;
   // The exact year the customer mentioned — shown instead of the generation range.
@@ -129,6 +132,7 @@ export async function GET(req: NextRequest) {
     label,
     note,
     size,
+    total,
     products: picks.map(map),
   });
 }

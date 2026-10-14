@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Close, Arrow, WhatsApp } from "./icons";
 import { formatPrice } from "@/lib/format";
 import { cleanVoiceQuery, correctBrands } from "@/lib/voice-search";
+import { parseSize, sizeToShopHref } from "@/lib/tyre-size";
 import { MicButton } from "./MicButton";
 import { WhatsAppPanel } from "./WhatsAppPanel";
 import { useCart } from "@/lib/cart";
+import type { VehicleRecord } from "./VehicleSizeChoice";
 
 interface TyroneProduct {
   name: string;
@@ -20,7 +23,7 @@ interface TyroneProduct {
   thumb: string | null;
   size: string;
 }
-type Msg = { from: "bot" | "user"; text: string; products?: TyroneProduct[]; buttons?: string[] };
+type Msg = { from: "bot" | "user"; text: string; products?: TyroneProduct[]; buttons?: string[]; links?: { label: string; href: string }[] };
 
 interface Rule {
   keys: string[];
@@ -194,10 +197,73 @@ function matchRule(input: string): string {
     }
   }
   if (best && bestScore > 0) return best.answer;
-  return "I'm not totally sure on that one, but I'd love to help! 🙂 I can answer questions about finding tyres, delivery, payment, fitment, mag wheels, brands and more. You can also call us on 078 0088 788 or email shop@thetyremall.co.za.";
+  return "I'm not sure I caught that — tell me your car (make, model, year), your tyre size (like 205/55R16), or pick an option below. 🙂";
+}
+
+// ---- vehicle flow ----------------------------------------------------------
+type FlowStep = "awaitingVehicle" | "awaitingModel" | "awaitingYear" | "awaitingTrim" | "awaitingSizeChoice";
+interface Veh { step: FlowStep; make?: string; model?: string; year?: number; records?: VehicleRecord[]; record?: VehicleRecord }
+
+const BROWSE_ALL = "🚗 Browse all vehicles";
+const BROWSE_BOTH = "Browse all sizes";
+const MAGS_FOR_CAR = "🛞 Mag wheels for this car";
+const SESSION_KEY = "ttm-tyrone-veh";
+
+const MAKE_ALIASES: Record<string, string> = {
+  vw: "Volkswagen", vdub: "Volkswagen", "v-dub": "Volkswagen", merc: "Mercedes", benz: "Mercedes",
+  "mercedes-benz": "Mercedes", chevy: "Chevrolet", beemer: "BMW", bimmer: "BMW",
+  "range rover": "Land Rover", landrover: "Land Rover",
+};
+
+const wordInLow = (hay: string, needle: string) =>
+  new RegExp(`(^|[^a-z0-9])${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`).test(hay);
+
+function findMake(t: string, makes: string[]): string | null {
+  const low = t.toLowerCase();
+  for (const [alias, real] of Object.entries(MAKE_ALIASES)) {
+    if (wordInLow(low, alias) && makes.some((m) => m.toLowerCase() === real.toLowerCase())) return real;
+  }
+  for (const m of [...makes].sort((a, b) => b.length - a.length)) {
+    if (wordInLow(low, m.toLowerCase())) return m;
+  }
+  return null;
+}
+
+function findModel(t: string, models: string[]): string | null {
+  const low = t.toLowerCase();
+  for (const m of [...models].sort((a, b) => b.length - a.length)) {
+    if (m.length >= 2 && wordInLow(low, m.toLowerCase())) return m;
+  }
+  return null;
+}
+
+/** Scan every make's models for a distinctive model (e.g. "hilux") when no make
+ *  was named. Returns the first strong hit. */
+function findModelAnywhere(t: string, index: Record<string, string[]>): { make: string; model: string } | null {
+  const low = t.toLowerCase();
+  for (const make of Object.keys(index)) {
+    for (const model of index[make]) {
+      if (model.length >= 4 && wordInLow(low, model.toLowerCase())) return { make, model };
+    }
+  }
+  return null;
+}
+
+/** Parse a free-text car into make/model/year using the live index. */
+function parseVehicle(t: string, makes: string[], index: Record<string, string[]>): { make?: string; model?: string; year?: number } {
+  const ym = t.match(/\b(19|20)\d{2}\b/);
+  const year = ym ? Number(ym[0]) : undefined;
+  let make = findMake(t, makes);
+  let model = make ? findModel(t, index[make] ?? []) : null;
+  if (!make) {
+    const hit = findModelAnywhere(t, index);
+    if (hit) { make = hit.make; model = hit.model; }
+  }
+  return { make: make ?? undefined, model: model ?? undefined, year };
 }
 
 export function Tyrone() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [waOpen, setWaOpen] = useState(false);
   const { drawerOpen } = useCart(); // cart side-drawer — slide the dock clear of it
@@ -205,6 +271,11 @@ export function Tyrone() {
   const [mode, setMode] = useState<"wheels" | null>(null); // wheel-context after tapping "Mag wheels"
   const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", text: GREETING, buttons: MAIN_MENU }]);
   const [typing, setTyping] = useState(false);
+  // Vehicle flow state (persisted so a trip to /shop and back keeps the flow).
+  const [veh, setVeh] = useState<Veh | null>(null);
+  const makesRef = useRef<string[]>([]);
+  const indexRef = useRef<Record<string, string[]>>({});
+  const indexLoaded = useRef(false);
   // Typewriter reveal: `stream` is the bot message index currently being typed
   // out and how many characters are shown so far. Products/buttons for that
   // message hold back until the text finishes.
@@ -254,6 +325,24 @@ export function Tyrone() {
     return () => window.clearTimeout(id);
   }, [stream, msgs]);
 
+  // Load the make→models index once the chat opens (for free-text car parsing).
+  async function loadIndex() {
+    if (indexLoaded.current) return;
+    indexLoaded.current = true;
+    try {
+      const d = await fetch("/api/vehicles?index=1").then((r) => r.json());
+      makesRef.current = d.makes || [];
+      indexRef.current = d.index || {};
+    } catch { indexLoaded.current = false; }
+  }
+  useEffect(() => { if (open) loadIndex(); }, [open]);
+
+  // Restore / persist the vehicle flow across navigations.
+  useEffect(() => { try { const r = sessionStorage.getItem(SESSION_KEY); if (r) setVeh(JSON.parse(r)); } catch {} }, []);
+  useEffect(() => {
+    try { if (veh) sessionStorage.setItem(SESSION_KEY, JSON.stringify(veh)); else sessionStorage.removeItem(SESSION_KEY); } catch {}
+  }, [veh]);
+
   // Let other parts of the site open Tyrone (e.g. the no-results help panel)
   // and optionally have him greet with a specific message.
   useEffect(() => {
@@ -273,6 +362,148 @@ export function Tyrone() {
     send(label);
   }
 
+  function botReply(msg: Msg, delay = 350) {
+    setTyping(true);
+    window.setTimeout(() => { setTyping(false); setMsgs((m) => [...m, msg]); }, delay);
+  }
+
+  const HUMAN = MENU.human;
+  const yearBtns = (years: number[]) => [...years.slice(0, 8).map(String), ...(years.length > 8 ? ["More years →"] : []), BROWSE_ALL, HUMAN];
+  const trimLabel = (r: VehicleRecord) => `${r.trim || "Standard"}${r.generation ? ` · ${r.generation}` : ""}`;
+  const rimLine = (r: VehicleRecord) =>
+    r.rimOptions.length ? `\nRim ${r.rimOptions.join(" / ")}${r.pcd ? ` · PCD ${r.pcd.replace(/\*/g, "×")}` : " · bolt pattern to be verified"}` : "";
+
+  async function fetchYears(make: string, model: string): Promise<number[]> {
+    try { return (await fetch(`/api/vehicles?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`).then((r) => r.json())).years || []; } catch { return []; }
+  }
+
+  function startVehicleFlow() {
+    loadIndex();
+    setVeh({ step: "awaitingVehicle" });
+    botReply({ from: "bot", text: "Sweet 🚗 — what do you drive? Give me the make, model & year, like “Toyota Hilux 2021” or “VW Polo 2018”. You can also browse the full list.", buttons: [BROWSE_ALL, HUMAN] });
+  }
+
+  async function startFromText(t: string) {
+    await loadIndex();
+    const { make, model, year } = parseVehicle(t, makesRef.current, indexRef.current);
+    if (make && model && year) { await resolveRecords(make, model, year); return; }
+    if (make && model) {
+      const years = await fetchYears(make, model);
+      setVeh({ step: "awaitingYear", make, model });
+      botReply({ from: "bot", text: `A ${make} ${model} — nice! Which year?`, buttons: yearBtns(years) });
+      return;
+    }
+    if (make) {
+      const models = indexRef.current[make] || [];
+      setVeh({ step: "awaitingModel", make });
+      botReply({ from: "bot", text: `Which ${make} do you drive?`, buttons: [...models.slice(0, 8), ...(models.length > 8 ? ["See all models →"] : []), BROWSE_ALL, HUMAN] });
+      return;
+    }
+    setVeh({ step: "awaitingVehicle" });
+    botReply({ from: "bot", text: "I didn't catch your vehicle. Tell me the make, model & year — like “Toyota Hilux 2021” — or browse all vehicles.", buttons: [BROWSE_ALL, MENU.size, HUMAN] });
+  }
+
+  async function resolveRecords(make: string, model: string, year: number) {
+    let records: VehicleRecord[] = [];
+    try { records = (await fetch(`/api/vehicles?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${year}`).then((r) => r.json())).records || []; } catch {}
+    if (!records.length) {
+      const years = await fetchYears(make, model);
+      setVeh({ step: "awaitingYear", make, model });
+      botReply({ from: "bot", text: `I don't have ${year} for the ${make} ${model}.${years.length ? ` I do have: ${years.slice(0, 10).join(", ")}${years.length > 10 ? "…" : ""}. Which year?` : " Try browsing all vehicles."}`, buttons: yearBtns(years) });
+      return;
+    }
+    if (records.length === 1) { showSizeChoice(records[0], make, model, year); return; }
+    setVeh({ step: "awaitingTrim", make, model, year, records });
+    botReply({ from: "bot", text: `Your ${year} ${make} ${model} comes in ${records.length} trims — which is yours?`, buttons: [...records.slice(0, 8).map(trimLabel), ...(records.length > 8 ? ["More trims →"] : []), HUMAN] });
+  }
+
+  function showSizeChoice(record: VehicleRecord, make: string, model: string, year: number) {
+    setVeh({ step: "awaitingSizeChoice", make, model, year, record });
+    const v = `${year} ${make} ${model}${record.trim ? ` ${record.trim}` : ""}`;
+    if (record.tyreOptions.length <= 1) {
+      const size = record.tyreOptions[0];
+      if (!size) { botReply({ from: "bot", text: `I don't have a listed size for your ${v} yet — tap below and we'll confirm the fitment.`, buttons: [WA_BUTTON, HUMAN] }); setVeh(null); return; }
+      const note = parseSize(size).nonStandard ? " (racing/competition size — matched as text)" : "";
+      botReply({ from: "bot", text: `Your ${v} uses ${size}${note}. Confirm and I'll pull the tyres.${rimLine(record)}`, buttons: [`✅ Yes, show ${size}`, "Another size", HUMAN] });
+    } else {
+      const lines = record.tyreOptions.map((s, i) => `• ${s} — ${parseSize(s).nonStandard ? "racing/competition size — matched as text" : i === 0 ? "factory fitment" : "optional / plus size"}`).join("\n");
+      botReply({ from: "bot", text: `Your ${v} came with ${record.tyreOptions.length} sizes:\n${lines}${rimLine(record)}\n\nWhich should I search?`, buttons: [...record.tyreOptions, BROWSE_BOTH, MAGS_FOR_CAR, HUMAN] });
+    }
+  }
+
+  async function confirmSize(record: VehicleRecord, size: string, make: string, model: string, year: number) {
+    const v = `${year} ${make} ${model}`;
+    let total = 0; let products: TyroneProduct[] = [];
+    try { const d = await fetch(`/api/tyrone?msg=${encodeURIComponent(size)}`).then((r) => r.json()); total = d.total ?? (d.products?.length ?? 0); products = d.products || []; } catch {}
+    const links = [{ label: `See all ${size} tyres →`, href: sizeToShopHref(size, { type: "tyre", vehicle: v }) }];
+    if (record.tyreOptions.length > 1) {
+      links.push({ label: "Shop all sizes →", href: `/shop?${new URLSearchParams({ type: "tyre", sizes: record.tyreOptions.join("|"), vehicle: v }).toString()}` });
+    }
+    setVeh(null);
+    botReply({ from: "bot", text: total ? `We've got ${total} ${total === 1 ? "tyre" : "tyres"} in ${size} for your ${v}. 👇` : `Here's ${size} for your ${v}:`, products, links, buttons: [HUMAN] }, 450);
+  }
+
+  /** Mid-flow parser — runs before the generic intent table. Returns true when
+   *  it handled the message (so send() stops), false to let normal handling run. */
+  async function handleFlow(t: string): Promise<boolean> {
+    if (!veh) return false;
+    const low = t.toLowerCase();
+    // escape hatches → drop the flow and let normal handling take over
+    if (low === WA_BUTTON.toLowerCase() || low === HUMAN.toLowerCase() || (MAIN_MENU.some((l) => l.toLowerCase() === low) && low !== MENU.vehicle.toLowerCase())) { setVeh(null); return false; }
+    if (low === BROWSE_ALL.toLowerCase() || t === "More years →" || t === "See all models →" || t === "More trims →") { setVeh(null); router.push("/vehicle-search"); return true; }
+
+    const { step, make, model, year, records, record } = veh;
+
+    if (step === "awaitingSizeChoice" && record && make && model && year != null) {
+      if (t === BROWSE_BOTH) { setVeh(null); router.push(`/shop?${new URLSearchParams({ type: "tyre", sizes: record.tyreOptions.join("|"), vehicle: `${year} ${make} ${model}` }).toString()}`); return true; }
+      if (t === MAGS_FOR_CAR) {
+        const href = record.rimHrefs[0]?.href || "/shop?type=wheel";
+        setVeh(null);
+        botReply({ from: "bot", text: `Here are mags that fit your ${year} ${make} ${model}${record.pcd ? ` (PCD ${record.pcd.replace(/\*/g, "×")})` : ""}:`, links: [{ label: "See matching mag wheels →", href }], buttons: [HUMAN] });
+        return true;
+      }
+      if (/^✅ yes, show /i.test(t)) { await confirmSize(record, record.tyreOptions[0], make, model, year); return true; }
+      if (low === "another size") { setVeh(null); botReply({ from: "bot", text: "No worries — tell me your exact size (like 205/55R16), or browse all vehicles.", buttons: [MENU.size, BROWSE_ALL, HUMAN] }); return true; }
+      const chosen = record.tyreOptions.find((s) => s.toLowerCase() === low || s.replace(/\s+/g, "").toLowerCase() === low.replace(/\s+/g, ""));
+      if (chosen) { await confirmSize(record, chosen, make, model, year); return true; }
+      botReply({ from: "bot", text: `Tap one of your sizes: ${record.tyreOptions.join(" or ")}.`, buttons: [...record.tyreOptions, BROWSE_BOTH, HUMAN] });
+      return true;
+    }
+
+    if (step === "awaitingTrim" && records && make && model && year != null) {
+      const chosen = records.find((r) => trimLabel(r).toLowerCase() === low) || records.find((r) => (r.trim || "").toLowerCase() === low);
+      if (chosen) { showSizeChoice(chosen, make, model, year); return true; }
+      botReply({ from: "bot", text: "Pick your trim from the list:", buttons: [...records.slice(0, 8).map(trimLabel), ...(records.length > 8 ? ["More trims →"] : []), HUMAN] });
+      return true;
+    }
+
+    if (step === "awaitingYear" && make && model) {
+      const ym = t.match(/\b(19|20)\d{2}\b/);
+      if (ym) { await resolveRecords(make, model, Number(ym[0])); return true; }
+      const years = await fetchYears(make, model);
+      botReply({ from: "bot", text: `Which year is your ${make} ${model}?`, buttons: yearBtns(years) });
+      return true;
+    }
+
+    if (step === "awaitingModel" && make) {
+      const models = indexRef.current[make] || [];
+      const chosen = findModel(t, models) || models.find((m) => m.toLowerCase() === low);
+      if (chosen) {
+        const ym = t.match(/\b(19|20)\d{2}\b/);
+        if (ym) { await resolveRecords(make, chosen, Number(ym[0])); return true; }
+        const years = await fetchYears(make, chosen);
+        setVeh({ step: "awaitingYear", make, model: chosen });
+        botReply({ from: "bot", text: `Great — a ${make} ${chosen}. Which year?`, buttons: yearBtns(years) });
+        return true;
+      }
+      botReply({ from: "bot", text: `Which ${make} model? Pick one:`, buttons: [...models.slice(0, 8), ...(models.length > 8 ? ["See all models →"] : []), BROWSE_ALL, HUMAN] });
+      return true;
+    }
+
+    if (step === "awaitingVehicle") { await startFromText(t); return true; }
+    return false;
+  }
+
   async function send(text: string) {
     const t = text.trim();
     if (!t) return;
@@ -280,6 +511,17 @@ export function Tyrone() {
     setInput("");
 
     const low = t.toLowerCase();
+
+    // ---- vehicle flow — runs BEFORE the generic intent table ----
+    if (veh && (await handleFlow(t))) return;
+    // entry: the "Find tyres by vehicle" button / phrasing
+    if (low === MENU.vehicle.toLowerCase() || low === "find by vehicle" || low === "by vehicle" || low === "find tyres by vehicle") { startVehicleFlow(); return; }
+    // entry: a recognised car in free text (not a bare tyre size)
+    if (!/\d{3}\s*[\/x]\s*\d{2}/.test(t)) {
+      await loadIndex();
+      if (parseVehicle(t, makesRef.current, indexRef.current).make) { await startFromText(t); return; }
+    }
+
     // Track "mag wheels" context so a plain vehicle afterwards searches wheels.
     if (low === MENU.wheels.toLowerCase()) setMode("wheels");
     else if (MAIN_MENU.some((l) => l.toLowerCase() === low)) setMode(null);
@@ -303,8 +545,8 @@ export function Tyrone() {
     setTyping(true);
     const started = Date.now();
     const fallbackText = matchRule(t);
-    const isFallback = fallbackText.startsWith("I'm not totally sure");
-    let reply: Msg = { from: "bot", text: fallbackText, buttons: isFallback ? MAIN_MENU : FOLLOWUPS };
+    const isFallback = fallbackText.startsWith("I'm not sure I caught that");
+    let reply: Msg = { from: "bot", text: fallbackText, buttons: isFallback ? [MENU.vehicle, MENU.size, MENU.human] : FOLLOWUPS };
     let firstProduct: TyroneProduct | undefined;
     try {
       const res = await fetch(`/api/tyrone?msg=${encodeURIComponent(query)}`);
@@ -444,6 +686,20 @@ export function Tyrone() {
                           </span>
                         </span>
                         <Arrow width={14} height={14} className="shrink-0 text-[#4f7000]" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+                {m.from === "bot" && m.links && m.links.length > 0 && !(stream && stream.idx === i) && (
+                  <div className="mt-2 flex w-full flex-col gap-2">
+                    {m.links.map((l) => (
+                      <Link
+                        key={l.href}
+                        href={l.href}
+                        onClick={() => setOpen(false)}
+                        className="btn btn-volt h-10 w-full justify-center px-4 text-xs"
+                      >
+                        {l.label}
                       </Link>
                     ))}
                   </div>

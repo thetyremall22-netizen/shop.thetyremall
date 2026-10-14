@@ -413,7 +413,7 @@ export function Tyrone() {
             <MicButton
               className="size-10 rounded-full bg-surface-2"
               title="Talk to Tyrone — e.g. “tyres for a Toyota Hilux 2021”"
-              onInterim={(t) => setInput(t)}
+              notePlacement="top"
               onResult={(t) => send(cleanVoiceQuery(t))}
             />
             <button type="submit" className="grid size-10 shrink-0 place-items-center rounded-full bg-volt text-volt-ink transition-transform hover:scale-105" aria-label="Send">

@@ -28,6 +28,12 @@ function getCtor(): SRCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+// Chrome allows only ONE active SpeechRecognition on a page at a time. If a
+// previous one (e.g. the header search mic) is still winding down when another
+// mic (e.g. Tyrone's) starts, the new one fails silently with no transcript.
+// Track the active instance globally and abort it before starting a new one.
+let activeRec: SpeechRecognitionLike | null = null;
+
 const MSG: Record<string, string> = {
   "not-allowed": "Allow microphone access to search by voice.",
   "service-not-allowed": "Allow microphone access to search by voice.",
@@ -44,12 +50,17 @@ export function MicButton({
   title = "Search by voice",
   className = "",
   size = 18,
+  notePlacement = "bottom",
 }: {
   onResult: (text: string) => void;
   onInterim?: (text: string) => void;
   title?: string;
   className?: string;
   size?: number;
+  /** Where the status note sits relative to the button. Use "top" when the
+   *  button is near the bottom of the screen (e.g. the Tyrone chat) so the
+   *  message isn't cut off below the viewport. */
+  notePlacement?: "top" | "bottom";
 }) {
   const [supported, setSupported] = useState(true);
   const [listening, setListening] = useState(false);
@@ -75,6 +86,8 @@ export function MicButton({
   function begin() {
     const Ctor = getCtor();
     if (!Ctor) { setSupported(false); flash(MSG.unsupported); return; }
+    // Make sure no other mic instance is holding recognition (see activeRec).
+    if (activeRec) { try { activeRec.abort(); } catch {} activeRec = null; }
     try {
       const rec = new Ctor();
       rec.lang = "en-ZA";
@@ -85,10 +98,16 @@ export function MicButton({
       rec.onstart = () => { setNote(null); setListening(true); };
       rec.onend = () => {
         setListening(false);
-        if (!gotResult.current && !note) flash(MSG["no-speech"]);
+        if (activeRec === rec) activeRec = null;
+        if (!gotResult.current && !note) {
+          console.warn("[MicButton] recognition ended with no transcript");
+          flash(MSG["no-speech"]);
+        }
       };
       rec.onerror = (e) => {
         setListening(false);
+        if (activeRec === rec) activeRec = null;
+        console.warn("[MicButton] recognition error:", e.error);
         flash(MSG[e.error ?? ""] ?? "Voice search couldn’t start — tap to retry.");
       };
       rec.onresult = (e: SpeechResultEvent) => {
@@ -103,9 +122,12 @@ export function MicButton({
         if (finalT) { gotResult.current = true; onResult(finalT.trim()); }
       };
       recRef.current = rec;
+      activeRec = rec;
       rec.start();
-    } catch {
+    } catch (err) {
       setListening(false);
+      activeRec = null;
+      console.warn("[MicButton] start threw:", err);
       flash("Voice search couldn’t start — tap to retry.");
     }
   }
@@ -141,7 +163,11 @@ export function MicButton({
         <Mic width={size} height={size} />
       </button>
       {note && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-lg bg-ink-2 px-3 py-2 text-[11px] font-medium leading-snug text-fg shadow-xl ring-1 ring-line">
+        <div
+          className={`absolute right-0 z-50 w-48 rounded-lg bg-ink-2 px-3 py-2 text-[11px] font-medium leading-snug text-fg shadow-xl ring-1 ring-line ${
+            notePlacement === "top" ? "bottom-full mb-2" : "top-full mt-2"
+          }`}
+        >
           {note}
         </div>
       )}

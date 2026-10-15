@@ -3,8 +3,13 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-const SECRET = process.env.SESSION_SECRET || "dev-insecure-change-me";
-const PASSWORD = process.env.ADMIN_PASSWORD || "tyremall-admin";
+// No insecure fallbacks: SESSION_SECRET falls back to a RANDOM per-process
+// secret (never a public default), and an unset ADMIN_PASSWORD means admin
+// login is disabled (fails closed) rather than using a guessable default.
+const SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+const PASSWORD = process.env.ADMIN_PASSWORD || "";
+if (!process.env.SESSION_SECRET) console.warn("[admin-auth] SESSION_SECRET not set — using a random per-process secret (sessions reset on restart). Set it in production.");
+if (!PASSWORD) console.warn("[admin-auth] ADMIN_PASSWORD not set — admin login is disabled until it's configured.");
 export const ADMIN_COOKIE = "ttm_admin";
 export const ADMIN_MAXAGE = 60 * 60 * 24 * 7; // 7 days
 
@@ -27,6 +32,7 @@ export function verifyToken(tok?: string): boolean {
 }
 
 export function checkPassword(pw: string): boolean {
+  if (!PASSWORD) return false; // fail closed when no admin password is configured
   if (typeof pw !== "string" || pw.length !== PASSWORD.length) return false;
   return crypto.timingSafeEqual(Buffer.from(pw), Buffer.from(PASSWORD));
 }

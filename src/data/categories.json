@@ -1,234 +1,234 @@
 [
- {
-  "id": 1001,
-  "name": "UHP Tyres",
-  "slug": "uhp-tyres",
-  "count": 1624,
-  "image": null,
-  "primary": true
- },
- {
-  "id": 1002,
-  "name": "Passenger Tyres",
-  "slug": "passenger-tyres",
-  "count": 1178,
-  "image": null,
-  "primary": true
- },
- {
-  "id": 1003,
-  "name": "SUV Tyres",
-  "slug": "suv-tyres",
-  "count": 827,
-  "image": null,
-  "primary": true
- },
- {
-  "id": 1004,
-  "name": "4x4 Tyres",
-  "slug": "4x4-tyres",
-  "count": 689,
-  "image": null,
-  "primary": true
- },
- {
-  "id": 1005,
-  "name": "Commercial Tyres",
-  "slug": "commercial-tyres",
-  "count": 361,
-  "image": null,
-  "primary": true
- },
- {
-  "id": 1006,
-  "name": "Runflat Tyres",
-  "slug": "runflat-tyres",
-  "count": 242,
-  "image": null,
-  "primary": true
- },
- {
-  "id": 1007,
-  "name": "Truck & Bus Tyres",
-  "slug": "truck-bus-tyres",
-  "count": 209,
-  "image": null,
-  "primary": true
- },
- {
-  "id": 1008,
-  "name": "Mag Wheels",
-  "slug": "mag-wheel",
-  "count": 79,
-  "image": null,
-  "primary": true
- },
- {
-  "id": 1009,
-  "name": "Passenger Deals",
-  "slug": "passenger-deals",
-  "count": 50,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1010,
-  "name": "RunFlat Deals",
-  "slug": "runflat-deals",
-  "count": 49,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1011,
-  "name": "UHP Deals",
-  "slug": "uhp-deals",
-  "count": 40,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1012,
-  "name": "Hot Deal",
-  "slug": "hot-deal",
-  "count": 35,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1013,
-  "name": "Commercial Deals",
-  "slug": "commercial-deals",
-  "count": 30,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1014,
-  "name": "4x4 Deals",
-  "slug": "4x4-deals",
-  "count": 29,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1015,
-  "name": "Clearance Specials",
-  "slug": "clearance-specials",
-  "count": 27,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1016,
-  "name": "SUV Deals",
-  "slug": "suv-deals",
-  "count": 23,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1017,
-  "name": "Bus Deals",
-  "slug": "bus-deals",
-  "count": 21,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1018,
-  "name": "Truck Deals",
-  "slug": "truck-deals",
-  "count": 20,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1019,
-  "name": "Black November Deals",
-  "slug": "black-november-deals",
-  "count": 18,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1020,
-  "name": "Deal of the Month",
-  "slug": "deal-of-the-month",
-  "count": 16,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1021,
-  "name": "Last of the Best",
-  "slug": "last-of-the-best",
-  "count": 14,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1022,
-  "name": "Weekly Deals",
-  "slug": "weekly-deals",
-  "count": 11,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1023,
-  "name": "Bike Tyres",
-  "slug": "bike-tyres",
-  "count": 9,
-  "image": null,
-  "primary": true
- },
- {
-  "id": 1024,
-  "name": "TAKE CONTROL DEALS",
-  "slug": "take-control-deals",
-  "count": 8,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1025,
-  "name": "WAS AND NOW DEALS",
-  "slug": "was-and-now-deals",
-  "count": 5,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1026,
-  "name": "Fathers Day Deals",
-  "slug": "fathers-day-deals",
-  "count": 4,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1027,
-  "name": "3 + 1 DEALS",
-  "slug": "3-1-deals",
-  "count": 3,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1028,
-  "name": "LIMITED TIME TYRE DEALS",
-  "slug": "limited-time-tyre-deals",
-  "count": 3,
-  "image": null,
-  "primary": false
- },
- {
-  "id": 1029,
-  "name": "WomensMonth",
-  "slug": "womensmonth",
-  "count": 1,
-  "image": null,
-  "primary": false
- }
+  {
+    "id": 1001,
+    "name": "UHP Tyres",
+    "slug": "uhp-tyres",
+    "count": 1624,
+    "image": null,
+    "primary": true
+  },
+  {
+    "id": 1002,
+    "name": "Passenger Tyres",
+    "slug": "passenger-tyres",
+    "count": 1189,
+    "image": null,
+    "primary": true
+  },
+  {
+    "id": 1003,
+    "name": "SUV Tyres",
+    "slug": "suv-tyres",
+    "count": 827,
+    "image": null,
+    "primary": true
+  },
+  {
+    "id": 1004,
+    "name": "4x4 Tyres",
+    "slug": "4x4-tyres",
+    "count": 699,
+    "image": null,
+    "primary": true
+  },
+  {
+    "id": 1005,
+    "name": "Commercial Tyres",
+    "slug": "commercial-tyres",
+    "count": 361,
+    "image": null,
+    "primary": true
+  },
+  {
+    "id": 1006,
+    "name": "Runflat Tyres",
+    "slug": "runflat-tyres",
+    "count": 242,
+    "image": null,
+    "primary": true
+  },
+  {
+    "id": 1007,
+    "name": "Truck & Bus Tyres",
+    "slug": "truck-bus-tyres",
+    "count": 209,
+    "image": null,
+    "primary": true
+  },
+  {
+    "id": 1008,
+    "name": "Mag Wheels",
+    "slug": "mag-wheel",
+    "count": 79,
+    "image": null,
+    "primary": true
+  },
+  {
+    "id": 1009,
+    "name": "Passenger Deals",
+    "slug": "passenger-deals",
+    "count": 50,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1010,
+    "name": "RunFlat Deals",
+    "slug": "runflat-deals",
+    "count": 49,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1011,
+    "name": "UHP Deals",
+    "slug": "uhp-deals",
+    "count": 40,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1012,
+    "name": "Hot Deal",
+    "slug": "hot-deal",
+    "count": 35,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1013,
+    "name": "Commercial Deals",
+    "slug": "commercial-deals",
+    "count": 30,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1014,
+    "name": "4x4 Deals",
+    "slug": "4x4-deals",
+    "count": 29,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1015,
+    "name": "Clearance Specials",
+    "slug": "clearance-specials",
+    "count": 27,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1016,
+    "name": "SUV Deals",
+    "slug": "suv-deals",
+    "count": 23,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1017,
+    "name": "Bus Deals",
+    "slug": "bus-deals",
+    "count": 21,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1018,
+    "name": "Truck Deals",
+    "slug": "truck-deals",
+    "count": 20,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1019,
+    "name": "Black November Deals",
+    "slug": "black-november-deals",
+    "count": 18,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1020,
+    "name": "Deal of the Month",
+    "slug": "deal-of-the-month",
+    "count": 16,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1021,
+    "name": "Last of the Best",
+    "slug": "last-of-the-best",
+    "count": 14,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1022,
+    "name": "Weekly Deals",
+    "slug": "weekly-deals",
+    "count": 11,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1023,
+    "name": "Bike Tyres",
+    "slug": "bike-tyres",
+    "count": 9,
+    "image": null,
+    "primary": true
+  },
+  {
+    "id": 1024,
+    "name": "TAKE CONTROL DEALS",
+    "slug": "take-control-deals",
+    "count": 8,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1025,
+    "name": "WAS AND NOW DEALS",
+    "slug": "was-and-now-deals",
+    "count": 5,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1026,
+    "name": "Fathers Day Deals",
+    "slug": "fathers-day-deals",
+    "count": 4,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1027,
+    "name": "3 + 1 DEALS",
+    "slug": "3-1-deals",
+    "count": 3,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1028,
+    "name": "LIMITED TIME TYRE DEALS",
+    "slug": "limited-time-tyre-deals",
+    "count": 3,
+    "image": null,
+    "primary": false
+  },
+  {
+    "id": 1029,
+    "name": "WomensMonth",
+    "slug": "womensmonth",
+    "count": 1,
+    "image": null,
+    "primary": false
+  }
 ]

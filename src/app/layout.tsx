@@ -6,8 +6,7 @@ import { CompareProvider } from "@/lib/compare";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
-import { CompareBar } from "@/components/CompareBar";
-import { Tyrone } from "@/components/Tyrone";
+import { FloatingWidgets } from "@/components/FloatingWidgets";
 import { ScrollToTop } from "@/components/ScrollToTop";
 
 const inter = Inter({
@@ -53,8 +52,7 @@ export default function RootLayout({
             <main>{children}</main>
             <Footer />
             <CartDrawer />
-            <CompareBar />
-            <Tyrone />
+            <FloatingWidgets />
           </CompareProvider>
         </CartProvider>
       </body>

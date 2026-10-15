@@ -14,7 +14,7 @@ export function CompareBar() {
   if (items.length === 0 || pathname === "/compare") return null;
 
   return (
-    <div className="fixed bottom-4 left-4 z-40 max-w-[calc(100vw-2rem)]">
+    <div className="fixed bottom-20 left-4 z-40 max-w-[calc(100vw-2rem)]">
       <div className="flex items-center gap-3 rounded-2xl border border-line bg-ink-2/95 p-2.5 pr-3 shadow-2xl shadow-black/60 backdrop-blur">
         <span className="hidden pl-1 text-xs font-bold uppercase tracking-wide text-muted sm:block">
           Compare<br />{items.length}/{COMPARE_MAX}

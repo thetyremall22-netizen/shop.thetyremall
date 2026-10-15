@@ -1,6 +1,7 @@
 import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import type { Order } from "./orders";
+import { logEmail, type EmailType } from "./email-log";
 
 const HOST = process.env.SMTP_HOST;
 const PORT = Number(process.env.SMTP_PORT ?? 587);
@@ -51,17 +52,32 @@ async function sendViaResend(to: string, subject: string, html: string, cc: stri
   }
 }
 
-export async function sendMail(to: string, subject: string, html: string): Promise<void> {
+export interface MailMeta {
+  type?: EmailType;
+  orderRef?: string | null;
+  resend?: boolean;
+}
+
+export async function sendMail(to: string, subject: string, html: string, meta: MailMeta = {}): Promise<void> {
+  const type = meta.type ?? "custom";
+  const orderRef = meta.orderRef ?? null;
+  const resend = meta.resend ?? false;
+
   if (!emailConfigured()) {
     console.warn(`[email] not configured (set RESEND_API_KEY or SMTP_*) — skipped "${subject}" to ${to}`);
+    await logEmail({ toAddr: to, subject, html, type, orderRef, status: "skipped", provider: "none", resend });
     return;
   }
   const cc = CC_LIST.filter((a) => a.toLowerCase() !== to.toLowerCase());
-  if (RESEND_API_KEY) {
-    await sendViaResend(to, subject, html, cc);
-    return;
+  const provider = RESEND_API_KEY ? "resend" : "smtp";
+  try {
+    if (RESEND_API_KEY) await sendViaResend(to, subject, html, cc);
+    else await getTransport().sendMail({ from: FROM, to, subject, html, ...(cc.length ? { cc } : {}) });
+    await logEmail({ toAddr: to, cc, subject, html, type, orderRef, status: "sent", provider, resend });
+  } catch (e) {
+    await logEmail({ toAddr: to, cc, subject, html, type, orderRef, status: "failed", provider, error: (e as Error).message, resend });
+    throw e;
   }
-  await getTransport().sendMail({ from: FROM, to, subject, html, ...(cc.length ? { cc } : {}) });
 }
 
 const SITE_URL = process.env.SITE_URL ?? "https://thetyremall.co.za";
@@ -85,7 +101,7 @@ export async function sendAbandonedCartEmail(to: string, items: { name: string; 
     <p style="font-size:11px;color:#9aa2ab;margin-top:20px;border-top:1px solid #eee;padding-top:12px">
       Made by <a href="${IHD_CREDIT}" style="color:#9aa2ab">iHeart Digital</a>
     </p>`;
-  await sendMail(to, "You left tyres in your cart — The Tyre Mall", layout("Still thinking it over?", body));
+  await sendMail(to, "You left tyres in your cart — The Tyre Mall", layout("Still thinking it over?", body), { type: "abandoned_cart" });
 }
 
 /** Notify the shop of a WhatsApp / Tyrone product enquiry. */
@@ -105,7 +121,8 @@ export async function sendEnquiryEmail(e: {
     SHOP_EMAIL,
     `${label}${e.productName ? ` — ${e.productName}` : ""}`,
     layout(label, `<p style="margin:0 0 12px;font-size:14px">A customer sent a ${label.toLowerCase()} from the website:</p>
-      <table role="presentation" style="font-size:14px;border-collapse:collapse">${table}</table>`)
+      <table role="presentation" style="font-size:14px;border-collapse:collapse">${table}</table>`),
+    { type: "enquiry" }
   );
 }
 
@@ -248,29 +265,44 @@ export async function sendOrderPaid(o: Order): Promise<void> {
   const cust = tProcessingCustomer(o);
   const admin = tNewOrderAdmin(o);
   await Promise.all([
-    sendMail(o.customer.email, cust.subject, cust.html),
-    sendMail(SHOP_EMAIL, admin.subject, admin.html),
+    sendMail(o.customer.email, cust.subject, cust.html, { type: "order_paid", orderRef: o.reference }),
+    sendMail(SHOP_EMAIL, admin.subject, admin.html, { type: "order_new_admin", orderRef: o.reference }),
   ]);
 }
 export async function sendOrderFailed(o: Order): Promise<void> {
   const c = tFailedCustomer(o);
   const a = tFailedAdmin(o);
-  await Promise.all([sendMail(o.customer.email, c.subject, c.html), sendMail(SHOP_EMAIL, a.subject, a.html)]);
+  await Promise.all([
+    sendMail(o.customer.email, c.subject, c.html, { type: "order_failed", orderRef: o.reference }),
+    sendMail(SHOP_EMAIL, a.subject, a.html, { type: "order_failed_admin", orderRef: o.reference }),
+  ]);
 }
 export async function sendOrderCancelled(o: Order): Promise<void> {
   const c = tCancelledCustomer(o);
   const a = tCancelledAdmin(o);
-  await Promise.all([sendMail(o.customer.email, c.subject, c.html), sendMail(SHOP_EMAIL, a.subject, a.html)]);
+  await Promise.all([
+    sendMail(o.customer.email, c.subject, c.html, { type: "order_cancelled", orderRef: o.reference }),
+    sendMail(SHOP_EMAIL, a.subject, a.html, { type: "order_cancelled_admin", orderRef: o.reference }),
+  ]);
 }
 export async function sendOrderRefunded(o: Order): Promise<void> {
   const c = tRefundedCustomer(o);
-  await Promise.all([sendMail(o.customer.email, c.subject, c.html), sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, c.html)]);
+  await Promise.all([
+    sendMail(o.customer.email, c.subject, c.html, { type: "order_refunded", orderRef: o.reference }),
+    sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, c.html, { type: "order_refunded", orderRef: o.reference }),
+  ]);
 }
 export async function sendOrderCompleted(o: Order): Promise<void> {
   const c = tCompletedCustomer(o);
-  await Promise.all([sendMail(o.customer.email, c.subject, c.html), sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, c.html)]);
+  await Promise.all([
+    sendMail(o.customer.email, c.subject, c.html, { type: "order_completed", orderRef: o.reference }),
+    sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, c.html, { type: "order_completed", orderRef: o.reference }),
+  ]);
 }
 export async function sendOrderOnHold(o: Order): Promise<void> {
   const c = tOnHoldCustomer(o);
-  await Promise.all([sendMail(o.customer.email, c.subject, c.html), sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, c.html)]);
+  await Promise.all([
+    sendMail(o.customer.email, c.subject, c.html, { type: "order_on_hold", orderRef: o.reference }),
+    sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, c.html, { type: "order_on_hold", orderRef: o.reference }),
+  ]);
 }

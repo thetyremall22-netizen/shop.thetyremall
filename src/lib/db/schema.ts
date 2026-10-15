@@ -33,8 +33,28 @@ export const orders = sqliteTable("orders", {
   totals: text("totals").notNull().default("{}"), // json
   paymentMethod: text("payment_method").notNull().default(""),
   pfPaymentId: text("pf_payment_id"),
+  // true for PayFast-sandbox / test orders, so they can be labelled and
+  // filtered apart from real paid orders in the admin.
+  test: integer("test", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at").notNull().default(0),
   updatedAt: integer("updated_at").notNull().default(0),
+});
+
+// Log of every outbound email the site sends (order lifecycle, enquiries,
+// abandoned-cart) so staff can review, resend, or edit-and-resend them.
+export const emails = sqliteTable("emails", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  toAddr: text("to_addr").notNull().default(""),
+  cc: text("cc").notNull().default("[]"), // json array
+  subject: text("subject").notNull().default(""),
+  html: text("html").notNull().default(""),
+  type: text("type").notNull().default("custom"),
+  orderRef: text("order_ref"),
+  status: text("status").notNull().default("sent"), // sent | failed | skipped
+  provider: text("provider").notNull().default(""), // resend | smtp | none
+  error: text("error"),
+  resend: integer("resend", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at").notNull().default(0),
 });
 
 export const meta = sqliteTable("meta", {
@@ -44,3 +64,4 @@ export const meta = sqliteTable("meta", {
 
 export type ProductRow = typeof products.$inferSelect;
 export type OrderRow = typeof orders.$inferSelect;
+export type EmailRow = typeof emails.$inferSelect;

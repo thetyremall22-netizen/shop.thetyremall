@@ -3,6 +3,9 @@ import crypto from "crypto";
 
 const SANDBOX = (process.env.PAYFAST_SANDBOX ?? "true") !== "false";
 
+/** True when PayFast is in sandbox/test mode — used to label test orders. */
+export const PAYFAST_SANDBOX = SANDBOX;
+
 export const PAYFAST_PROCESS_URL = SANDBOX
   ? "https://sandbox.payfast.co.za/eng/process"
   : "https://www.payfast.co.za/eng/process";

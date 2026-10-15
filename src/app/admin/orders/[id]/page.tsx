@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { OrderStatusForm } from "@/components/admin/OrderStatusForm";
 import { getOrder } from "@/lib/orders";
+import { listEmailsForOrder, EMAIL_TYPE_LABELS } from "@/lib/email-log";
 
 export const instant = false;
 
@@ -14,6 +15,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   const { id } = await params;
   const o = await getOrder(id);
   if (!o) notFound();
+  const orderEmails = await listEmailsForOrder(o.reference);
 
   const a = o.delivery.address;
   const t = o.totals;
@@ -23,7 +25,11 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
       <Link href="/admin/orders" className="text-sm font-bold text-volt hover:underline">← Orders</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl">{o.reference}</h1>
-        <span className="badge badge-pay">{o.status}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          {o.test && <span className="badge badge-warn">test order</span>}
+          {o.totals.total === 0 && <span className="badge badge-muted">free</span>}
+          <span className="badge badge-pay">{o.status}</span>
+        </div>
       </div>
       <div className="mt-1 text-sm text-muted">Placed {new Date(o.createdAt).toLocaleString("en-ZA")} · Paid via {o.paymentMethod}{o.pfPaymentId ? ` (PF ${o.pfPaymentId})` : ""}</div>
 
@@ -77,6 +83,34 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
       <div className="mt-5 card p-5">
         <h2 className="font-display text-lg">Update status</h2>
         <div className="mt-3"><OrderStatusForm id={o.id} current={o.status} /></div>
+      </div>
+
+      <div className="mt-5 card p-5">
+        <h2 className="font-display text-lg">Emails for this order</h2>
+        {orderEmails.length === 0 ? (
+          <p className="mt-2 text-sm text-muted">No emails logged for this order yet. They&apos;re recorded here as the order&apos;s confirmation, status-change and other emails go out.</p>
+        ) : (
+          <div className="mt-3 overflow-hidden rounded-xl border border-line">
+            <table className="w-full text-sm">
+              <tbody>
+                {orderEmails.map((e) => (
+                  <tr key={e.id} className="border-b border-line last:border-0 hover:bg-surface">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-xs text-muted">{new Date(e.createdAt).toLocaleString("en-ZA")}</td>
+                    <td className="px-4 py-2.5">
+                      <Link href={`/admin/emails/${e.id}`} className="font-semibold text-volt hover:underline">{EMAIL_TYPE_LABELS[e.type] ?? e.type}</Link>
+                      {e.resend && <span className="ml-1.5 badge badge-muted">resend</span>}
+                      <div className="text-xs text-muted">{e.toAddr}</div>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className={`badge ${e.status === "sent" ? "badge-pay" : e.status === "failed" ? "badge-sale" : "badge-muted"}`}>{e.status === "skipped" ? "not sent" : e.status}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right"><Link href={`/admin/emails/${e.id}`} className="text-sm font-semibold text-volt hover:underline">Open / resend →</Link></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </AdminShell>
   );

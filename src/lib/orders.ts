@@ -1,5 +1,5 @@
 import "server-only";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and } from "drizzle-orm";
 import { db, schema, libsql } from "./db";
 import type { LineItem, OrderTotals } from "./totals";
 import type { DeliveryMethod } from "./shop-config";
@@ -28,6 +28,8 @@ export interface Order {
   totals: OrderTotals;
   paymentMethod: string;
   pfPaymentId?: string;
+  /** true for PayFast-sandbox / test orders (labelled apart from real orders). */
+  test?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,9 +53,16 @@ async function ensureSchema() {
     totals TEXT NOT NULL DEFAULT '{}',
     payment_method TEXT NOT NULL DEFAULT '',
     pf_payment_id TEXT,
+    test INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL DEFAULT 0,
     updated_at INTEGER NOT NULL DEFAULT 0
   )`);
+  // Add the `test` column to tables created before it existed (ignore if present).
+  try {
+    await libsql.execute("ALTER TABLE orders ADD COLUMN test INTEGER NOT NULL DEFAULT 0");
+  } catch {
+    /* column already exists */
+  }
   await libsql.execute(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')`);
   await libsql.execute(`INSERT OR IGNORE INTO meta (key, value) VALUES ('order_seq', '0')`);
   ensured = true;
@@ -70,6 +79,7 @@ function rowToOrder(r: Row): Order {
     totals: JSON.parse(r.totals),
     paymentMethod: r.paymentMethod,
     pfPaymentId: r.pfPaymentId ?? undefined,
+    test: !!r.test,
     createdAt: new Date(r.createdAt).toISOString(),
     updatedAt: new Date(r.updatedAt).toISOString(),
   };
@@ -90,6 +100,7 @@ export async function saveOrder(order: Order): Promise<void> {
       totals: JSON.stringify(order.totals),
       paymentMethod: order.paymentMethod,
       pfPaymentId: order.pfPaymentId ?? null,
+      test: order.test ?? false,
       createdAt: Date.parse(order.createdAt) || now,
       updatedAt: now,
     })
@@ -133,12 +144,15 @@ export async function nextReference(): Promise<string> {
 }
 
 // ---- admin ------------------------------------------------------------------
-export async function listOrders(opts: { page?: number; perPage?: number; status?: string } = {}) {
+export async function listOrders(opts: { page?: number; perPage?: number; status?: string; test?: boolean } = {}) {
   const page = Math.max(1, opts.page ?? 1);
   const perPage = opts.perPage ?? 25;
   try {
     await ensureSchema();
-    const where = opts.status ? eq(schema.orders.status, opts.status) : undefined;
+    const conds = [];
+    if (opts.status) conds.push(eq(schema.orders.status, opts.status));
+    if (opts.test !== undefined) conds.push(eq(schema.orders.test, opts.test));
+    const where = conds.length ? and(...conds) : undefined;
     const rows = await db.select().from(schema.orders).where(where)
       .orderBy(desc(schema.orders.id)).limit(perPage).offset((page - 1) * perPage);
     const totalRow = await db.select({ c: sql<number>`count(*)` }).from(schema.orders).where(where);

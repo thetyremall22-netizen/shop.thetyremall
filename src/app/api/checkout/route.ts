@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getProduct } from "@/lib/catalogue";
 import { computeTotals, type LineItem } from "@/lib/totals";
 import { saveOrder, nextReference, type Order } from "@/lib/orders";
-import { buildPaymentFields, PAYFAST_PROCESS_URL, isConfigured } from "@/lib/payfast";
+import { buildPaymentFields, PAYFAST_PROCESS_URL, isConfigured, PAYFAST_SANDBOX } from "@/lib/payfast";
 import { getLive } from "@/lib/db/queries";
 import type { DeliveryMethod } from "@/lib/shop-config";
 
@@ -68,7 +68,8 @@ export async function POST(req: NextRequest) {
   const order: Order = {
     id, reference, status: "pending",
     customer, delivery: { ...delivery, method }, items: lines, totals,
-    paymentMethod, createdAt: now, updatedAt: now,
+    // Sandbox PayFast => test order (labelled apart from real orders in admin).
+    paymentMethod, test: paymentMethod === "payfast" && PAYFAST_SANDBOX, createdAt: now, updatedAt: now,
   };
   try {
     await saveOrder(order);

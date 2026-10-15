@@ -43,7 +43,11 @@ export default async function AdminDashboard() {
             <tbody>
               {orders.map((o) => (
                 <tr key={o.id} className="border-b border-line last:border-0">
-                  <td className="px-4 py-2.5 font-semibold text-fg">{o.reference}</td>
+                  <td className="px-4 py-2.5 font-semibold text-fg">
+                    {o.reference}
+                    {o.test && <span className="ml-1.5 badge badge-warn">test</span>}
+                    {o.totals.total === 0 && <span className="ml-1.5 badge badge-muted">free</span>}
+                  </td>
                   <td className="px-4 py-2.5 text-muted">{o.customer.firstName} {o.customer.lastName}</td>
                   <td className="px-4 py-2.5"><span className="badge badge-pay">{o.status}</span></td>
                   <td className="px-4 py-2.5 text-right font-semibold">R{(o.totals.total / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</td>

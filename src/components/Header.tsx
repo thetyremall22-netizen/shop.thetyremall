@@ -13,8 +13,8 @@ import { useCart } from "@/lib/cart";
 
 const NAV = [
   { label: "Home", href: "/" },
-  { label: "The Tyre Shop", href: "/shop?type=tyre" },
-  { label: "The Wheel Shop", href: "/shop?type=wheel" },
+  { label: "Tyre Mall", href: "/shop?type=tyre" },
+  { label: "Wheel Mall", href: "/shop?type=wheel" },
   { label: "Find by Vehicle", href: "/vehicle-search" },
   { label: "Contact us", href: "/contact" },
 ];

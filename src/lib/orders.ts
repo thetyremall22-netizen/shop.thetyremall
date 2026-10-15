@@ -134,12 +134,17 @@ export async function nextReference(): Promise<string> {
 
 // ---- admin ------------------------------------------------------------------
 export async function listOrders(opts: { page?: number; perPage?: number; status?: string } = {}) {
-  await ensureSchema();
   const page = Math.max(1, opts.page ?? 1);
   const perPage = opts.perPage ?? 25;
-  const where = opts.status ? eq(schema.orders.status, opts.status) : undefined;
-  const rows = await db.select().from(schema.orders).where(where)
-    .orderBy(desc(schema.orders.id)).limit(perPage).offset((page - 1) * perPage);
-  const totalRow = await db.select({ c: sql<number>`count(*)` }).from(schema.orders).where(where);
-  return { orders: rows.map(rowToOrder), total: Number(totalRow[0].c), page, perPage };
+  try {
+    await ensureSchema();
+    const where = opts.status ? eq(schema.orders.status, opts.status) : undefined;
+    const rows = await db.select().from(schema.orders).where(where)
+      .orderBy(desc(schema.orders.id)).limit(perPage).offset((page - 1) * perPage);
+    const totalRow = await db.select({ c: sql<number>`count(*)` }).from(schema.orders).where(where);
+    return { orders: rows.map(rowToOrder), total: Number(totalRow[0].c), page, perPage };
+  } catch (e) {
+    console.error("[db] listOrders fallback to empty:", (e as Error).message);
+    return { orders: [] as Order[], total: 0, page, perPage };
+  }
 }

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { OrderStatusForm } from "@/components/admin/OrderStatusForm";
+import { ComposeEmailForm } from "@/components/admin/ComposeEmailForm";
 import { getOrder } from "@/lib/orders";
 import { listEmailsForOrder, EMAIL_TYPE_LABELS } from "@/lib/email-log";
 
@@ -111,6 +112,19 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
             </table>
           </div>
         )}
+      </div>
+
+      <div className="mt-5 card p-5">
+        <h2 className="font-display text-lg">Email this customer</h2>
+        <p className="mt-1 text-sm text-muted">Send {o.customer.firstName} a message about this order. CC&apos;d to the shop and logged above.</p>
+        <div className="mt-4 max-w-2xl">
+          <ComposeEmailForm
+            initialTo={o.customer.email}
+            initialSubject={`The Tyre Mall — about your order ${o.reference}`}
+            initialMessage={`Hi ${o.customer.firstName},\n\nRegarding your order ${o.reference}: `}
+            orderRef={o.reference}
+          />
+        </div>
       </div>
     </AdminShell>
   );

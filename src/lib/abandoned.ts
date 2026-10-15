@@ -77,3 +77,12 @@ export async function listAbandoned(limit = 100): Promise<Record<string, unknown
     return res.rows as unknown as Record<string, unknown>[];
   } catch { return []; }
 }
+
+/** One abandoned cart by its email (the table's primary key). */
+export async function getAbandoned(email: string): Promise<Record<string, unknown> | null> {
+  try {
+    await ensureTable();
+    const res = await libsql.execute({ sql: `SELECT * FROM abandoned_carts WHERE email = ? LIMIT 1`, args: [email] });
+    return (res.rows[0] as unknown as Record<string, unknown>) ?? null;
+  } catch { return null; }
+}

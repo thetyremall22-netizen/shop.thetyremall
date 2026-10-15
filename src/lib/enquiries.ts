@@ -55,6 +55,14 @@ export async function listEnquiries(limit = 100): Promise<Record<string, unknown
   } catch { return []; }
 }
 
+export async function getEnquiry(id: number): Promise<Record<string, unknown> | null> {
+  try {
+    await ensureTable();
+    const res = await libsql.execute({ sql: `SELECT * FROM enquiries WHERE id = ? LIMIT 1`, args: [id] });
+    return (res.rows[0] as unknown as Record<string, unknown>) ?? null;
+  } catch { return null; }
+}
+
 /** Call-tap counts per store since a given time (for the weekly digest). */
 export async function callTapSummary(sinceMs: number): Promise<{ storeName: string; taps: number }[]> {
   try {

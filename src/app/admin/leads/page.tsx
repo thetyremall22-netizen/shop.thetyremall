@@ -49,7 +49,10 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
         <Table
           empty="No leads captured yet."
           head={["When", "Email", "Phone", "Source", "Message"]}
-          rows={leads.map((l) => [when(l.created_at), str(l.email), str(l.phone), str(l.source), truncate(str(l.message), 80)])}
+          rows={leads.map((l) => ({
+            href: `/admin/leads/contact/${l.id}`,
+            cells: [when(l.created_at), str(l.email), str(l.phone), str(l.source), truncate(str(l.message), 80)],
+          }))}
         />
       )}
 
@@ -57,13 +60,16 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
         <Table
           empty="No abandoned carts."
           head={["Updated", "Email", "Items", "Total", "Status"]}
-          rows={carts.map((c) => [
-            when(c.updated_at),
-            str(c.email),
-            String(JSON.parse(String(c.items || "[]")).length) + " item(s)",
-            formatPrice(Number(c.total) || 0),
-            Number(c.recovered) ? "Recovered" : Number(c.emailed_at) ? "Reminder sent" : "Pending",
-          ])}
+          rows={carts.map((c) => ({
+            href: `/admin/leads/cart/${encodeURIComponent(str(c.email))}`,
+            cells: [
+              when(c.updated_at),
+              str(c.email),
+              String(JSON.parse(String(c.items || "[]")).length) + " item(s)",
+              formatPrice(Number(c.total) || 0),
+              Number(c.recovered) ? "Recovered" : Number(c.emailed_at) ? "Reminder sent" : "Pending",
+            ],
+          }))}
         />
       )}
 
@@ -71,7 +77,10 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
         <Table
           empty="No enquiries yet."
           head={["When", "Type", "Product / Store", "Message"]}
-          rows={enquiries.map((e) => [when(e.created_at), str(e.type), str(e.product_name) || str(e.store_name) || "—", truncate(str(e.message), 80)])}
+          rows={enquiries.map((e) => ({
+            href: `/admin/leads/enquiry/${e.id}`,
+            cells: [when(e.created_at), str(e.type), str(e.product_name) || str(e.store_name) || "—", truncate(str(e.message), 80)],
+          }))}
         />
       )}
     </AdminShell>
@@ -81,7 +90,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
 function str(v: unknown): string { return v == null ? "" : String(v); }
 function truncate(s: string, n: number): string { return s.length > n ? s.slice(0, n) + "…" : s; }
 
-function Table({ head, rows, empty }: { head: string[]; rows: string[][]; empty: string }) {
+function Table({ head, rows, empty }: { head: string[]; rows: { cells: string[]; href: string }[]; empty: string }) {
   if (rows.length === 0) return <p className="mt-5 text-sm text-muted">{empty}</p>;
   return (
     <div className="mt-5 overflow-x-auto rounded-xl border border-line">
@@ -89,12 +98,18 @@ function Table({ head, rows, empty }: { head: string[]; rows: string[][]; empty:
         <thead>
           <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
             {head.map((h) => <th key={h} className="px-4 py-2.5 font-bold">{h}</th>)}
+            <th className="px-4 py-2.5" />
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={i} className="border-b border-line last:border-0 hover:bg-surface">
-              {r.map((c, j) => <td key={j} className="px-4 py-2.5 text-fg">{c || "—"}</td>)}
+              {r.cells.map((c, j) => (
+                <td key={j} className="px-4 py-2.5 text-fg">
+                  {j === 0 ? <Link href={r.href} className="font-semibold text-volt hover:underline">{c || "—"}</Link> : (c || "—")}
+                </td>
+              ))}
+              <td className="px-4 py-2.5 text-right whitespace-nowrap"><Link href={r.href} className="text-sm font-semibold text-volt hover:underline">View →</Link></td>
             </tr>
           ))}
         </tbody>

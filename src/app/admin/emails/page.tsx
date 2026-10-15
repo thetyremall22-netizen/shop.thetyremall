@@ -28,7 +28,10 @@ export default async function AdminEmails({ searchParams }: { searchParams: Prom
 
   return (
     <AdminShell>
-      <h1 className="font-display text-3xl">Emails <span className="text-base text-muted">({total.toLocaleString()})</span></h1>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h1 className="font-display text-3xl">Emails <span className="text-base text-muted">({total.toLocaleString()})</span></h1>
+        <Link href="/admin/emails/new" className="btn btn-volt h-10 px-4 text-sm">✉ Compose email</Link>
+      </div>
       <p className="mt-1 text-sm text-muted">Every email the site sends — order confirmations, failures, cancellations, refunds, enquiries and abandoned-cart nudges. Open one to read, resend, or edit &amp; resend.</p>
 
       <div className="mt-4 flex flex-wrap gap-2">

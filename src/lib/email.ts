@@ -56,6 +56,8 @@ export interface MailMeta {
   type?: EmailType;
   orderRef?: string | null;
   resend?: boolean;
+  /** Always include the shop address in CC, even if EMAIL_CC is cleared. */
+  ccShop?: boolean;
 }
 
 export async function sendMail(to: string, subject: string, html: string, meta: MailMeta = {}): Promise<void> {
@@ -68,7 +70,9 @@ export async function sendMail(to: string, subject: string, html: string, meta: 
     await logEmail({ toAddr: to, subject, html, type, orderRef, status: "skipped", provider: "none", resend });
     return;
   }
-  const cc = CC_LIST.filter((a) => a.toLowerCase() !== to.toLowerCase());
+  const ccSet = new Set(CC_LIST.map((a) => a));
+  if (meta.ccShop) ccSet.add(SHOP_EMAIL);
+  const cc = [...ccSet].filter((a) => a.toLowerCase() !== to.toLowerCase());
   const provider = RESEND_API_KEY ? "resend" : "smtp";
   try {
     if (RESEND_API_KEY) await sendViaResend(to, subject, html, cc);
@@ -78,6 +82,22 @@ export async function sendMail(to: string, subject: string, html: string, meta: 
     await logEmail({ toAddr: to, cc, subject, html, type, orderRef, status: "failed", provider, error: (e as Error).message, resend });
     throw e;
   }
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Admin-composed email to a customer — wraps a plain-text message in the
+ *  branded template and always CCs the shop. */
+export async function sendComposedEmail(
+  to: string,
+  subject: string,
+  message: string,
+  meta: { orderRef?: string | null } = {}
+): Promise<void> {
+  const body = `<div style="font-size:14px;line-height:1.6;color:${INK}">${escapeHtml(message).replace(/\n/g, "<br>")}</div>`;
+  await sendMail(to, subject, layout(subject, body), { type: "custom", ccShop: true, orderRef: meta.orderRef ?? null });
 }
 
 const SITE_URL = process.env.SITE_URL ?? "https://thetyremall.co.za";

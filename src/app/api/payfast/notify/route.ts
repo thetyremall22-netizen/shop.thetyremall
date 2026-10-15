@@ -4,6 +4,7 @@ import { getOrder, updateOrder } from "@/lib/orders";
 import { sendOrderPaid, sendOrderFailed } from "@/lib/email";
 import { markRecovered } from "@/lib/abandoned";
 import { decrementStock } from "@/lib/db/queries";
+import { createWooOrder, wooWriteConfigured } from "@/lib/woo";
 
 export async function POST(req: NextRequest) {
   const raw = await req.text();
@@ -40,12 +41,27 @@ export async function POST(req: NextRequest) {
 
   const status = data.payment_status;
   if (status === "COMPLETE") {
+    // The status guard makes this run exactly once per order (PayFast retries
+    // the ITN, and the order is already "processing" on the second hit).
     if (order.status !== "processing" && order.status !== "completed") {
       const updated = await updateOrder(id, { status: "processing", pfPaymentId: data.pf_payment_id });
       if (updated) {
-        // Decrement stock in our database, then send the order emails.
-        for (const it of updated.items) await decrementStock(it.slug, it.qty);
-        await sendOrderPaid(updated);
+        // Headless WooCommerce: push the paid order into Woo so it records the
+        // order, decrements ITS OWN stock, and sends its confirmation emails
+        // (via the WordPress SMTP plugin — i.e. FluentSMTP → Microsoft 365,
+        // which works because it sends from the WP server, not this one).
+        let wooId: number | null = null;
+        if (wooWriteConfigured()) {
+          wooId = await createWooOrder(updated);
+          if (wooId) console.log(`[woo] order ${updated.reference} created in Woo as #${wooId}`);
+          else console.warn(`[woo] order ${updated.reference} NOT created in Woo — using local stock/email fallback`);
+        }
+        // When Woo owns the order it handles stock + emails. Otherwise fall
+        // back to our own stock decrement + emailed confirmation (Resend/SMTP).
+        if (!wooId) {
+          for (const it of updated.items) await decrementStock(it.slug, it.qty);
+          await sendOrderPaid(updated);
+        }
         // Cart was recovered — don't chase it.
         await markRecovered(updated.customer.email).catch(() => {});
       }

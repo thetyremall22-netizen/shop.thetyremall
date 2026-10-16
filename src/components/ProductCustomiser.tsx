@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart, type CartItem } from "@/lib/cart";
 import { formatPrice } from "@/lib/format";
@@ -60,6 +60,33 @@ export function ProductCustomiser({ item, inStock, sku, size }: { item: Item; in
 
   const need = Math.max(0, FREE_DELIVERY_MIN_TYRES - qty);
 
+  // HappyPay on-site widget: inject their official script once. It builds the
+  // "Choose how you pay" modal and defines the globals show_happy_modal() /
+  // setProductAmount() used by our callout below (same widget the old site used).
+  const hpRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (document.getElementById("ttm-happypay-widget")) return;
+    const el = hpRef.current;
+    if (!el) return;
+    const sc = document.createElement("script");
+    sc.id = "ttm-happypay-widget";
+    sc.className = "happypay_script";
+    sc.async = true;
+    sc.src = `https://widgets.happypay.co.za/integrations/shopify_widget.js?amount=${(item.price / 100).toFixed(2)}`;
+    el.appendChild(sc);
+  }, [item.price]);
+
+  function openHappyPay() {
+    const w = window as unknown as { show_happy_modal?: () => void; setProductAmount?: (n: number) => void };
+    if (typeof w.show_happy_modal === "function") {
+      // Feed the live order amount (rands) so the plan figures match the cart.
+      w.setProductAmount?.(t.total / 100);
+      w.show_happy_modal();
+    } else {
+      window.open(HAPPYPAY_URL, "_blank", "noopener,noreferrer");
+    }
+  }
+
   function commit() {
     add({ ...item, roadHazard: false, alignment: alignment && isTyre, balanceQty: isTyre ? balanceQty : 0 }, qty);
     setDelivery(method);
@@ -69,12 +96,11 @@ export function ProductCustomiser({ item, inStock, sku, size }: { item: Item; in
 
   return (
     <div className="space-y-5">
-      {/* HappyPay callout */}
-      <a
-        href={HAPPYPAY_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="group flex items-center gap-3 rounded-xl bg-[#FFD400] p-3 text-black transition-transform hover:-translate-y-0.5"
+      {/* HappyPay callout — opens the official HappyPay "how to pay" popup */}
+      <button
+        type="button"
+        onClick={openHappyPay}
+        className="group flex w-full items-center gap-3 rounded-xl bg-[#FFD400] p-3 text-left text-black transition-transform hover:-translate-y-0.5"
       >
         <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-black text-[#FFD400]">
           <Bolt width={20} height={20} />
@@ -86,7 +112,9 @@ export function ProductCustomiser({ item, inStock, sku, size }: { item: Item; in
         <span className="shrink-0 rounded-lg bg-black px-3 py-2 text-xs font-black uppercase text-[#FFD400] group-hover:bg-neutral-800">
           Check if you qualify →
         </span>
-      </a>
+      </button>
+      {/* Hidden mount point for the HappyPay widget script (modal renders to <body>) */}
+      <div ref={hpRef} className="hidden" aria-hidden="true" />
 
       {/* 1 — quantity */}
       <div>

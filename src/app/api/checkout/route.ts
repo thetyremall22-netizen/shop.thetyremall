@@ -102,7 +102,19 @@ export async function POST(req: NextRequest) {
     console.error("[checkout] saveOrder failed — proceeding to PayFast without a saved order:", (e as Error).message);
   }
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
+  // Public base URL for return/notify/webhook links. Behind the Nginx Unit +
+  // LiteSpeed proxy, req.nextUrl.origin is the app's INTERNAL address
+  // (localhost:PORT), which breaks PayFast/HappyPay callbacks and the free-order
+  // redirect. Prefer an explicit env (SITE_URL, read at runtime so it's not
+  // frozen at build), then the proxy's forwarded host, and only fall back to the
+  // request origin when that isn't a local address.
+  const envOrigin = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  const fwdHost = req.headers.get("x-forwarded-host") || req.headers.get("host");
+  const fwdProto = req.headers.get("x-forwarded-proto") || "https";
+  const origin = (
+    envOrigin ||
+    (fwdHost && !/^(localhost|127\.|\[?::1\]?)/i.test(fwdHost) ? `${fwdProto}://${fwdHost}` : req.nextUrl.origin)
+  ).replace(/\/+$/, "");
 
   // --- Free order (e.g. a 100%-off coupon): no gateway, mark paid directly ---
   if (totals.total === 0) {

@@ -646,27 +646,30 @@ export function Tyrone() {
   return (
     <>
       {/* launchers — WhatsApp bottom-LEFT, the AI Tyre Guy bottom-RIGHT */}
-      {!open && !waOpen && (
-        <>
-          <button
-            onClick={() => { setWaOpen(true); setOpen(false); }}
-            className="fixed bottom-4 left-4 z-50 grid size-12 place-items-center rounded-full bg-[#25D366] text-black shadow-xl shadow-black/40 ring-1 ring-black/10 transition-transform hover:scale-105"
-            aria-label="WhatsApp / get a quote"
-          >
-            <WhatsApp width={26} height={26} />
-          </button>
-          <button
-            onClick={() => { setOpen(true); setWaOpen(false); }}
-            className={`btn-chrome fixed bottom-4 z-50 flex items-center gap-2 rounded-full py-2 pl-2 pr-4 shadow-xl shadow-black/40 transition-all duration-300 hover:scale-105 ${drawerOpen ? "right-4 max-sm:hidden sm:right-[calc(28rem+1rem)]" : "right-4"}`}
-            aria-label="Let the AI Tyre Guy help you"
-          >
-            <span className="relative grid size-8 place-items-center rounded-full bg-ink text-volt">
-              <Avatar />
-              <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-white bg-pay" />
-            </span>
-            <span className="text-sm font-extrabold">Let the AI Tyre Guy help you</span>
-          </button>
-        </>
+      {/* Each launcher is hidden only while ITS OWN panel is open, so the other
+          stays visible to switch straight across. Only one chat open at a time
+          (opening one closes the other). */}
+      {!waOpen && (
+        <button
+          onClick={() => { setWaOpen(true); setOpen(false); }}
+          className="fixed bottom-4 left-4 z-50 grid size-12 place-items-center rounded-full bg-[#25D366] text-black shadow-xl shadow-black/40 ring-1 ring-black/10 transition-transform hover:scale-105"
+          aria-label="WhatsApp / get a quote"
+        >
+          <WhatsApp width={26} height={26} />
+        </button>
+      )}
+      {!open && (
+        <button
+          onClick={() => { setOpen(true); setWaOpen(false); }}
+          className={`btn-chrome fixed bottom-4 z-50 flex items-center gap-2 rounded-full py-2 pl-2 pr-4 shadow-xl shadow-black/40 transition-all duration-300 hover:scale-105 ${drawerOpen ? "right-4 max-sm:hidden sm:right-[calc(28rem+1rem)]" : "right-4"}`}
+          aria-label="Let the AI Tyre Guy help you"
+        >
+          <span className="relative grid size-8 place-items-center rounded-full bg-ink text-volt">
+            <Avatar />
+            <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-white bg-pay" />
+          </span>
+          <span className="text-sm font-extrabold">Let the AI Tyre Guy help you</span>
+        </button>
       )}
 
       {/* panel */}

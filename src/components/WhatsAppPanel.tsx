@@ -66,7 +66,7 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
   ].filter(Boolean).join("\n");
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex h-[560px] max-h-[82vh] w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-line bg-ink-2 shadow-2xl shadow-black/60">
+    <div className="fixed bottom-5 left-5 z-50 flex h-[560px] max-h-[82vh] w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl border border-line bg-ink-2 shadow-2xl shadow-black/60">
       {/* header */}
       <div className="flex items-center gap-3 border-b border-line bg-ink px-4 py-3">
         <span className="grid size-10 place-items-center rounded-full bg-[#25D366]/15 text-[#25D366]"><WhatsApp width={22} height={22} /></span>

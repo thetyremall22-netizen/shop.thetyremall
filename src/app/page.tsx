@@ -17,6 +17,7 @@ import { BrandTile } from "@/components/BrandTile";
 import { BRANDS } from "@/lib/brands";
 import { Arrow } from "@/components/icons";
 import { HappyPayLogo } from "@/components/HappyPayLogo";
+import { HappyPayQualify } from "@/components/HappyPayQualify";
 import { PromoBanner } from "@/components/PromoBanner";
 import { DragScroll } from "@/components/DragScroll";
 import { getRatingSummary, getFeaturedReviews } from "@/lib/reviews";
@@ -103,12 +104,11 @@ export default async function Home() {
                   instalments — instant approval at checkout, no paperwork, no fuss.
                 </p>
               </div>
-              <Link
-                href="/shop"
+              <HappyPayQualify
                 className="shrink-0 whitespace-nowrap rounded-xl bg-black px-8 py-4 text-base font-extrabold text-[#FFD400] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)] transition-transform hover:scale-[1.04]"
               >
                 Check if you qualify →
-              </Link>
+              </HappyPayQualify>
             </div>
           </div>
         </Reveal>

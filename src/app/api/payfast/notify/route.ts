@@ -5,6 +5,7 @@ import { sendOrderPaid, sendOrderFailed } from "@/lib/email";
 import { markRecovered } from "@/lib/abandoned";
 import { decrementStock } from "@/lib/db/queries";
 import { createWooOrder, wooWriteConfigured } from "@/lib/woo";
+import { recordRedemption } from "@/lib/coupons";
 
 export async function POST(req: NextRequest) {
   const raw = await req.text();
@@ -61,6 +62,10 @@ export async function POST(req: NextRequest) {
         if (!wooId) {
           for (const it of updated.items) await decrementStock(it.slug, it.qty);
           await sendOrderPaid(updated);
+        }
+        // Record a coupon redemption (bumps usage + enforces per-customer limits).
+        if (updated.totals.couponCode && updated.totals.couponDiscount > 0) {
+          await recordRedemption(updated.totals.couponCode, updated.reference, updated.customer.email, updated.totals.couponDiscount).catch(() => {});
         }
         // Cart was recovered — don't chase it.
         await markRecovered(updated.customer.email).catch(() => {});

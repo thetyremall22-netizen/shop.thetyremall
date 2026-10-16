@@ -58,6 +58,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
             {t.alignmentTotal > 0 && <Row k="Alignment" v={zar(t.alignmentTotal)} />}
             {t.balanceTotal > 0 && <Row k="Balance & valve" v={zar(t.balanceTotal)} />}
             {t.hazardTotal > 0 && <Row k="Road hazard" v={zar(t.hazardTotal)} />}
+            {t.couponDiscount > 0 && <Row k={`Coupon ${t.couponCode ?? ""}`} v={`−${zar(t.couponDiscount)}`} />}
             <Row k="Delivery" v={t.delivery === 0 ? "FREE" : zar(t.delivery)} />
             <div className="flex justify-between border-t border-line pt-2 font-bold"><dt>Total</dt><dd>{zar(t.total)}</dd></div>
           </dl>

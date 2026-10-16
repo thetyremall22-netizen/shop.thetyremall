@@ -195,6 +195,7 @@ function itemsTable(o: Order): string {
     ${t.alignmentTotal ? line("Wheel alignment", zar(t.alignmentTotal)) : ""}
     ${t.balanceTotal ? line("Balance &amp; valve", zar(t.balanceTotal)) : ""}
     ${t.hazardTotal ? line("Road hazard cover", zar(t.hazardTotal)) : ""}
+    ${t.couponDiscount ? line(`Coupon ${t.couponCode ?? ""}`, `&minus;${zar(t.couponDiscount)}`) : ""}
     ${line("Delivery", t.delivery === 0 ? "FREE" : zar(t.delivery))}
     <tr><td style="padding:10px 0 0;font-weight:800;font-size:16px">Total</td>
         <td style="padding:10px 0 0;text-align:right;font-weight:800;font-size:16px;color:${INK}">${zar(t.total)}</td></tr>

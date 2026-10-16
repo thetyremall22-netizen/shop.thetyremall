@@ -33,10 +33,12 @@ export interface OrderTotals {
   balanceTotal: number;
   delivery: number;
   freeDelivery: boolean;
+  couponCode?: string;
+  couponDiscount: number;
   total: number;
 }
 
-export function computeTotals(items: LineItem[], deliveryMethod: DeliveryMethod): OrderTotals {
+export function computeTotals(items: LineItem[], deliveryMethod: DeliveryMethod, coupon?: { code: string; discount: number }): OrderTotals {
   const tyreQty = items.filter((i) => i.type === "tyre").reduce((n, i) => n + i.qty, 0);
   const itemCount = items.reduce((n, i) => n + i.qty, 0);
   const subtotal = items.reduce((n, i) => n + i.price * i.qty, 0);
@@ -47,6 +49,8 @@ export function computeTotals(items: LineItem[], deliveryMethod: DeliveryMethod)
   const freeDelivery = tyreQty >= FREE_DELIVERY_MIN_TYRES;
   const delivery =
     deliveryMethod === "fitment" ? 0 : freeDelivery || itemCount === 0 ? 0 : STANDARD_DELIVERY_FEE;
+  const beforeCoupon = subtotal - setDiscount + hazardTotal + alignmentTotal + balanceTotal + delivery;
+  const couponDiscount = coupon ? Math.max(0, Math.min(coupon.discount, beforeCoupon)) : 0;
   return {
     tyreQty,
     itemCount,
@@ -57,6 +61,8 @@ export function computeTotals(items: LineItem[], deliveryMethod: DeliveryMethod)
     balanceTotal,
     delivery,
     freeDelivery,
-    total: subtotal - setDiscount + hazardTotal + alignmentTotal + balanceTotal + delivery,
+    couponCode: coupon && couponDiscount > 0 ? coupon.code : undefined,
+    couponDiscount,
+    total: Math.max(0, beforeCoupon - couponDiscount),
   };
 }

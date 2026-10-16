@@ -13,7 +13,30 @@ export default function CheckoutPage() {
   const [payment, setPayment] = useState("payfast");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [couponMsg, setCouponMsg] = useState<string | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
   const centre = FITMENT_CENTRES.find((f) => f.id === fitmentStoreId) ?? FITMENT_CENTRES[0];
+  const payTotal = Math.max(0, totals.total - (coupon?.discount ?? 0));
+
+  async function applyCoupon() {
+    const code = couponInput.trim();
+    if (!code || couponBusy) return;
+    setCouponBusy(true); setCouponMsg(null);
+    const email = (document.querySelector('input[name="email"]') as HTMLInputElement | null)?.value || undefined;
+    try {
+      const res = await fetch("/api/coupon/validate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, email, items: items.map((i) => ({ slug: i.slug, qty: i.qty })) }),
+      });
+      const d = await res.json();
+      if (d.valid && d.discount > 0) { setCoupon({ code: d.code, discount: d.discount }); setCouponMsg(null); }
+      else { setCoupon(null); setCouponMsg(d.error ?? "That code isn't valid."); }
+    } catch { setCouponMsg("Couldn't check that code."); }
+    setCouponBusy(false);
+  }
+  function removeCoupon() { setCoupon(null); setCouponInput(""); setCouponMsg(null); }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -44,6 +67,7 @@ export default function CheckoutPage() {
         slug: i.slug, qty: i.qty, roadHazard: i.roadHazard, alignment: i.alignment, balanceQty: i.balanceQty,
       })),
       paymentMethod: payment,
+      couponCode: coupon?.code,
     };
 
     try {
@@ -188,7 +212,7 @@ export default function CheckoutPage() {
           )}
 
           <button type="submit" disabled={submitting} className="btn btn-volt w-full py-4 text-base disabled:opacity-60">
-            {submitting ? "Redirecting to secure payment…" : <><Bolt width={18} height={18} /> Pay securely · {formatPrice(totals.total)}</>}
+            {submitting ? "Redirecting to secure payment…" : <><Bolt width={18} height={18} /> Pay securely · {formatPrice(payTotal)}</>}
           </button>
         </form>
 
@@ -225,10 +249,37 @@ export default function CheckoutPage() {
                 value={totals.delivery === 0 ? "FREE" : formatPrice(totals.delivery)}
                 highlight={totals.delivery === 0}
               />
+              {coupon && <SumRow label={`Coupon ${coupon.code}`} value={`−${formatPrice(coupon.discount)}`} highlight />}
             </dl>
-            <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-line pt-3">
+
+            {/* Coupon code */}
+            <div className="mt-4 border-t border-line pt-4">
+              {coupon ? (
+                <div className="flex items-center justify-between gap-2 rounded-lg bg-volt/10 px-3 py-2 text-sm">
+                  <span className="font-semibold text-volt">✓ {coupon.code} applied</span>
+                  <button type="button" onClick={removeCoupon} className="text-xs font-semibold text-muted hover:text-sale">Remove</button>
+                </div>
+              ) : (
+                <>
+                  <label className="mb-1.5 block text-xs font-semibold text-muted">Coupon code</label>
+                  <div className="flex gap-2">
+                    <input
+                      value={couponInput}
+                      onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponMsg(null); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyCoupon(); } }}
+                      placeholder="Enter code"
+                      className="h-10 flex-1 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt"
+                    />
+                    <button type="button" onClick={applyCoupon} disabled={couponBusy || !couponInput.trim()} className="btn btn-ghost h-10 px-4 text-sm disabled:opacity-50">{couponBusy ? "…" : "Apply"}</button>
+                  </div>
+                  {couponMsg && <p className="mt-1.5 text-xs font-semibold text-sale">{couponMsg}</p>}
+                </>
+              )}
+            </div>
+
+            <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-line pt-3">
               <span className="shrink-0 font-bold">Total</span>
-              <span className="min-w-0 whitespace-nowrap font-display text-2xl leading-tight text-volt">{formatPrice(totals.total)}</span>
+              <span className="min-w-0 whitespace-nowrap font-display text-2xl leading-tight text-volt">{formatPrice(payTotal)}</span>
             </div>
 
             <div className="mt-4 flex items-center gap-2 rounded-lg bg-surface px-3 py-2 text-xs text-muted">

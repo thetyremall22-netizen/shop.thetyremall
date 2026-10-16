@@ -4,6 +4,7 @@ import { computeTotals, type LineItem } from "@/lib/totals";
 import { saveOrder, nextReference, type Order } from "@/lib/orders";
 import { buildPaymentFields, PAYFAST_PROCESS_URL, isConfigured, PAYFAST_SANDBOX } from "@/lib/payfast";
 import { getLive } from "@/lib/db/queries";
+import { validateCoupon } from "@/lib/coupons";
 import type { DeliveryMethod } from "@/lib/shop-config";
 
 interface Body {
@@ -11,6 +12,7 @@ interface Body {
   delivery: Order["delivery"];
   items: { slug: string; qty: number; roadHazard?: boolean; alignment?: boolean; balanceQty?: number }[];
   paymentMethod: string;
+  couponCode?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -52,7 +54,18 @@ export async function POST(req: NextRequest) {
   }
 
   const method: DeliveryMethod = delivery?.method === "fitment" ? "fitment" : "delivery";
-  const totals = computeTotals(lines, method);
+
+  // Re-validate any coupon server-side (never trust a client-sent discount).
+  let coupon: { code: string; discount: number } | undefined;
+  if (body.couponCode) {
+    const cr = await validateCoupon(body.couponCode, {
+      items: lines.map((l) => ({ slug: l.slug, price: l.price, qty: l.qty, type: l.type })),
+      email: customer.email,
+    });
+    if (cr.valid && cr.discount && cr.code) coupon = { code: cr.code, discount: cr.discount };
+  }
+
+  const totals = computeTotals(lines, method, coupon);
 
   // Order persistence is best-effort: if the database isn't available yet
   // (e.g. before Turso is connected on Vercel) we still let the customer pay —

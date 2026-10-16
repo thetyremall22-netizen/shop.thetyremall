@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/format";
 import { setDiscountFor } from "@/lib/pricing";
-import { Close, Trash, Plus, Minus, Truck, Cart as CartIcon, Check } from "./icons";
+import { Close, Trash, Plus, Minus, Cart as CartIcon, Check } from "./icons";
 
 export function CartDrawer() {
   const { items, totals, drawerOpen, setDrawerOpen, setQty, remove } = useCart();
@@ -49,18 +49,12 @@ export function CartDrawer() {
                 for <span className="text-volt">FREE delivery</span> to your front door!
               </p>
             )}
-            {/* progress bar with a driving truck */}
-            <div className="relative mt-4 h-3 rounded-full bg-surface-2">
+            {/* progress bar */}
+            <div className="relative mt-4 h-3 overflow-hidden rounded-full bg-surface-2">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-volt-2 to-volt transition-all duration-700"
                 style={{ width: `${Math.min(100, (totals.tyreQty / 2) * 100)}%` }}
               />
-              <span
-                className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 text-volt drop-shadow transition-all duration-700"
-                style={{ left: `${Math.min(100, (totals.tyreQty / 2) * 100)}%` }}
-              >
-                <Truck width={26} height={26} />
-              </span>
             </div>
           </div>
         )}

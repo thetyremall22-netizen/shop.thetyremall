@@ -31,6 +31,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     ...(me?.canEditContent ? [{ href: "/admin/content", label: "Content" }] : []),
     ...(me?.canEditContent ? [{ href: "/admin/reviews", label: "Reviews" }] : []),
     ...(me?.canEditContent ? [{ href: "/admin/theme", label: "Theme" }] : []),
+    ...(me?.canEditContent ? [{ href: "/admin/strings", label: "Wording" }] : []),
     ...(me?.canManageDeals ? [{ href: "/admin/coupons", label: "Coupons" }] : []),
     ...(me?.canManageSettings ? [{ href: "/admin/payments", label: "Payments" }] : []),
     ...(me?.canManageSettings ? [{ href: "/admin/settings", label: "Settings" }] : []),

@@ -7,6 +7,7 @@ import { CompareToggle } from "./CompareToggle";
 import type { CompareItem } from "@/lib/compare";
 import { Star, Arrow } from "./icons";
 import { BurstLink } from "./BurstLink";
+import { getStrings, fmt } from "@/lib/strings";
 
 function toCompareItem(p: Product): CompareItem {
   return {
@@ -34,9 +35,10 @@ function BrandMark({ brand }: { brand: string }) {
   return <span className="font-display text-base uppercase tracking-wider text-[#14171a]/75">{brand}</span>;
 }
 
-export function ProductCard({ p }: { p: Product }) {
+export async function ProductCard({ p }: { p: Product }) {
   const pct = discountPct(p.regularPrice, p.salePrice);
   const payLater = formatPriceShort(Math.round(p.price / 2));
+  const s = await getStrings();
 
   return (
     <div
@@ -86,14 +88,14 @@ export function ProductCard({ p }: { p: Product }) {
         {hasSetPricing(p.type) ? (
           <div className="mt-2.5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
-              <div className="text-[9px] font-extrabold uppercase tracking-wider text-[#8a929c]">Per tyre</div>
+              <div className="text-[9px] font-extrabold uppercase tracking-wider text-[#8a929c]">{s["product.per_tyre"]}</div>
               {p.onSale && pct > 0 && (
                 <div className="text-[11px] leading-none text-neutral-400 line-through">{formatPrice(p.regularPrice)}</div>
               )}
               <div className="font-display text-lg leading-tight text-[#14171a]">{formatPrice(p.price)}</div>
             </div>
             <div className="shrink-0 self-stretch rounded-lg bg-[#eef6e0] px-2.5 py-1.5 text-left ring-1 ring-[#8ac53f]/40 sm:self-auto sm:text-right">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4f7000]">Set of 4</span>
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4f7000]">{s["product.set_of_4"]}</span>
               <div className="price-set font-display text-xl leading-tight">{formatPrice(setPriceOf4(p.price))}</div>
             </div>
           </div>
@@ -107,13 +109,13 @@ export function ProductCard({ p }: { p: Product }) {
         )}
         <div className="mt-2 flex items-center justify-between gap-2">
           <span className={`text-[11px] font-bold ${p.inStock ? "text-pay-ink" : "text-sale"}`}>
-            {p.inStock ? "In stock" : "Out of stock"}
+            {p.inStock ? s["product.in_stock"] : s["product.out_of_stock"]}
           </span>
           <CompareToggle item={toCompareItem(p)} className="text-[11px]" />
         </div>
         {p.onSale && pct > 0 && (
           <div className="mt-1.5 inline-flex items-center gap-1 self-start rounded-full bg-sale/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-sale">
-            🔥 On sale — save {pct}%
+            {fmt(s["product.on_sale_save"], { pct })}
           </div>
         )}
 
@@ -122,12 +124,12 @@ export function ProductCard({ p }: { p: Product }) {
             2× {payLater}<span className="font-extrabold"> · 0% interest</span>
           </div>
           <div className="mt-1 text-[9px] font-bold uppercase leading-none tracking-wide">
-            HappyPay — no upfront · pay over 2 months
+            {s["bnpl.provider"]}
           </div>
         </div>
 
         <Link href={`/product/${p.slug}`} className="btn btn-volt mt-3 w-full">
-          View product <Arrow width={15} height={15} />
+          {s["product.view"]} <Arrow width={15} height={15} />
         </Link>
       </div>
 

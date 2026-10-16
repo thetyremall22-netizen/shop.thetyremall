@@ -1,5 +1,5 @@
 import "server-only";
-import { and, or, like, eq, sql } from "drizzle-orm";
+import { and, or, like, eq, sql, inArray } from "drizzle-orm";
 import { db, schema, libsql } from "./index";
 import productsData from "@/data/products.json";
 
@@ -288,6 +288,99 @@ export async function bulkUpsert(rows: Record<string, string>[]): Promise<{ upda
     updated++;
   }
   return { updated, skipped };
+}
+
+// ---- bulk operations --------------------------------------------------------
+export type BulkOp =
+  | { kind: "price"; mode: "pct_down" | "pct_up" | "rand_down" | "rand_up" | "set"; value: number; rounding?: "none" | "r99" | "r10" | "r50" }
+  | { kind: "stock"; mode: "set" | "inc" | "dec"; value: number }
+  | { kind: "status"; visible: boolean }
+  | { kind: "sale"; mode: "set" | "remove"; pct?: number };
+
+/** Round a price (minor units) to an SA-friendly ending. */
+function roundCents(cents: number, rule: "none" | "r99" | "r10" | "r50" = "none"): number {
+  const c = Math.max(0, Math.round(cents));
+  if (rule === "none") return c;
+  const rand = c / 100;
+  if (rule === "r10") return Math.max(0, Math.round(rand / 10) * 10) * 100;
+  if (rule === "r50") return Math.max(0, Math.round(rand / 50) * 50) * 100;
+  const hundreds = Math.max(1, Math.round(rand / 100)); // r99: nearest hundred, end in 99
+  return (hundreds * 100 - 1) * 100;
+}
+
+interface BulkTarget { slug: string; regularPrice: number; salePrice: number; onSale: boolean; stockQty: number }
+
+async function bulkTargets(opts: { slugs?: string[]; q?: string; filter?: AdminFilter }): Promise<BulkTarget[]> {
+  const cols = {
+    slug: schema.products.slug,
+    regularPrice: schema.products.regularPrice,
+    salePrice: schema.products.salePrice,
+    onSale: schema.products.onSale,
+    stockQty: schema.products.stockQty,
+  };
+  if (opts.slugs?.length) {
+    const out: BulkTarget[] = [];
+    for (let i = 0; i < opts.slugs.length; i += 300) {
+      const rows = await db.select(cols).from(schema.products).where(inArray(schema.products.slug, opts.slugs.slice(i, i + 300)));
+      out.push(...rows);
+    }
+    return out;
+  }
+  const conds = [];
+  if (opts.q) { const t = `%${opts.q}%`; conds.push(or(like(schema.products.name, t), like(schema.products.sku, t), like(schema.products.brand, t))); }
+  if (opts.filter === "low") conds.push(sql`stock_qty > 0 AND stock_qty <= low_stock_threshold`);
+  if (opts.filter === "out") conds.push(sql`stock_qty = 0`);
+  if (opts.filter === "sale") conds.push(eq(schema.products.onSale, true));
+  const where = conds.length ? and(...conds) : undefined;
+  return db.select(cols).from(schema.products).where(where);
+}
+
+function computePatch(t: BulkTarget, op: BulkOp) {
+  if (op.kind === "price") {
+    let reg = t.regularPrice;
+    if (op.mode === "pct_down") reg = t.regularPrice * (1 - op.value / 100);
+    else if (op.mode === "pct_up") reg = t.regularPrice * (1 + op.value / 100);
+    else if (op.mode === "rand_down") reg = t.regularPrice - op.value * 100;
+    else if (op.mode === "rand_up") reg = t.regularPrice + op.value * 100;
+    else reg = op.value * 100; // set
+    reg = roundCents(reg, op.rounding);
+    const keepSale = t.onSale && t.salePrice > 0 && t.salePrice < reg;
+    return { regularPrice: reg, onSale: keepSale, salePrice: keepSale ? t.salePrice : reg, price: keepSale ? t.salePrice : reg };
+  }
+  if (op.kind === "stock") {
+    const q = op.mode === "set" ? op.value : op.mode === "inc" ? t.stockQty + op.value : t.stockQty - op.value;
+    return { stockQty: Math.max(0, Math.round(q)) };
+  }
+  if (op.kind === "status") return { visible: op.visible };
+  if (op.mode === "remove") return { onSale: false, salePrice: t.regularPrice, price: t.regularPrice };
+  const pct = Math.max(0, Math.min(95, op.pct ?? 0));
+  const sale = roundCents(t.regularPrice * (1 - pct / 100), "none");
+  return { onSale: true, salePrice: sale, price: sale };
+}
+
+/** Apply a bulk operation to selected slugs OR to every product matching a
+ *  search/filter. Returns how many rows were updated. */
+export async function bulkUpdateProducts(opts: { slugs?: string[]; q?: string; filter?: AdminFilter; op: BulkOp }): Promise<{ updated: number }> {
+  await ensureProducts();
+  const targets = await bulkTargets(opts);
+  if (!targets.length) return { updated: 0 };
+  const now = Date.now();
+  const stmts = targets.map((t) => {
+    const p = computePatch(t, opts.op) as unknown as Record<string, number | boolean>;
+    const sets = ["updated_at = ?"];
+    const args: (number | string)[] = [now];
+    const col: Record<string, string> = { regularPrice: "regular_price", salePrice: "sale_price", price: "price", onSale: "on_sale", stockQty: "stock_qty", visible: "visible" };
+    for (const [k, v] of Object.entries(p)) {
+      sets.push(`${col[k]} = ?`);
+      args.push(typeof v === "boolean" ? (v ? 1 : 0) : v);
+    }
+    args.push(t.slug);
+    return { sql: `UPDATE products SET ${sets.join(", ")} WHERE slug = ?`, args };
+  });
+  for (let i = 0; i < stmts.length; i += 200) {
+    await libsql.batch(stmts.slice(i, i + 200));
+  }
+  return { updated: targets.length };
 }
 
 export async function dashboardStats() {

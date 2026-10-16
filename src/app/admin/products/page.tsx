@@ -3,8 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { listProducts, type AdminFilter } from "@/lib/db/queries";
 import { ProductsToolbar } from "@/components/admin/ProductsToolbar";
-
-const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2 });
+import { ProductsTable } from "@/components/admin/ProductsTable";
 
 export const instant = false;
 
@@ -50,41 +49,8 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
         ))}
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-line">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead>
-            <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
-              <th className="px-4 py-2.5">Product</th>
-              <th className="px-4 py-2.5">Price</th>
-              <th className="px-4 py-2.5">Stock</th>
-              <th className="px-4 py-2.5"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((p) => {
-              const low = p.stockQty > 0 && p.stockQty <= p.lowStockThreshold;
-              return (
-                <tr key={p.slug} className="border-b border-line last:border-0">
-                  <td className="px-4 py-2.5">
-                    <div className="font-semibold text-fg">{p.name}</div>
-                    <div className="text-xs text-muted">{p.brand} · {p.sku || "—"}</div>
-                  </td>
-                  <td className="px-4 py-2.5 whitespace-nowrap">
-                    {p.onSale ? <><span className="text-faint line-through">{zar(p.regularPrice)}</span> <span className="font-semibold text-fg">{zar(p.salePrice)}</span></> : <span className="font-semibold text-fg">{zar(p.price)}</span>}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {p.stockQty === 0
-                      ? <span className="font-semibold text-sale">Out</span>
-                      : <span className={`font-semibold ${low ? "text-amber-400" : "text-pay"}`}>{p.stockQty}{low ? " · low" : ""}</span>}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <Link href={`/admin/products/${p.slug}`} className="text-sm font-bold text-volt hover:underline">Edit</Link>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="mt-4">
+        <ProductsTable rows={rows} q={q} filter={filter} total={total} />
       </div>
 
       {pages > 1 && (

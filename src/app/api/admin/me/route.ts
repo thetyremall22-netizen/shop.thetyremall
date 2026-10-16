@@ -13,5 +13,6 @@ export async function GET() {
     canManageUsers: can(u.role, "users.manage"),
     canManageSettings: can(u.role, "settings.manage"),
     canManageDeals: can(u.role, "deals.manage"),
+    canEditContent: can(u.role, "content.edit"),
   });
 }

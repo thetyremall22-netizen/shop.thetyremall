@@ -19,10 +19,13 @@ import { Arrow } from "@/components/icons";
 import { HappyPayLogo } from "@/components/HappyPayLogo";
 import { PromoBanner } from "@/components/PromoBanner";
 import { DragScroll } from "@/components/DragScroll";
+import { getRatingSummary, getFeaturedReviews } from "@/lib/reviews";
 
 
 export default async function Home() {
-  const [sellers, deals, mags] = await Promise.all([bestSellers(10), dealProducts(8), wheelProducts(10)]);
+  const [sellers, deals, mags, ratingSummary, reviews] = await Promise.all([
+    bestSellers(10), dealProducts(8), wheelProducts(10), getRatingSummary(), getFeaturedReviews(),
+  ]);
 
   return (
     <>
@@ -62,11 +65,11 @@ export default async function Home() {
       {/* ============ SOCIAL PROOF (moved up) ============ */}
       <section className="container-x py-12">
         <Reveal>
-          <SectionHead eyebrow="4.8★ loved across Mzansi" silver="HAPPY" green="CUSTOMERS" />
+          <SectionHead eyebrow={`${ratingSummary.overall}★ loved across Mzansi`} silver="HAPPY" green="CUSTOMERS" />
         </Reveal>
         <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,340px)_1fr]">
-          <Reveal variant="left"><AnimatedRating /></Reveal>
-          <RotatingReviews />
+          <Reveal variant="left"><AnimatedRating overall={ratingSummary.overall} count={ratingSummary.count} sourceCopy={ratingSummary.sourceCopy} /></Reveal>
+          <RotatingReviews reviews={reviews.map((r) => ({ name: r.location ? `${r.name}, ${r.location}` : r.name, text: r.quote, rating: r.rating }))} />
         </div>
       </section>
 

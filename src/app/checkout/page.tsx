@@ -87,6 +87,11 @@ export default function CheckoutPage() {
         setSubmitting(false);
         return;
       }
+      // HappyPay (and other redirect-based gateways): go to the provider.
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+        return;
+      }
       // Auto-submit a hidden form to PayFast.
       const form = document.createElement("form");
       form.method = "POST";

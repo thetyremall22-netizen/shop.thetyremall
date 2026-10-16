@@ -29,6 +29,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const NAV = [
     ...BASE_NAV,
     ...(me?.canManageDeals ? [{ href: "/admin/coupons", label: "Coupons" }] : []),
+    ...(me?.canManageSettings ? [{ href: "/admin/payments", label: "Payments" }] : []),
     ...(me?.canManageSettings ? [{ href: "/admin/settings", label: "Settings" }] : []),
     ...(me?.canManageUsers ? [{ href: "/admin/users", label: "Staff & roles" }] : []),
   ];

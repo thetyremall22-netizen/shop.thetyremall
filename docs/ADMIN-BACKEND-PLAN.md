@@ -162,4 +162,5 @@ pulled forward to run next, after the current catalog work. Delivered in slices:
 - 2026-10-16 — Phase 5c shipped: forgot-password (email reset token).
 - 2026-10-16 — Phase 2b shipped: fuller CSV importer (create+update all fields, dry-run, undo).
 - 2026-10-16 — Phase 4 (coupons) shipped: admin coupon management + checkout application + redemption tracking.
+- 2026-10-16 — Phase 5 (payments) shipped: encrypted gateway config store + Admin → Payments screen; PayFast now DB-configurable (no redeploy, env fallback); real HappyPay adapter (createOrder/webhook/status/refund) wired into checkout. DNS/email go-live checklist (docs/GO-LIVE-DNS.md).
 - 2026-10-16 — Next: remaining catalog depth (brands/categories CRUD, fitment admin, richer product editor) + content/theme (Phase 3) + the 3 asks.

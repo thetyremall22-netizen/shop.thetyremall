@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getProduct } from "@/lib/catalogue";
 import { computeTotals, type LineItem } from "@/lib/totals";
 import { saveOrder, nextReference, type Order } from "@/lib/orders";
-import { buildPaymentFields, PAYFAST_PROCESS_URL, isConfigured, PAYFAST_SANDBOX } from "@/lib/payfast";
+import { buildPaymentFields, payfastProcessUrl, isConfigured, isSandbox } from "@/lib/payfast";
+import { createHappyPayOrder, isEnabled as happyPayEnabled } from "@/lib/happypay";
 import { getLive } from "@/lib/db/queries";
 import { validateCoupon } from "@/lib/coupons";
 import type { DeliveryMethod } from "@/lib/shop-config";
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
     id, reference, status: "pending",
     customer, delivery: { ...delivery, method }, items: lines, totals,
     // Sandbox PayFast => test order (labelled apart from real orders in admin).
-    paymentMethod, test: paymentMethod === "payfast" && PAYFAST_SANDBOX, createdAt: now, updatedAt: now,
+    paymentMethod, test: paymentMethod === "payfast" && (await isSandbox()), createdAt: now, updatedAt: now,
   };
   try {
     await saveOrder(order);
@@ -90,16 +91,28 @@ export async function POST(req: NextRequest) {
     console.error("[checkout] saveOrder failed — proceeding to PayFast without a saved order:", (e as Error).message);
   }
 
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
+
+  // --- HappyPay (BNPL): create an order and redirect the customer there ---
+  if (paymentMethod === "happypay") {
+    if (!(await happyPayEnabled())) {
+      return NextResponse.json({ gateway: false, reference, message: "HappyPay isn't available right now." });
+    }
+    const hp = await createHappyPayOrder({ orderId: id, reference, totalCents: totals.total, origin, email: customer.email });
+    if (!hp.ok || !hp.redirectUrl) {
+      return NextResponse.json({ error: hp.error ?? "Couldn't start HappyPay." }, { status: 502 });
+    }
+    return NextResponse.json({ gateway: true, redirectUrl: hp.redirectUrl, reference });
+  }
+
   if (paymentMethod !== "payfast") {
-    // HappyPay / Mobicred gateways come in a later step.
     return NextResponse.json({ gateway: false, reference, message: `${paymentMethod} is not wired up yet.` });
   }
-  if (!isConfigured()) {
+  if (!(await isConfigured())) {
     return NextResponse.json({ error: "PayFast is not configured on the server." }, { status: 503 });
   }
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
-  const fields = buildPaymentFields({
+  const fields = await buildPaymentFields({
     mPaymentId: id,
     amount: totals.total / 100,
     itemName: `The Tyre Mall order ${reference}`,
@@ -114,5 +127,5 @@ export async function POST(req: NextRequest) {
     customStr1: id,
   });
 
-  return NextResponse.json({ gateway: true, processUrl: PAYFAST_PROCESS_URL, fields, reference });
+  return NextResponse.json({ gateway: true, processUrl: await payfastProcessUrl(), fields, reference });
 }

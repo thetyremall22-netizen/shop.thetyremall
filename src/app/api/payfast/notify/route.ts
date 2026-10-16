@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   for (const [k, v] of new URLSearchParams(raw)) data[k] = v;
 
   // 1. signature
-  if (!verifyItnSignature(data)) {
+  if (!(await verifyItnSignature(data))) {
     console.warn("[payfast] ITN bad signature", data.m_payment_id);
     return new NextResponse("invalid signature", { status: 400 });
   }

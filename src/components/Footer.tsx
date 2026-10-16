@@ -16,7 +16,7 @@ export async function Footer() {
         <div className="container-x grid grid-cols-2 gap-px lg:grid-cols-4">
           {[
             { icon: Truck, t: "Free Delivery", s: `On ${s.commerce.freeDeliveryMinTyres}+ tyres, nationwide` },
-            { icon: Bolt, t: "Pay Later", s: "0% with HappyPay & Mobicred" },
+            { icon: Bolt, t: "Pay Later", s: "0% with HappyPay" },
             { icon: Shield, t: "Road Hazard Cover", s: "Optional 12-month protection" },
             { icon: Pin, t: "JHB Fitment", s: "Book at a partner centre" },
           ].map((f) => (
@@ -98,7 +98,7 @@ export async function Footer() {
         <div className="container-x flex flex-col items-center gap-3 py-6">
           <span className="eyebrow">Secure payment &amp; buy-now-pay-later</span>
           <div className="w-full max-w-3xl rounded-xl bg-white p-3">
-            <Image src="/brand/payments.png" alt="We accept PayFast, Instant EFT, RCS, RMI, Zapper, Samsung Pay, Apple Pay, Mastercard, Visa and Mobicred" width={1920} height={120} className="h-auto w-full" />
+            <Image src="/brand/payments.png" alt="We accept PayFast, Instant EFT, RCS, RMI, Zapper, Samsung Pay, Apple Pay, Mastercard and Visa" width={1920} height={120} className="h-auto w-full" />
           </div>
         </div>
       </div>

@@ -235,11 +235,11 @@ export default function CheckoutPage() {
                     <span className="flex items-center gap-2">
                       <span className="font-bold text-fg">{m.name}</span>
                       <span className="badge badge-pay">{m.tag}</span>
-                      {m.id !== "payfast" && <span className="text-[10px] font-bold uppercase tracking-wide text-muted">coming soon</span>}
+                      {!m.live && <span className="text-[10px] font-bold uppercase tracking-wide text-muted">coming soon</span>}
                     </span>
                     <span className="text-sm text-muted">{m.blurb}</span>
                   </span>
-                  {m.id !== "payfast" && <Bolt width={18} height={18} className="text-pay" />}
+                  {m.id === "happypay" && <Bolt width={18} height={18} className="text-pay" />}
                 </button>
               ))}
             </div>

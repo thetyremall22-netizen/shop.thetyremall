@@ -119,7 +119,7 @@ export async function sendAbandonedCartEmail(to: string, items: { name: string; 
       <tr><td style="padding:10px 0 0;font-weight:800">Total</td><td style="padding:10px 0 0;text-align:right;font-weight:800;color:${INK}">${zar(total)}</td></tr>
     </table>
     <p style="margin:18px 0"><a href="${SITE_URL}/cart" style="display:inline-block;background:${BRAND};color:${INK};font-weight:800;text-decoration:none;padding:12px 22px;border-radius:10px">Complete your order →</a></p>
-    <p style="font-size:12px;color:#6b7280">Buy now, pay later with HappyPay &amp; Mobicred. Need help choosing? Just reply or WhatsApp us.</p>
+    <p style="font-size:12px;color:#6b7280">Buy now, pay later with HappyPay. Need help choosing? Just reply or WhatsApp us.</p>
     <p style="font-size:11px;color:#9aa2ab;margin-top:20px;border-top:1px solid #eee;padding-top:12px">
       Made by <a href="${IHD_CREDIT}" style="color:#9aa2ab">iHeart Digital</a>
     </p>`;

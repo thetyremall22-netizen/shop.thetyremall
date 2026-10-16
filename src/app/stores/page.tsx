@@ -54,7 +54,7 @@ export default function StoresPage() {
       <div className="mt-10 grid gap-3 sm:grid-cols-3">
         {[
           { icon: Truck, t: "Free delivery", s: "On 2+ tyres, nationwide" },
-          { icon: Bolt, t: "Pay later", s: "0% with HappyPay & Mobicred" },
+          { icon: Bolt, t: "Pay later", s: "0% with HappyPay" },
           { icon: Pin, t: "Expert fitment", s: "At the centre nearest you" },
         ].map((f) => (
           <div key={f.t} className="card flex items-center gap-3 p-5">

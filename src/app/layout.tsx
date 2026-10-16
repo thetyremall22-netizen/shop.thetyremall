@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     template: "%s · The Tyre Mall",
   },
   description:
-    "Buy tyres, mag wheels and 4x4 rubber online in South Africa. Free nationwide delivery on 2 or more tyres. Buy now, pay later with HappyPay & Mobicred.",
+    "Buy tyres, mag wheels and 4x4 rubber online in South Africa. Free nationwide delivery on 2 or more tyres. Buy now, pay later with HappyPay.",
   metadataBase: new URL("https://thetyremall.co.za"),
 };
 

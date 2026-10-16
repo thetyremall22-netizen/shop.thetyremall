@@ -147,11 +147,11 @@ export const FAQ_SECTIONS: FaqSection[] =
       },
       {
         "q": "What payment methods do you accept?",
-        "a": "We accept standard card payments and EFT, as well as Buy Now Pay Later options through HappyPay and Mobicred, so you can split the cost of your tyres instead of paying the full amount up front. Buy Now Pay Later lets you fit quality tyres immediately and pay them off over time, which is especially useful when you need a full set of four at once."
+        "a": "We accept standard card payments and EFT, as well as Buy Now Pay Later through HappyPay, so you can split the cost of your tyres instead of paying the full amount up front. Buy Now Pay Later lets you fit quality tyres immediately and pay them off over time, which is especially useful when you need a full set of four at once."
       },
       {
         "q": "Can I pay for my tyres in instalments?",
-        "a": "Yes. Through our HappyPay and Mobicred payment partners you can spread the cost of your tyres rather than paying the full amount in one go. This is ideal when you need a full set of four tyres, or when you want premium tyres but would prefer to manage the cost monthly. Approval is handled by the payment provider at checkout."
+        "a": "Yes. Through our HappyPay payment partner you can spread the cost of your tyres rather than paying the full amount in one go. This is ideal when you need a full set of four tyres, or when you want premium tyres but would prefer to manage the cost monthly. Approval is handled by the payment provider at checkout."
       },
       {
         "q": "Do you deliver to my area in South Africa?",

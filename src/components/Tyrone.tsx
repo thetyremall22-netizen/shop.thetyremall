@@ -45,12 +45,12 @@ const RULES: Rule[] = [
   {
     keys: ["pay", "payment", "card", "eft", "payfast", "checkout", "secure"],
     answer:
-      "Paying is quick and secure 💳. At checkout you can pay by card or Instant EFT through PayFast, or choose Buy Now, Pay Later with HappyPay or Mobicred. Your card details are never stored on our site.",
+      "Paying is quick and secure 💳. At checkout you can pay by card or Instant EFT through PayFast, or choose Buy Now, Pay Later with HappyPay. Your card details are never stored on our site.",
   },
   {
-    keys: ["happypay", "mobicred", "later", "instal", "credit", "months", "deposit", "upfront"],
+    keys: ["happypay", "later", "instal", "credit", "months", "deposit", "upfront"],
     answer:
-      "Yes! With HappyPay you can pay over 2 months at 0% interest, with no upfront payment — just a quick credit check at checkout. Mobicred is also available as a revolving buy-now-pay-later option. 😊",
+      "Yes! With HappyPay you can pay over 2 months at 0% interest, with no upfront payment — just a quick credit check at checkout. 😊",
   },
   {
     keys: ["find", "search", "looking", "size", "how do i find", "which tyre", "fit my car", "my car"],

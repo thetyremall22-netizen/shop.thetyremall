@@ -66,10 +66,11 @@ export interface PaymentMethod {
   name: string;
   tag: string;
   blurb: string;
+  live?: boolean; // false / omitted => shown as "coming soon"
 }
 
 export const PAYMENT_METHODS: PaymentMethod[] = [
-  { id: "payfast", name: "PayFast", tag: "Card / Instant EFT", blurb: "Secure card & instant EFT payments." },
-  { id: "happypay", name: "HappyPay", tag: "Pay over 2 months", blurb: "0% interest, no upfront. Instant credit check." },
-  { id: "mobicred", name: "Mobicred", tag: "Buy now, pay later", blurb: "Revolving credit facility for online shopping." },
+  { id: "payfast", name: "PayFast", tag: "Card / Instant EFT", blurb: "Secure card & instant EFT payments.", live: true },
+  { id: "happypay", name: "HappyPay", tag: "Pay over 2 months", blurb: "0% interest, no upfront. Instant credit check.", live: true },
+  // Mobicred — not set up yet; re-add with live:true (or false for "coming soon") when ready.
 ];

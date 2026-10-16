@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdmin } from "@/lib/admin-auth";
+import { authorize } from "@/lib/admin-auth";
 import { updateSettings, type SiteSettings } from "@/lib/settings";
 
 const s = (v: unknown, max = 500) => (typeof v === "string" ? v.trim().slice(0, max) : undefined);
@@ -13,7 +13,7 @@ function clean<T extends object>(obj: T): Partial<T> {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorize("settings.manage"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   let body: Partial<SiteSettings>;
   try {

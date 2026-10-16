@@ -1,20 +1,36 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-const NAV = [
+const BASE_NAV = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/products", label: "Products" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/emails", label: "Emails" },
   { href: "/admin/leads", label: "Leads & Enquiries" },
-  { href: "/admin/settings", label: "Settings" },
 ];
+
+interface Me { name: string; email: string; role: string; isOwner: boolean; canManageUsers: boolean; canManageSettings: boolean }
+const ROLE_LABEL: Record<string, string> = { super_admin: "Super Admin", manager: "Manager", editor: "Editor", viewer: "Viewer" };
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [me, setMe] = useState<Me | null>(null);
+
+  useEffect(() => {
+    let on = true;
+    fetch("/api/admin/me").then((r) => (r.ok ? r.json() : null)).then((d) => { if (on) setMe(d); }).catch(() => {});
+    return () => { on = false; };
+  }, []);
+
+  const NAV = [
+    ...BASE_NAV,
+    ...(me?.canManageSettings ? [{ href: "/admin/settings", label: "Settings" }] : []),
+    ...(me?.canManageUsers ? [{ href: "/admin/users", label: "Staff & roles" }] : []),
+  ];
 
   async function logout() {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -44,6 +60,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
+            {me && (
+              <div className="mt-3 rounded-lg border border-line px-3 py-2 text-xs">
+                <div className="truncate font-semibold text-fg">{me.isOwner ? "Owner" : me.name || me.email}</div>
+                <div className="text-muted">{ROLE_LABEL[me.role] ?? me.role}</div>
+              </div>
+            )}
             <button onClick={logout} className="mt-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-muted hover:bg-surface hover:text-sale">
               Log out
             </button>

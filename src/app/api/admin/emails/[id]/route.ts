@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdmin } from "@/lib/admin-auth";
+import { authorize } from "@/lib/admin-auth";
 import { getEmail, type EmailType } from "@/lib/email-log";
 import { sendMail, emailConfigured } from "@/lib/email";
 
 // Resend a logged email — optionally with an edited recipient/subject/body.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorize("emails.send"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { id } = await params;
   const emailId = Number(id);
   if (!Number.isFinite(emailId)) return NextResponse.json({ error: "bad id" }, { status: 400 });

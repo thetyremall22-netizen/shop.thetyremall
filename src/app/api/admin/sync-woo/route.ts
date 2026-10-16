@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { isAdmin } from "@/lib/admin-auth";
+import { authorize } from "@/lib/admin-auth";
 import { syncFromWoo } from "@/lib/woo-sync";
 
 export const maxDuration = 300;
 
 export async function POST() {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorize("products.import"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   try {
     const result = await syncFromWoo();
     return NextResponse.json({ ok: true, ...result });

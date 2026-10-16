@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdmin } from "@/lib/admin-auth";
+import { authorize } from "@/lib/admin-auth";
 import { bulkUpdateProducts, type BulkOp, type AdminFilter } from "@/lib/db/queries";
 
 const FILTERS: AdminFilter[] = ["all", "low", "out", "sale"];
@@ -36,7 +36,7 @@ function parseOp(raw: unknown): BulkOp | null {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorize("products.bulk"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   let body: Record<string, unknown>;
   try {

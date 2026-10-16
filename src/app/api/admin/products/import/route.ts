@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdmin } from "@/lib/admin-auth";
+import { authorize } from "@/lib/admin-auth";
 import { bulkUpsert } from "@/lib/db/queries";
 
 // minimal CSV parser (handles quoted fields, commas, newlines)
@@ -30,7 +30,7 @@ function parseCsv(text: string): Record<string, string>[] {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorize("products.import"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const text = await req.text();
   if (!text.trim()) return NextResponse.json({ error: "Empty file." }, { status: 400 });
   const rows = parseCsv(text);

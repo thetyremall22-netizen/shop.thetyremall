@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/admin-auth";
+import { requirePermission } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { SettingsForm } from "@/components/admin/SettingsForm";
 import { getSettings } from "@/lib/settings";
@@ -6,7 +6,7 @@ import { getSettings } from "@/lib/settings";
 export const instant = false;
 
 export default async function AdminSettings() {
-  await requireAdmin();
+  await requirePermission("settings.manage");
   const settings = await getSettings();
 
   return (

@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function AdminLogin() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [website, setWebsite] = useState(""); // honeypot — must stay empty
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +19,7 @@ export default function AdminLogin() {
     const res = await fetch("/api/admin/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password, website }),
+      body: JSON.stringify({ email, password, website }),
     });
     if (res.ok) {
       router.push("/admin");
@@ -47,14 +49,27 @@ export default function AdminLogin() {
           aria-hidden="true"
           className="absolute left-[-9999px] h-0 w-0 opacity-0"
         />
+        <label className="mb-1.5 block text-xs font-semibold text-muted">Email</label>
+        <input
+          type="email"
+          value={email}
+          autoFocus
+          autoComplete="username"
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@thetyremall.co.za"
+          className="mb-3 h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt"
+        />
         <label className="mb-1.5 block text-xs font-semibold text-muted">Password</label>
         <input
           type="password"
           value={password}
-          autoFocus
+          autoComplete="current-password"
           onChange={(e) => setPassword(e.target.value)}
           className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt"
         />
+        <div className="mt-2 text-right">
+          <Link href="/admin/forgot" className="text-xs font-semibold text-muted hover:text-volt">Forgot password?</Link>
+        </div>
         {error && <div className="mt-3 rounded-lg border border-sale/40 bg-sale/10 p-2.5 text-sm font-semibold text-sale">{error}</div>}
         <button type="submit" disabled={busy} className="btn btn-volt mt-5 w-full py-3 disabled:opacity-60">
           {busy ? "Signing in…" : "Sign in"}

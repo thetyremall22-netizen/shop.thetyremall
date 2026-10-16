@@ -58,6 +58,8 @@ export interface MailMeta {
   resend?: boolean;
   /** Always include the shop address in CC, even if EMAIL_CC is cleared. */
   ccShop?: boolean;
+  /** Send with NO CC at all (e.g. password resets — never copy the shop). */
+  noCc?: boolean;
 }
 
 export async function sendMail(to: string, subject: string, html: string, meta: MailMeta = {}): Promise<void> {
@@ -70,8 +72,8 @@ export async function sendMail(to: string, subject: string, html: string, meta: 
     await logEmail({ toAddr: to, subject, html, type, orderRef, status: "skipped", provider: "none", resend });
     return;
   }
-  const ccSet = new Set(CC_LIST.map((a) => a));
-  if (meta.ccShop) ccSet.add(SHOP_EMAIL);
+  const ccSet = new Set(meta.noCc ? [] : CC_LIST.map((a) => a));
+  if (meta.ccShop && !meta.noCc) ccSet.add(SHOP_EMAIL);
   const cc = [...ccSet].filter((a) => a.toLowerCase() !== to.toLowerCase());
   const provider = RESEND_API_KEY ? "resend" : "smtp";
   try {

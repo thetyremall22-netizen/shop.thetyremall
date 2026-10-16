@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdmin } from "@/lib/admin-auth";
+import { authorize } from "@/lib/admin-auth";
 import { sendComposedEmail, emailConfigured } from "@/lib/email";
 
 // Compose + send an email to a customer from the admin panel. Always CCs the shop.
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorize("emails.send"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   let body: { to?: string; subject?: string; message?: string; orderRef?: string };
   try {

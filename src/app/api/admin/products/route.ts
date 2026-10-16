@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdmin } from "@/lib/admin-auth";
+import { authorize } from "@/lib/admin-auth";
 import { createProduct, type NewProduct } from "@/lib/db/queries";
 
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorize("products.edit"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   let b: Record<string, unknown>;
   try {
     b = (await req.json()) as Record<string, unknown>;

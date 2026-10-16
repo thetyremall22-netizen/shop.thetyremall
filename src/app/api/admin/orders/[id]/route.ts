@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdmin } from "@/lib/admin-auth";
+import { authorize } from "@/lib/admin-auth";
 import { getOrder, updateOrder, type OrderStatus } from "@/lib/orders";
 import { incrementStock } from "@/lib/db/queries";
 import { sendOrderCompleted, sendOrderRefunded, sendOrderCancelled, sendOrderOnHold } from "@/lib/email";
@@ -8,7 +8,7 @@ const ALLOWED: OrderStatus[] = ["processing", "completed", "refunded", "cancelle
 const STOCK_HELD: OrderStatus[] = ["processing", "completed"]; // states where stock was already taken
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdmin())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorize("orders.edit"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { id } = await params;
   let status: OrderStatus;
   try {

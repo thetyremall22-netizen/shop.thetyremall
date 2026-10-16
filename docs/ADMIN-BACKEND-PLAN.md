@@ -142,14 +142,15 @@ pulled forward to run next, after the current catalog work. Delivered in slices:
   lock-out (8 failed attempts per IP / 15 min → 429, holds across serverless
   instances via Turso), a hidden **honeypot** field to catch form-filling bots,
   a failure delay to slow guessing, and the existing fail-closed HMAC session.
-- **5b. Staff accounts & roles** *(next)* — `AdminUser` + `Role` tables; login by
-  **email + password** (argon2/bcrypt hash); roles **Super Admin / Manager /
-  Editor** (+ disabled) with a module×action permission grid enforced
-  server-side on every mutation; Users admin screen (invite, edit role,
-  disable). The env `ADMIN_PASSWORD` stays as break-glass super-admin until
-  accounts exist.
-- **5c. Forgot password** — email reset-token flow (reuses the email system).
-- **5d. 2FA (TOTP)** — optional enrolment for admin+ roles.
+- **5b. Staff accounts & roles** ✅ *(done 2026-10-16)* — `admin_users` table;
+  login by **email + password** (scrypt hash); roles **Super Admin / Manager /
+  Editor / Viewer** with a permission matrix enforced server-side on every
+  mutation (403, not just hidden UI); Users screen (add, set role, enable/
+  disable, set password). Env `ADMIN_PASSWORD` = break-glass super-admin owner.
+- **5c. Forgot password** ✅ *(done 2026-10-16)* — `password_resets` (sha-256,
+  1-hour one-time token); /admin/forgot + /admin/reset; reset email sent with no
+  CC; no account enumeration. *Delivery needs email configured (Resend/SMTP).*
+- **5d. 2FA (TOTP)** *(pending)* — optional enrolment for admin+ roles.
 
 ## Status log
 
@@ -157,4 +158,6 @@ pulled forward to run next, after the current catalog work. Delivered in slices:
 - 2026-10-16 — Phase 1 shipped: Settings foundation (footer reads DB settings).
 - 2026-10-16 — Phase 2a shipped: bulk product actions (price/stock/visibility/sale).
 - 2026-10-16 — Phase 5a shipped: admin login brute-force + bot protection.
-- 2026-10-16 — Next: Phase 5b staff accounts & roles (email+password, RBAC, Users screen).
+- 2026-10-16 — Phase 5b shipped: staff accounts, 4 roles, RBAC enforced (UI + API).
+- 2026-10-16 — Phase 5c shipped: forgot-password (email reset token).
+- 2026-10-16 — Next: resume catalog depth (Phase 2b) or 2FA (5d) / the 3 asks.

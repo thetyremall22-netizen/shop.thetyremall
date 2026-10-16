@@ -166,5 +166,7 @@ pulled forward to run next, after the current catalog work. Delivered in slices:
 - 2026-10-16 — Orders: refund button (full/partial) via gateway adapters (HappyPay auto, PayFast manual-record + restock + email).
 - 2026-10-16 — Phase 2 catalog depth: full single-product editor (all fields + spec merge) + product duplicate.
 - 2026-10-16 — Phase 3 (reviews): Reviews & ratings manager — testimonials + rating summary admin, homepage wired to DB, fixes the 0.0★ bug.
-- 2026-10-16 — Next: Brands & Categories CRUD + Fitment (Phase 2), then more Phase 3 (strings/theme/page builder, team/stats/story, menus).
+- 2026-10-16 — Phase 3 (content): Our Story / Stats / Team manager, homepage wired to DB.
+- 2026-10-16 — Phase 3 (theme): brand colours + card radius editor, injected site-wide at runtime (no redeploy).
+- 2026-10-16 — Next: site strings/copy table, menus builder, then Brands/Categories + Fitment, page builder.
 - 2026-10-16 — Next: remaining catalog depth (brands/categories CRUD, fitment admin, richer product editor) + content/theme (Phase 3) + the 3 asks.

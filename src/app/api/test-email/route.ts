@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
         </td></tr>
         <tr><td style="padding:28px">
           <h1 style="margin:0 0 12px;font-size:20px">SMTP test successful ✅</h1>
-          <p style="font-size:14px;margin:0 0 8px">If you can read this, the Vercel site can send email through Microsoft 365 on its own — no WordPress or WooCommerce connection needed.</p>
+          <p style="font-size:14px;margin:0 0 8px">If you can read this, the site can send email on its own — no WordPress or WooCommerce connection needed.</p>
           <p style="font-size:13px;color:#6b7280;margin:0">Sent ${new Date().toLocaleString("en-ZA", { timeZone: "Africa/Johannesburg" })} (SAST).</p>
         </td></tr>
       </table>

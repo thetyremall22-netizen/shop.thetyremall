@@ -89,7 +89,19 @@ export async function sendMail(to: string, subject: string, html: string, meta: 
   try {
     if (cfg.resendKey) await sendViaResend(cfg, to, subject, html, cc);
     else {
-      const transporter = nodemailer.createTransport({ host: cfg.host, port: cfg.port, secure: cfg.secure, auth: { user: cfg.user, pass: cfg.pass } });
+      // When sending through the mail server on the SAME machine (localhost),
+      // its TLS cert is issued for the server's real hostname, not "localhost",
+      // so default cert validation would reject the STARTTLS handshake. Relaxing
+      // it is safe here because the connection never leaves the box. External
+      // hosts (Microsoft 365, Resend SMTP, etc.) stay fully validated.
+      const isLocal = /^(localhost|127\.0\.0\.1|::1)$/i.test(cfg.host.trim());
+      const transporter = nodemailer.createTransport({
+        host: cfg.host,
+        port: cfg.port,
+        secure: cfg.secure,
+        auth: { user: cfg.user, pass: cfg.pass },
+        ...(isLocal ? { tls: { rejectUnauthorized: false } } : {}),
+      });
       await transporter.sendMail({ from: cfg.from, to, subject, html, ...(cc.length ? { cc } : {}) });
     }
     await logEmail({ toAddr: to, cc, subject, html, type, orderRef, status: "sent", provider, resend });

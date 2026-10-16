@@ -160,4 +160,6 @@ pulled forward to run next, after the current catalog work. Delivered in slices:
 - 2026-10-16 — Phase 5a shipped: admin login brute-force + bot protection.
 - 2026-10-16 — Phase 5b shipped: staff accounts, 4 roles, RBAC enforced (UI + API).
 - 2026-10-16 — Phase 5c shipped: forgot-password (email reset token).
-- 2026-10-16 — Next: resume catalog depth (Phase 2b) or 2FA (5d) / the 3 asks.
+- 2026-10-16 — Phase 2b shipped: fuller CSV importer (create+update all fields, dry-run, undo).
+- 2026-10-16 — Phase 4 (coupons) shipped: admin coupon management + checkout application + redemption tracking.
+- 2026-10-16 — Next: remaining catalog depth (brands/categories CRUD, fitment admin, richer product editor) + content/theme (Phase 3) + the 3 asks.

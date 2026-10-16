@@ -1,134 +1,142 @@
 # Go-Live Checklist — The Tyre Mall custom site on 0724
 
 Deploy the Next.js custom build to the **0724 (DirectAdmin) server**, standalone.
-WordPress/WooCommerce stays on its current (xneelo) server and is **not** needed
-for launch — the custom site owns its catalogue, orders, admin and emails.
+WordPress/WooCommerce stays on its current server and is **not** needed for launch —
+the custom site owns its catalogue, orders, admin, payments and emails.
 
-> **Launch mode = standalone.** Orders go to the site's own database, emails are
-> sent by the site, and the catalogue runs from the committed snapshot. The live
-> WooCommerce sync, coupons, staff roles and customer accounts are **post-launch**
-> builds (see the bottom of this file).
+**Decisions locked in:**
+- **Database:** fresh **file DB on the server** (`file:.data/ttm.db`) — clean slate.
+- **Admin backend is fully built** (products, orders, emails, leads, content, media,
+  reviews, theme, wording, coupons, payments, settings, staff roles, maintenance mode).
+- **Payments:** PayFast + HappyPay (both live-tested). Mobicred hidden for now.
+- The domain **transfer into 0724 is still pending**, so this splits into Phase A
+  (do now) and Phase B (at cutover). DNS details: see `DNS-CUTOVER-0724.md`.
+
+> ⚠️ **The file DB holds your live orders.** It must live on persistent, writable
+> disk, be **backed up** (e.g. a daily `cp .data/ttm.db` to a safe folder), and you
+> must deploy by **`git pull` in place** — never re-clone over `.data/` or you'll
+> wipe orders.
+>
+> **The whole website is in the repo** — design, all content/copy, theme colours,
+> wording, the product catalogue (auto-seeds from the snapshot) **and every image**
+> (product photos, banners, logos, promo art in `public/`) all ship with the code and
+> render on a fresh DB with nothing to rebuild or re-upload. A fresh DB only starts
+> empty for **admin-entered data**: payment credentials, coupons, staff logins,
+> anything added later via the **Media library tab** (a separate tool — not the site's
+> existing imagery), and any admin *edits that override* a built-in default.
+>
+> **Note on MariaDB:** this app uses **SQLite** (`file:.data/ttm.db`), not MySQL/
+> MariaDB. Any MariaDB on the 0724 account is **not used** by this app and can be
+> ignored.
 
 ---
 
-## 0. Prerequisites
-- [ ] **Node.js enabled** on the 0724 account (Node.js Selector / Passenger) — Node **20** (or ≥18.18). *(0724 said they'd enable it.)*
-- [ ] Access to the 0724 DirectAdmin + SSH/Git (for deploy) and to DNS for `thetyremall.co.za`.
+## PHASE A — do now (before the transfer; nothing customer-facing changes)
 
-## 1. Get the code onto the server
-- [ ] Clone the repo on the server (or upload a build):
-  ```bash
-  git clone https://github.com/thetyremall22-netizen/shop.thetyremall.git
-  cd shop.thetyremall
-  npm ci
-  ```
-- [ ] Next.js on DirectAdmin runs under **Passenger**. We'll set `output: "standalone"`
-  in `next.config.ts` and point the Node.js App's **startup file** at the standalone
-  `server.js` (or run `npm start`). *(Ping me when the Node.js Selector screen is up and
-  I'll give the exact entry/startup settings — it's a 2-line config.)*
-- [ ] Build:
-  ```bash
-  npm run build
-  ```
+### A0. Prerequisites
+- [ ] **Node.js 20** enabled on the 0724 account (Node.js Selector / Passenger).
+- [ ] DirectAdmin + SSH/Git access, and a **temp URL** to test on (server IP or a
+      temporary subdomain) while the real domain is still elsewhere.
 
-## 2. Environment variables (set in the Node.js App's "Environment variables")
-Generate the secrets **on the server** so they never go through chat:
+### A1. Code onto the server
 ```bash
-# strong admin password
-echo "TyreMall-$(openssl rand -base64 9 | tr -d '/+=')"
-# 64-char session secret
-openssl rand -hex 32
-# cron secret
-openssl rand -hex 24
+git clone https://github.com/thetyremall22-netizen/shop.thetyremall.git
+cd shop.thetyremall
+npm ci
 ```
-Then set:
+- [ ] Add `output: "standalone"` to `next.config.ts` (ping me — 1 line) so Passenger
+      can run the self-contained `server.js`.
+- [ ] `npm run build`
+- [ ] Point the Node.js App's **startup file** at the standalone server (exact entry
+      when the Node.js Selector screen is up).
+
+### A2. Environment variables (in the Node.js App's "Environment variables")
+Generate secrets **on the server** (never through chat):
+```bash
+echo "TyreMall-$(openssl rand -base64 9 | tr -d '/+=')"   # admin password
+openssl rand -hex 32                                      # SESSION_SECRET (64 hex)
+openssl rand -hex 24                                      # CRON_SECRET
+```
 ```
 NEXT_PUBLIC_SITE_URL = https://thetyremall.co.za
-SITE_URL             = https://thetyremall.co.za
 NODE_ENV             = production
-
-# --- admin (set FRESH values from the commands above — never reuse chat values) ---
-ADMIN_PASSWORD       = <strong password you just generated>
-SESSION_SECRET       = <64-char hex you just generated>
-CRON_SECRET          = <hex you just generated>
-
-# --- database (file persists on 0724; no Turso needed) ---
+ADMIN_PASSWORD       = <generated>
+SESSION_SECRET       = <generated>      # encrypts payment creds + signs admin logins; keep STABLE
+CRON_SECRET          = <generated>
 DATABASE_URL         = file:.data/ttm.db
 
-# --- PayFast (SANDBOX first) ---
+# PayFast — SANDBOX first (switch to live in Phase B)
 PAYFAST_SANDBOX      = true
-PAYFAST_MERCHANT_ID  = 10004002
-PAYFAST_MERCHANT_KEY = q1cd2rdny4a53
-PAYFAST_PASSPHRASE   = payfast
+# (sandbox creds can be set here OR entered in Admin → Payments)
 
-# --- email (see step 5; fill whichever method works from 0724) ---
+# Email — set in Phase B once the domain/MX is settled (see A-note below)
 MAIL_FROM            = The Tyre Mall <shop@thetyremall.co.za>
 SHOP_EMAIL           = shop@thetyremall.co.za
-EMAIL_CC             = tracy@iheartdigital.co.za
-#   Option A: server/M365 SMTP (try first from 0724)
-SMTP_HOST            = smtp.office365.com
-SMTP_PORT            = 587
-SMTP_SECURE          = false
-SMTP_USER            = shop@thetyremall.co.za
-SMTP_PASS            = <the mailbox app password>
-#   Option B (fallback if SMTP is blocked): RESEND_API_KEY = re_...
-
-# WOO_* keys are NOT set for launch (standalone). Add them later for the live sync.
 ```
+*SESSION_SECRET is generated fresh here (fine — we are not sharing the Vercel DB).*
 
-## 3. Database seed (so the admin drives the live catalogue)
-- [ ] One-time seed of the SQLite DB from the committed snapshot, so admin edits go live.
-  *(I'll provide the exact seed command/route — it reads `src/data/products.json` into the DB.)*
-- [ ] Confirm `.data/` is writable and on persistent disk.
+### A3. First run + admin
+- [ ] Confirm `.data/` is writable on persistent disk.
+- [ ] Load the temp URL → storefront renders, catalogue auto-seeded from the snapshot.
+- [ ] Log in at `<temp-url>/admin` with `ADMIN_PASSWORD` (break-glass owner).
+- [ ] In Admin, enter **Payments** creds (PayFast + HappyPay, sandbox) and set the
+      **store timezone**. (Content/theme/images already ship with the code — only
+      add coupons/staff/new media if you want them.)
 
-## 4. DNS + SSL
-- [ ] Point `thetyremall.co.za` (A record) at the **0724 server IP** (`169.239.182.48`).
-  - If WordPress must stay reachable for admin during wind-down, give it a subdomain
-    (e.g. `wp.thetyremall.co.za`) on xneelo with its own free Let's Encrypt cert.
-- [ ] In DirectAdmin → **SSL/TLS Certificates → Manage certificates**, issue the free
-  **Let's Encrypt** cert for `thetyremall.co.za` (works once DNS resolves to 0724).
-- [ ] Confirm `https://thetyremall.co.za` loads over HTTPS with a valid padlock.
+### A4. Turn ON maintenance mode
+- [ ] Admin → **Settings → Maintenance / Coming-soon mode → On → Save.**
+      So the instant DNS flips in Phase B, the public sees the "coming soon" page —
+      not a half-ready store. (You, logged in, still see the real site to finish setup.)
 
-## 5. Email — one test
-- [ ] Hit the test endpoint (standalone sends from the 0724 server):
-  ```
-  https://thetyremall.co.za/api/test-email?key=<CRON_SECRET>
-  ```
-  - `{"ok":true,...}` → email works (M365 SMTP from 0724). ✅
-  - `{"ok":false,"configured":true,"error":"...535..."}` → M365 blocked → set
-    `RESEND_API_KEY` (Resend) and re-test.
-  - `{"ok":false,"configured":false}` → no email configured → set SMTP or Resend.
-
-## 6. PayFast + checkout smoke test (sandbox)
-- [ ] In the **PayFast dashboard**, set the notify/return URLs to the live domain
-  (the app builds `https://thetyremall.co.za/api/payfast/notify` from `NEXT_PUBLIC_SITE_URL`).
-- [ ] Place **one sandbox order** end-to-end:
-  - [ ] Order appears in **`/admin` → Orders** with status **processing**.
-  - [ ] Stock decremented.
-  - [ ] Confirmation **email arrives**.
-- [ ] If all good → set `PAYFAST_SANDBOX=false` and the **live** PayFast credentials.
-
-## 7. Admin
-- [ ] Log in at `https://thetyremall.co.za/admin` with the `ADMIN_PASSWORD` set in step 2.
-- [ ] Verify Orders / Products / Leads load.
-- [ ] (Reminder) the insecure code defaults are removed — login is disabled unless
-  `ADMIN_PASSWORD` is set, and `SESSION_SECRET` must be set or logins won't persist.
-
-## 8. Go live
-- [ ] Final check: homepage, shop listings, product page, vehicle search, Tyrone, cart,
-  checkout → PayFast → order + email. All on HTTPS.
-- [ ] Monitor the first few real orders.
+### A5. Smoke test on the temp URL
+- [ ] Place **one sandbox PayFast order** end-to-end → appears in **Orders** (processing),
+      stock decrements.
+- [ ] Test HappyPay redirect from checkout.
+- [ ] `<temp-url>/api/test-email?key=<CRON_SECRET>` — see email note below.
 
 ---
 
-## Post-launch (separate builds, agreed)
-1. **Staff RBAC** — users table, username + password login, roles **Super Admin / Manager /
-   Editor** (+ disabled), **forgot password** (email reset), Users admin screen.
-2. **Customer accounts** — register/login, order history, saved addresses, forgot password;
-   guest checkout / create-at-checkout / login-to-buy. **No card storage** (PayFast handles
-   payments; optional saved-card via PayFast's vault).
-3. **Live WooCommerce sync** (optional, during the WP wind-down) — scheduled `syncFromWoo`
-   pulling product/price/stock changes into the site DB, with images downloaded locally.
-   Requires WordPress on an **HTTPS** hostname + the `WOO_*` keys.
-4. **Coupons** — WooCommerce (or native) coupons applied at checkout.
-5. **"Email sent" log** on the order detail for staff visibility.
+## PHASE B — at cutover (once the transfer into 0724 is accepted)
+
+### B1. DNS (⚠️ preserve Microsoft 365 email — see DNS-CUTOVER-0724.md)
+- [ ] Build the new zone with **all M365 records preserved** (MX → Outlook, SPF,
+      autodiscover, Intune) + website A record → 0724 server IP.
+- [ ] Lower TTLs a day ahead; switch nameservers; verify `dig MX` still → Outlook and a
+      test email **to** shop@ still arrives.
+
+### B2. SSL
+- [ ] DirectAdmin → SSL/TLS → issue **Let's Encrypt** for `thetyremall.co.za` + `www`.
+- [ ] Confirm `https://thetyremall.co.za` loads with a valid padlock.
+
+### B3. Email (pick whichever works from 0724)
+- **Option A — M365 SMTP (simplest, no domain verification):** enable **Authenticated
+  SMTP** on the shop@ mailbox in M365, create an app password, set `SMTP_HOST=
+  smtp.office365.com`, `SMTP_PORT=587`, `SMTP_USER=shop@thetyremall.co.za`,
+  `SMTP_PASS=<app password>`. Confirm 0724 allows outbound TCP 587.
+- **Option B — Resend:** add the Resend DNS records (DKIM TXT + rsend/send CNAMEs) and
+  verify the domain in resend.com, then set `RESEND_API_KEY`. (See DNS-CUTOVER doc.)
+- [ ] `https://thetyremall.co.za/api/test-email?key=<CRON_SECRET>` → `{"ok":true}`.
+
+### B4. PayFast + HappyPay live
+- [ ] Admin → Payments → switch PayFast to **Live** + enter **live** merchant creds;
+      set the PayFast dashboard notify/return URLs to the live domain.
+- [ ] Enter **live HappyPay** creds (or keep disabled until ready).
+
+### B5. Final checks → open
+- [ ] Homepage, shop, product page, vehicle search, Tyrone, cart, checkout → PayFast
+      → order + confirmation email. All on HTTPS.
+- [ ] **Rotate** any credentials shared in chat (PayFast passphrase, HappyPay API key,
+      Resend key) and update them in Admin → Payments / env.
+- [ ] Admin → Settings → **Maintenance mode → Off → Save.** 🎉
+- [ ] Monitor the first few real orders + that their emails send.
+
+---
+
+## Already built this session (no longer "post-launch")
+Staff RBAC + forgot-password + brute-force protection · coupons (%/fixed, limits,
+timezone-correct dates) · media library (size-capped) · editable content/theme/wording ·
+refunds · email logging & filters · HappyPay · maintenance toggle.
+
+## Still optional / later
+Customer accounts (register/login/order history) · live WooCommerce sync during WP
+wind-down · WooCommerce orders CSV import · multi-step abandoned-cart automation.

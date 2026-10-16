@@ -7,89 +7,119 @@ interface Props {
   slug: string;
   initial: {
     name: string;
+    brand: string;
+    type: string;
+    sku: string;
     regularPrice: number; // cents
     salePrice: number;
-    price: number;
     onSale: boolean;
     stockQty: number;
     lowStockThreshold: number;
     visible: boolean;
+    shortDescription: string;
+    description: string;
+    image: string;
+    categories: string[];
+    specs: Record<string, string>;
   };
 }
 
-// work in rands in the UI, store cents
 const toR = (c: number) => (c / 100).toFixed(2);
+const SPEC_KEYS = ["width", "profile", "rim", "pcd", "pattern", "size"] as const;
 
 export function ProductEditForm({ slug, initial }: Props) {
   const router = useRouter();
+  const [name, setName] = useState(initial.name);
+  const [brand, setBrand] = useState(initial.brand);
+  const [type, setType] = useState(initial.type || "tyre");
+  const [sku, setSku] = useState(initial.sku);
+  const [categories, setCategories] = useState(initial.categories.join(", "));
   const [regular, setRegular] = useState(toR(initial.regularPrice));
   const [sale, setSale] = useState(toR(initial.salePrice));
   const [onSale, setOnSale] = useState(initial.onSale);
   const [stock, setStock] = useState(String(initial.stockQty));
   const [low, setLow] = useState(String(initial.lowStockThreshold));
   const [visible, setVisible] = useState(initial.visible);
+  const [shortDesc, setShortDesc] = useState(initial.shortDescription);
+  const [desc, setDesc] = useState(initial.description);
+  const [image, setImage] = useState(initial.image);
+  const [specs, setSpecs] = useState<Record<string, string>>(() => Object.fromEntries(SPEC_KEYS.map((k) => [k, initial.specs[k] ?? ""])));
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const touch = () => setSaved(false);
+
   async function save() {
-    setSaving(true);
-    setSaved(false);
-    setError(null);
-    const regularCents = Math.round(parseFloat(regular || "0") * 100);
-    const saleCents = Math.round(parseFloat(sale || "0") * 100);
+    setSaving(true); setSaved(false); setError(null);
     const body = {
-      price: onSale ? saleCents : regularCents,
-      salePrice: saleCents,
+      name, brand, type, sku,
+      categories: categories.split(/[|,]/).map((s) => s.trim()).filter(Boolean),
+      regularPrice: Math.round(parseFloat(regular || "0") * 100),
+      salePrice: Math.round(parseFloat(sale || "0") * 100),
       onSale,
       stockQty: parseInt(stock || "0", 10),
       lowStockThreshold: parseInt(low || "0", 10),
       visible,
+      shortDescription: shortDesc,
+      description: desc,
+      image,
+      specs,
     };
-    const res = await fetch(`/api/admin/products/${slug}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
-      setSaved(true);
-      router.refresh();
-    } else {
-      const d = await res.json().catch(() => ({}));
-      setError(d.error ?? "Couldn't save.");
-    }
+    const res = await fetch(`/api/admin/products/${slug}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (res.ok) { setSaved(true); router.refresh(); }
+    else { const d = await res.json().catch(() => ({})); setError(d.error ?? "Couldn't save."); }
     setSaving(false);
   }
 
   return (
-    <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Stock quantity">
-          <input type="number" min={0} value={stock} onChange={(e) => { setStock(e.target.value); setSaved(false); }} className="num" />
-        </Field>
-        <Field label="Low-stock alert at">
-          <input type="number" min={0} value={low} onChange={(e) => { setLow(e.target.value); setSaved(false); }} className="num" />
-        </Field>
-        <Field label="Regular price (R)">
-          <input type="number" min={0} step="0.01" value={regular} onChange={(e) => { setRegular(e.target.value); setSaved(false); }} className="num" />
-        </Field>
-        <Field label="Sale price (R)">
-          <input type="number" min={0} step="0.01" value={sale} onChange={(e) => { setSale(e.target.value); setSaved(false); }} className="num" />
-        </Field>
-      </div>
+    <div className="space-y-6">
+      <Section title="Basics">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Name"><input value={name} onChange={(e) => { setName(e.target.value); touch(); }} className="num" /></Field>
+          <Field label="Brand"><input value={brand} onChange={(e) => { setBrand(e.target.value); touch(); }} className="num" /></Field>
+          <Field label="Type">
+            <select value={type} onChange={(e) => { setType(e.target.value); touch(); }} className="num">
+              <option value="tyre">Tyre</option><option value="wheel">Wheel / Mag</option><option value="accessory">Accessory</option>
+            </select>
+          </Field>
+          <Field label="SKU"><input value={sku} onChange={(e) => { setSku(e.target.value); touch(); }} className="num" /></Field>
+          <Field label="Categories (comma-separated)"><input value={categories} onChange={(e) => { setCategories(e.target.value); touch(); }} className="num" /></Field>
+          <div className="flex items-end"><Toggle label="Visible in shop" checked={visible} onChange={(v) => { setVisible(v); touch(); }} /></div>
+        </div>
+      </Section>
 
-      <div className="flex flex-wrap gap-5">
-        <Toggle label="On sale" checked={onSale} onChange={(v) => { setOnSale(v); setSaved(false); }} />
-        <Toggle label="Visible in shop" checked={visible} onChange={(v) => { setVisible(v); setSaved(false); }} />
-      </div>
+      <Section title="Pricing & stock">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Regular price (R)"><input type="number" min={0} step="0.01" value={regular} onChange={(e) => { setRegular(e.target.value); touch(); }} className="num" /></Field>
+          <Field label="Sale price (R)"><input type="number" min={0} step="0.01" value={sale} onChange={(e) => { setSale(e.target.value); touch(); }} className="num" /></Field>
+          <Field label="Stock quantity"><input type="number" min={0} value={stock} onChange={(e) => { setStock(e.target.value); touch(); }} className="num" /></Field>
+          <Field label="Low-stock alert at"><input type="number" min={0} value={low} onChange={(e) => { setLow(e.target.value); touch(); }} className="num" /></Field>
+        </div>
+        <div className="mt-3"><Toggle label="On sale" checked={onSale} onChange={(v) => { setOnSale(v); touch(); }} /></div>
+      </Section>
+
+      <Section title="Content">
+        <Field label="Short description"><textarea value={shortDesc} onChange={(e) => { setShortDesc(e.target.value); touch(); }} rows={2} className="num !h-auto py-2" /></Field>
+        <div className="mt-4"><Field label="Description"><textarea value={desc} onChange={(e) => { setDesc(e.target.value); touch(); }} rows={5} className="num !h-auto py-2" /></Field></div>
+        <div className="mt-4"><Field label="Image URL or path"><input value={image} onChange={(e) => { setImage(e.target.value); touch(); }} placeholder="/products/slug.webp" className="num" /></Field></div>
+      </Section>
+
+      <Section title="Specifications">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {SPEC_KEYS.map((k) => (
+            <Field key={k} label={k.charAt(0).toUpperCase() + k.slice(1)}>
+              <input value={specs[k] ?? ""} onChange={(e) => { setSpecs({ ...specs, [k]: e.target.value }); touch(); }} className="num" />
+            </Field>
+          ))}
+        </div>
+      </Section>
 
       {error && <div className="rounded-lg border border-sale/40 bg-sale/10 p-2.5 text-sm font-semibold text-sale">{error}</div>}
 
-      <div className="flex items-center gap-3">
-        <button onClick={save} disabled={saving} className="btn btn-volt px-6 disabled:opacity-60">
-          {saving ? "Saving…" : "Save changes"}
-        </button>
-        {saved && <span className="text-sm font-semibold text-pay">✓ Saved — live on the store</span>}
+      <div className="sticky bottom-0 -mx-1 flex items-center gap-3 border-t border-line bg-ink/80 px-1 py-3 backdrop-blur">
+        <button onClick={save} disabled={saving} className="btn btn-volt px-6 disabled:opacity-60">{saving ? "Saving…" : "Save changes"}</button>
+        {saved && <span className="text-sm font-semibold text-pay">✓ Saved — live on the store within ~1 min</span>}
       </div>
 
       <style>{`.num{height:2.75rem;width:100%;border-radius:0.5rem;border:1px solid var(--color-line);background:var(--color-surface-2);padding:0 0.75rem;color:var(--color-fg);outline:none}.num:focus{border-color:var(--color-volt)}`}</style>
@@ -97,15 +127,17 @@ export function ProductEditForm({ slug, initial }: Props) {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold text-muted">{label}</span>
+    <div>
+      <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-muted">{title}</h3>
       {children}
-    </label>
+    </div>
   );
 }
-
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="block"><span className="mb-1.5 block text-xs font-semibold text-muted">{label}</span>{children}</label>;
+}
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button type="button" onClick={() => onChange(!checked)} className="flex items-center gap-2.5">

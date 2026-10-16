@@ -4,8 +4,11 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ProductEditForm } from "@/components/admin/ProductEditForm";
 import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
+import { DuplicateProductButton } from "@/components/admin/DuplicateProductButton";
 import { getProductRow } from "@/lib/db/queries";
 import { Close } from "@/components/icons";
+
+function parseJson<T>(s: string, fallback: T): T { try { return JSON.parse(s) as T; } catch { return fallback; } }
 
 export const instant = false;
 
@@ -38,22 +41,32 @@ export default async function AdminProductEdit({ params }: { params: Promise<{ s
           slug={p.slug}
           initial={{
             name: p.name,
+            brand: p.brand,
+            type: p.type,
+            sku: p.sku,
             regularPrice: p.regularPrice,
             salePrice: p.salePrice,
-            price: p.price,
             onSale: p.onSale,
             stockQty: p.stockQty,
             lowStockThreshold: p.lowStockThreshold,
             visible: p.visible,
+            shortDescription: p.shortDescription,
+            description: p.description,
+            image: p.image ?? "",
+            categories: parseJson<string[]>(p.categories, []),
+            specs: parseJson<Record<string, string>>(p.specs, {}),
           }}
         />
       </div>
 
-      <div className="mt-5 flex items-center justify-between gap-4 border-t border-line pt-4">
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-4">
         <Link href={`/product/${p.slug}`} target="_blank" className="text-sm font-semibold text-muted hover:text-volt">
           View on store ↗
         </Link>
-        <DeleteProductButton slug={p.slug} name={p.name} />
+        <div className="flex items-center gap-4">
+          <DuplicateProductButton slug={p.slug} />
+          <DeleteProductButton slug={p.slug} name={p.name} />
+        </div>
       </div>
     </AdminShell>
   );

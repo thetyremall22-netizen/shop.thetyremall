@@ -180,6 +180,13 @@ export default function CheckoutPage() {
             )}
           </Section>
 
+          {payTotal === 0 ? (
+          <Section n={3} title="Payment">
+            <div className="rounded-xl border border-volt/40 bg-volt/10 p-4 text-sm font-semibold text-volt">
+              ✓ Your coupon covers the full amount — no payment needed. Just place your order below.
+            </div>
+          </Section>
+          ) : (
           <Section n={3} title="Payment method">
             <div className="space-y-2">
               {PAYMENT_METHODS.map((m) => (
@@ -211,13 +218,18 @@ export default function CheckoutPage() {
               Payments are processed securely by PayFast. Card details are never stored on this site.
             </p>
           </Section>
+          )}
 
           {error && (
             <div className="rounded-xl border border-sale/40 bg-sale/10 p-3 text-sm font-semibold text-sale">{error}</div>
           )}
 
           <button type="submit" disabled={submitting} className="btn btn-volt w-full py-4 text-base disabled:opacity-60">
-            {submitting ? "Redirecting to secure payment…" : <><Bolt width={18} height={18} /> Pay securely · {formatPrice(payTotal)}</>}
+            {submitting
+              ? (payTotal === 0 ? "Placing your order…" : "Redirecting to secure payment…")
+              : payTotal === 0
+                ? <><Bolt width={18} height={18} /> Place order · FREE</>
+                : <><Bolt width={18} height={18} /> Pay securely · {formatPrice(payTotal)}</>}
           </button>
         </form>
 

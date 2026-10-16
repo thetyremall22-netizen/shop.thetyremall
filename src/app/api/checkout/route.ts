@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProduct } from "@/lib/catalogue";
 import { computeTotals, type LineItem } from "@/lib/totals";
-import { saveOrder, nextReference, type Order } from "@/lib/orders";
+import { saveOrder, nextReference, updateOrder, type Order } from "@/lib/orders";
 import { buildPaymentFields, payfastProcessUrl, isConfigured, isSandbox } from "@/lib/payfast";
 import { createHappyPayOrder, isEnabled as happyPayEnabled } from "@/lib/happypay";
-import { getLive } from "@/lib/db/queries";
-import { validateCoupon } from "@/lib/coupons";
+import { getLive, decrementStock } from "@/lib/db/queries";
+import { validateCoupon, recordRedemption } from "@/lib/coupons";
+import { sendOrderPaid } from "@/lib/email";
+import { markRecovered } from "@/lib/abandoned";
 import type { DeliveryMethod } from "@/lib/shop-config";
 
 interface Body {
@@ -92,6 +94,19 @@ export async function POST(req: NextRequest) {
   }
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
+
+  // --- Free order (e.g. a 100%-off coupon): no gateway, mark paid directly ---
+  if (totals.total === 0) {
+    const updated = await updateOrder(id, { status: "processing", paymentMethod: "coupon" });
+    const paidOrder = updated ?? order;
+    for (const it of paidOrder.items) await decrementStock(it.slug, it.qty);
+    await sendOrderPaid(paidOrder).catch((e) => console.error("[checkout] free-order email failed", e));
+    if (paidOrder.totals.couponCode && paidOrder.totals.couponDiscount > 0) {
+      await recordRedemption(paidOrder.totals.couponCode, paidOrder.reference, paidOrder.customer.email, paidOrder.totals.couponDiscount).catch(() => {});
+    }
+    await markRecovered(paidOrder.customer.email).catch(() => {});
+    return NextResponse.json({ gateway: "free", reference, redirectUrl: `${origin}/checkout/return?ref=${encodeURIComponent(reference)}` });
+  }
 
   // --- HappyPay (BNPL): create an order and redirect the customer there ---
   if (paymentMethod === "happypay") {

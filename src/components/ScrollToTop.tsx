@@ -11,7 +11,17 @@ import { useEffect } from "react";
 export function ScrollToTop() {
   const pathname = usePathname();
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+    const toTop = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    };
+    toTop();
+    // Re-run after paint and a short tick so streamed / partially-prerendered
+    // content (e.g. the checkout page) can't leave the view scrolled down.
+    const raf = requestAnimationFrame(toTop);
+    const t = setTimeout(toTop, 80);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t); };
   }, [pathname]);
   return null;
 }

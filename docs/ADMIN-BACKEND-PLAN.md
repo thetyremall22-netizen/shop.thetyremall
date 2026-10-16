@@ -165,5 +165,6 @@ pulled forward to run next, after the current catalog work. Delivered in slices:
 - 2026-10-16 — Phase 5 (payments) shipped: encrypted gateway config store + Admin → Payments screen; PayFast now DB-configurable (no redeploy, env fallback); real HappyPay adapter (createOrder/webhook/status/refund) wired into checkout. DNS/email go-live checklist (docs/GO-LIVE-DNS.md).
 - 2026-10-16 — Orders: refund button (full/partial) via gateway adapters (HappyPay auto, PayFast manual-record + restock + email).
 - 2026-10-16 — Phase 2 catalog depth: full single-product editor (all fields + spec merge) + product duplicate.
-- 2026-10-16 — Next: Brands & Categories CRUD, Fitment admin (rest of Phase 2), then Phase 3 (pages/sections/strings/theme).
+- 2026-10-16 — Phase 3 (reviews): Reviews & ratings manager — testimonials + rating summary admin, homepage wired to DB, fixes the 0.0★ bug.
+- 2026-10-16 — Next: Brands & Categories CRUD + Fitment (Phase 2), then more Phase 3 (strings/theme/page builder, team/stats/story, menus).
 - 2026-10-16 — Next: remaining catalog depth (brands/categories CRUD, fitment admin, richer product editor) + content/theme (Phase 3) + the 3 asks.

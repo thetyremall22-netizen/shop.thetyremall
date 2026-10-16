@@ -186,12 +186,19 @@ export async function getProductRow(slug: string) {
 
 export interface ProductPatch {
   price?: number;
+  regularPrice?: number;
   salePrice?: number;
   onSale?: boolean;
   stockQty?: number;
   lowStockThreshold?: number;
   visible?: boolean;
   name?: string;
+  brand?: string;
+  type?: string;
+  sku?: string;
+  image?: string | null;
+  categories?: string; // json string
+  specs?: string; // json string
   description?: string;
   shortDescription?: string;
 }

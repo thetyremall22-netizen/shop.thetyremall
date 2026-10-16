@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/lib/cart";
@@ -17,8 +17,34 @@ export default function CheckoutPage() {
   const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
   const [couponMsg, setCouponMsg] = useState<string | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
   const centre = FITMENT_CENTRES.find((f) => f.id === fitmentStoreId) ?? FITMENT_CENTRES[0];
   const payTotal = Math.max(0, totals.total - (coupon?.discount ?? 0));
+
+  // Restore the customer details + applied coupon after a round-trip to the
+  // payment gateway (or an accidental refresh). Runs once the cart has hydrated
+  // and the form is rendered (cart items persist separately via the cart store).
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || items.length === 0) return;
+    let saved: { fields?: Record<string, string>; couponCode?: string } | null = null;
+    try { saved = JSON.parse(sessionStorage.getItem("ttm-checkout") || "null"); } catch { /* ignore */ }
+    if (!saved) { restoredRef.current = true; return; }
+    restoredRef.current = true;
+    const form = formRef.current;
+    if (form && saved.fields) {
+      for (const [k, v] of Object.entries(saved.fields)) {
+        const el = form.elements.namedItem(k) as HTMLInputElement | null;
+        if (el && !el.value) el.value = v;
+      }
+    }
+    if (saved.couponCode) {
+      setCouponInput(saved.couponCode);
+      fetch("/api/coupon/validate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: saved.couponCode, items: items.map((i) => ({ slug: i.slug, qty: i.qty })) }) })
+        .then((r) => r.json()).then((d) => { if (d.valid && d.discount > 0) setCoupon({ code: d.code, discount: d.discount }); }).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length]);
 
   async function applyCoupon() {
     const code = couponInput.trim();
@@ -43,6 +69,12 @@ export default function CheckoutPage() {
     setError(null);
     setSubmitting(true);
     const fd = new FormData(e.currentTarget);
+    // Persist details + coupon so they survive the trip to the payment gateway.
+    try {
+      const fields: Record<string, string> = {};
+      fd.forEach((v, k) => { if (typeof v === "string") fields[k] = v; });
+      sessionStorage.setItem("ttm-checkout", JSON.stringify({ fields, couponCode: coupon?.code }));
+    } catch { /* ignore */ }
     const body = {
       customer: {
         firstName: String(fd.get("firstName") ?? ""),
@@ -128,7 +160,7 @@ export default function CheckoutPage() {
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)]">
         {/* form */}
-        <form className="min-w-0 space-y-8" onSubmit={handleSubmit}>
+        <form ref={formRef} className="min-w-0 space-y-8" onSubmit={handleSubmit}>
           <Section n={1} title="Your details">
             <div className="grid gap-3 sm:grid-cols-2">
               <Field name="firstName" label="First name" required />

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SiteSettings } from "@/lib/settings";
+import { TIMEZONE_OPTIONS } from "@/lib/tz";
 
 const field = "mt-1 h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt";
 const label = "text-xs font-bold uppercase tracking-wide text-muted";
@@ -102,6 +103,12 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
         <label className="flex items-center gap-2.5 pt-6">
           <input type="checkbox" checked={v.commerce.vatIncluded} onChange={(e) => up("commerce", "vatIncluded", e.target.checked)} className="size-4 accent-volt" />
           <span className="text-sm font-semibold text-fg">Prices shown include VAT</span>
+        </label>
+        <label className="block sm:col-span-2"><span className={label}>Store timezone</span>
+          <select value={v.commerce.timezone} onChange={(e) => up("commerce", "timezone", e.target.value)} className={field}>
+            {TIMEZONE_OPTIONS.map((tz) => (<option key={tz} value={tz}>{tz.replace("_", " ")}</option>))}
+          </select>
+          <span className="mt-1 block text-xs text-muted">Coupon &amp; special start/end times run on this timezone — they go live and expire at the right local moment regardless of where you edit from.</span>
         </label>
       </Group>
 

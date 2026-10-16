@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { msToLocalInput, localInputToMs, DEFAULT_TZ } from "@/lib/tz";
 
 export interface CouponRow {
   id: number; code: string; description: string;
@@ -14,8 +15,6 @@ export interface CouponRow {
 const field = "mt-1 h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt";
 const label = "text-xs font-bold uppercase tracking-wide text-muted";
 const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2 });
-const toLocal = (ms: number | null) => (ms ? new Date(ms - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "");
-const fromLocal = (s: string) => (s ? new Date(s).getTime() : null);
 
 interface FormState {
   id: number; code: string; description: string;
@@ -26,8 +25,10 @@ interface FormState {
 }
 const EMPTY: FormState = { id: 0, code: "", description: "", discountType: "percentage", discountValue: 10, scope: "all", productSlugs: [], minSpend: 0, perCustomerLimit: 0, usageLimitTotal: 0, active: true, startsAt: null, endsAt: null };
 
-export function CouponsManager({ coupons }: { coupons: CouponRow[] }) {
+export function CouponsManager({ coupons, timezone = DEFAULT_TZ }: { coupons: CouponRow[]; timezone?: string }) {
   const router = useRouter();
+  const toLocal = (ms: number | null) => msToLocalInput(ms, timezone);
+  const fromLocal = (s: string) => localInputToMs(s, timezone);
   const [f, setF] = useState<FormState>({ ...EMPTY });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [slugText, setSlugText] = useState("");
@@ -116,6 +117,7 @@ export function CouponsManager({ coupons }: { coupons: CouponRow[] }) {
             <input type="datetime-local" value={toLocal(f.startsAt)} onChange={(e) => setF({ ...f, startsAt: fromLocal(e.target.value) })} className={field} /></label>
           <label className="block"><span className={label}>Ends (optional)</span>
             <input type="datetime-local" value={toLocal(f.endsAt)} onChange={(e) => setF({ ...f, endsAt: fromLocal(e.target.value) })} className={field} /></label>
+          <p className="col-span-full -mt-2 text-xs text-muted">Times are in <span className="font-semibold text-fg">{timezone.replace("_", " ")}</span> — set in Settings. Coupons go live and expire at that local time.</p>
 
           <label className="flex items-center gap-2.5 pt-6">
             <input type="checkbox" checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} className="size-4 accent-volt" />

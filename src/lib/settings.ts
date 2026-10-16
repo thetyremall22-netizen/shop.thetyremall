@@ -23,6 +23,7 @@ export interface SiteSettings {
     vatIncluded: boolean; // prices shown incl. VAT
     happyPayMonths: number;
     roadHazardFee: number; // minor units
+    timezone: string; // IANA tz for coupon/special start-end times (e.g. Africa/Johannesburg)
   };
 }
 
@@ -49,6 +50,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     vatIncluded: true,
     happyPayMonths: 2,
     roadHazardFee: sc.ROAD_HAZARD_FEE,
+    timezone: "Africa/Johannesburg",
   },
 };
 

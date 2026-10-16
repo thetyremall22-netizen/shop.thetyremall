@@ -3,6 +3,13 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  // Nginx Unit's unit-http response shim doesn't reliably forward the
+  // Content-Encoding header that Next sets when it gzips a response, so
+  // dynamically-rendered pages (e.g. /admin) arrive gzipped but undecoded —
+  // the browser shows binary garbage. Disable Next's own compression and let
+  // the front web server (LiteSpeed) handle gzip on the way out. Static pages
+  // were unaffected because they're served as plain prebuilt HTML.
+  compress: false,
   // Self-contained server build for the 0724 (DirectAdmin/Passenger) deploy:
   // `.next/standalone/server.js` + a traced node_modules, so the server needs no
   // `npm install`. Vercel ignores this and deploys as normal.

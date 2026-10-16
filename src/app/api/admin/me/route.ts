@@ -12,5 +12,6 @@ export async function GET() {
     isOwner: u.isOwner,
     canManageUsers: can(u.role, "users.manage"),
     canManageSettings: can(u.role, "settings.manage"),
+    canManageDeals: can(u.role, "deals.manage"),
   });
 }

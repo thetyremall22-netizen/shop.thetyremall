@@ -12,7 +12,7 @@ const BASE_NAV = [
   { href: "/admin/leads", label: "Leads & Enquiries" },
 ];
 
-interface Me { name: string; email: string; role: string; isOwner: boolean; canManageUsers: boolean; canManageSettings: boolean }
+interface Me { name: string; email: string; role: string; isOwner: boolean; canManageUsers: boolean; canManageSettings: boolean; canManageDeals: boolean }
 const ROLE_LABEL: Record<string, string> = { super_admin: "Super Admin", manager: "Manager", editor: "Editor", viewer: "Viewer" };
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -28,6 +28,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const NAV = [
     ...BASE_NAV,
+    ...(me?.canManageDeals ? [{ href: "/admin/coupons", label: "Coupons" }] : []),
     ...(me?.canManageSettings ? [{ href: "/admin/settings", label: "Settings" }] : []),
     ...(me?.canManageUsers ? [{ href: "/admin/users", label: "Staff & roles" }] : []),
   ];

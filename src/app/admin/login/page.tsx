@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 export default function AdminLogin() {
   const router = useRouter();
   const [password, setPassword] = useState("");
+  const [website, setWebsite] = useState(""); // honeypot — must stay empty
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -16,7 +17,7 @@ export default function AdminLogin() {
     const res = await fetch("/api/admin/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ password, website }),
     });
     if (res.ok) {
       router.push("/admin");
@@ -35,6 +36,17 @@ export default function AdminLogin() {
           <span className="text-chrome">TYRE MALL</span> <span className="text-volt-grad">ADMIN</span>
         </div>
         <p className="mb-5 text-sm text-muted">Sign in to manage stock, prices and orders.</p>
+        {/* Honeypot: hidden from humans; bots that auto-fill it are rejected. */}
+        <input
+          type="text"
+          name="website"
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          className="absolute left-[-9999px] h-0 w-0 opacity-0"
+        />
         <label className="mb-1.5 block text-xs font-semibold text-muted">Password</label>
         <input
           type="password"

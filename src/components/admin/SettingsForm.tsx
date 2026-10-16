@@ -1,0 +1,116 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import type { SiteSettings } from "@/lib/settings";
+
+const field = "mt-1 h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt";
+const label = "text-xs font-bold uppercase tracking-wide text-muted";
+
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="card p-5">
+      <h2 className="font-display text-lg">{title}</h2>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">{children}</div>
+    </div>
+  );
+}
+
+export function SettingsForm({ initial }: { initial: SiteSettings }) {
+  const router = useRouter();
+  const [v, setV] = useState<SiteSettings>(initial);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function up<G extends keyof SiteSettings>(group: G, key: keyof SiteSettings[G], val: unknown) {
+    setV((prev) => ({ ...prev, [group]: { ...prev[group], [key]: val } }));
+    setDone(false);
+  }
+
+  async function save() {
+    if (busy) return;
+    setBusy(true); setDone(false); setError(null);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(v),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) { setDone(true); if (d.settings) setV(d.settings); router.refresh(); }
+      else setError(d.error ?? "Couldn't save.");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    setBusy(false);
+  }
+
+  const rand = (cents: number) => (cents / 100).toString();
+  const toCents = (r: string) => Math.max(0, Math.round((Number(r) || 0) * 100));
+
+  return (
+    <div className="space-y-5">
+      <Group title="Site identity">
+        <label className="block"><span className={label}>Site name</span>
+          <input value={v.site.name} onChange={(e) => up("site", "name", e.target.value)} className={field} /></label>
+        <label className="block"><span className={label}>Tagline</span>
+          <input value={v.site.tagline} onChange={(e) => up("site", "tagline", e.target.value)} className={field} /></label>
+        <label className="block sm:col-span-2"><span className={label}>Copyright name (footer)</span>
+          <input value={v.site.copyrightName} onChange={(e) => up("site", "copyrightName", e.target.value)} className={field} /></label>
+      </Group>
+
+      <Group title="Contact & hours">
+        <label className="block"><span className={label}>Email</span>
+          <input value={v.contact.email} onChange={(e) => up("contact", "email", e.target.value)} className={field} /></label>
+        <label className="block"><span className={label}>Phone (display)</span>
+          <input value={v.contact.phoneDisplay} onChange={(e) => up("contact", "phoneDisplay", e.target.value)} className={field} /></label>
+        <label className="block"><span className={label}>Phone (dial — digits)</span>
+          <input value={v.contact.phoneTel} onChange={(e) => up("contact", "phoneTel", e.target.value)} className={field} /></label>
+        <label className="block"><span className={label}>WhatsApp number (intl digits)</span>
+          <input value={v.contact.whatsappNumber} onChange={(e) => up("contact", "whatsappNumber", e.target.value)} placeholder="27780088788" className={field} /></label>
+        <label className="block sm:col-span-2"><span className={label}>WhatsApp quick link (wa.link/…)</span>
+          <input value={v.contact.whatsappLink} onChange={(e) => up("contact", "whatsappLink", e.target.value)} className={field} /></label>
+        <label className="block sm:col-span-2"><span className={label}>Address</span>
+          <textarea value={v.contact.addressLines} onChange={(e) => up("contact", "addressLines", e.target.value)} rows={2} className={`${field} h-auto py-2`} /></label>
+        <label className="block sm:col-span-2"><span className={label}>Hours</span>
+          <input value={v.contact.hours} onChange={(e) => up("contact", "hours", e.target.value)} className={field} /></label>
+      </Group>
+
+      <Group title="Social links">
+        <label className="block"><span className={label}>Facebook URL</span>
+          <input value={v.social.facebook} onChange={(e) => up("social", "facebook", e.target.value)} className={field} /></label>
+        <label className="block"><span className={label}>Instagram URL</span>
+          <input value={v.social.instagram} onChange={(e) => up("social", "instagram", e.target.value)} className={field} /></label>
+        <label className="block"><span className={label}>TikTok URL</span>
+          <input value={v.social.tiktok} onChange={(e) => up("social", "tiktok", e.target.value)} className={field} /></label>
+        <label className="block"><span className={label}>YouTube URL</span>
+          <input value={v.social.youtube} onChange={(e) => up("social", "youtube", e.target.value)} className={field} /></label>
+      </Group>
+
+      <Group title="Commerce">
+        <label className="block"><span className={label}>Free delivery — min tyres</span>
+          <input type="number" min={1} value={v.commerce.freeDeliveryMinTyres} onChange={(e) => up("commerce", "freeDeliveryMinTyres", Number(e.target.value))} className={field} /></label>
+        <label className="block"><span className={label}>Single-tyre delivery fee (R)</span>
+          <input type="number" min={0} step="0.01" value={rand(v.commerce.standardDeliveryFee)} onChange={(e) => up("commerce", "standardDeliveryFee", toCents(e.target.value))} className={field} /></label>
+        <label className="block"><span className={label}>VAT rate (%)</span>
+          <input type="number" min={0} max={100} step="0.1" value={v.commerce.vatRate} onChange={(e) => up("commerce", "vatRate", Number(e.target.value))} className={field} /></label>
+        <label className="block"><span className={label}>HappyPay months</span>
+          <input type="number" min={1} value={v.commerce.happyPayMonths} onChange={(e) => up("commerce", "happyPayMonths", Number(e.target.value))} className={field} /></label>
+        <label className="block"><span className={label}>Road-hazard cover, per tyre (R)</span>
+          <input type="number" min={0} step="0.01" value={rand(v.commerce.roadHazardFee)} onChange={(e) => up("commerce", "roadHazardFee", toCents(e.target.value))} className={field} /></label>
+        <label className="flex items-center gap-2.5 pt-6">
+          <input type="checkbox" checked={v.commerce.vatIncluded} onChange={(e) => up("commerce", "vatIncluded", e.target.checked)} className="size-4 accent-volt" />
+          <span className="text-sm font-semibold text-fg">Prices shown include VAT</span>
+        </label>
+      </Group>
+
+      <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center gap-3 border-t border-line bg-ink/80 px-1 py-3 backdrop-blur">
+        <button onClick={save} disabled={busy} className="btn btn-volt px-6 disabled:opacity-50">{busy ? "Saving…" : "Save settings"}</button>
+        {done && <span className="text-sm font-semibold text-pay">✓ Saved — live on the storefront</span>}
+        {error && <span className="text-sm font-semibold text-sale">{error}</span>}
+        <span className="ml-auto text-xs text-muted">Changes appear on the storefront within a few seconds.</span>
+      </div>
+    </div>
+  );
+}

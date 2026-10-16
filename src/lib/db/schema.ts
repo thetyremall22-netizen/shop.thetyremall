@@ -62,6 +62,15 @@ export const meta = sqliteTable("meta", {
   value: text("value").notNull().default(""),
 });
 
+// Backend-controlled site settings (singletons), one JSON doc per group key
+// (site, contact, social, commerce …). Edited in /admin/settings; read by the
+// storefront so contact/commerce content isn't hardcoded.
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull().default("{}"), // json
+  updatedAt: integer("updated_at").notNull().default(0),
+});
+
 export type ProductRow = typeof products.$inferSelect;
 export type OrderRow = typeof orders.$inferSelect;
 export type EmailRow = typeof emails.$inferSelect;

@@ -3,15 +3,19 @@ import Image from "next/image";
 import { Logo } from "./Logo";
 import { Truck, Shield, Bolt, Phone, Pin } from "./icons";
 import { NAV_PRIMARY } from "@/lib/nav";
+import { getSettings, currentYear } from "@/lib/settings";
 
-export function Footer() {
+export async function Footer() {
+  const s = await getSettings();
+  const year = await currentYear();
+  const addressLines = s.contact.addressLines.split("\n").filter(Boolean);
   return (
     <footer className="mt-20 border-t border-line bg-ink-2">
       {/* trust strip */}
       <div className="border-b border-line">
         <div className="container-x grid grid-cols-2 gap-px lg:grid-cols-4">
           {[
-            { icon: Truck, t: "Free Delivery", s: "On 2+ tyres, nationwide" },
+            { icon: Truck, t: "Free Delivery", s: `On ${s.commerce.freeDeliveryMinTyres}+ tyres, nationwide` },
             { icon: Bolt, t: "Pay Later", s: "0% with HappyPay & Mobicred" },
             { icon: Shield, t: "Road Hazard Cover", s: "Optional 12-month protection" },
             { icon: Pin, t: "JHB Fitment", s: "Book at a partner centre" },
@@ -35,8 +39,8 @@ export function Footer() {
           <p className="mt-4 max-w-xs text-sm text-muted">
             South Africa's largest online tyre supplier. Quality tyres, mag wheels and expert service — delivered.
           </p>
-          <a href="tel:0780088788" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-fg">
-            <Phone width={16} height={16} className="text-volt" /> 078 0088 788
+          <a href={`tel:${s.contact.phoneTel}`} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-fg">
+            <Phone width={16} height={16} className="text-volt" /> {s.contact.phoneDisplay}
           </a>
           <Image src="/brand/springboks.png" alt="Proud supporters of the Springboks" width={300} height={120} className="mt-6 h-16 w-auto" />
         </div>
@@ -80,10 +84,12 @@ export function Footer() {
           <h4 className="eyebrow mb-3">Visit us</h4>
           <p className="text-sm text-muted">
             <Pin width={13} height={13} className="mr-1 inline text-volt" />
-            31 Heronmere Road, Reuven, Johannesburg, 2091
+            {addressLines.map((line, i) => (
+              <span key={i}>{i > 0 && <br />}{line}</span>
+            ))}
           </p>
-          <a href="mailto:shop@thetyremall.co.za" className="mt-3 block text-sm text-muted hover:text-volt">shop@thetyremall.co.za</a>
-          <p className="mt-3 text-xs text-muted">Mon–Fri 8:00–17:00 · Sat 8:00–13:00</p>
+          <a href={`mailto:${s.contact.email}`} className="mt-3 block text-sm text-muted hover:text-volt">{s.contact.email}</a>
+          <p className="mt-3 text-xs text-muted">{s.contact.hours}</p>
         </div>
       </div>
 
@@ -99,7 +105,7 @@ export function Footer() {
 
       <div className="border-t border-line">
         <div className="container-x flex flex-col items-center justify-between gap-2 py-5 text-xs text-faint sm:flex-row">
-          <p>© {2026} The Tyre Mall. All rights reserved.</p>
+          <p>© {year} {s.site.copyrightName}. All rights reserved.</p>
           <p>Demo build — design preview. Prices & stock from live catalogue.</p>
         </div>
       </div>

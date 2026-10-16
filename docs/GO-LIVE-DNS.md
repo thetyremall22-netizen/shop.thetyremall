@@ -45,6 +45,26 @@ Moving the website to the **0724** server changes only the **A record**. Email
   ```
 - [ ] Test: `https://thetyremall.co.za/api/test-email?key=<CRON_SECRET>` → expect `{"ok":true}`.
 
+### 3b. Email via Resend (current setup on Vercel) — DOMAIN MUST BE VERIFIED
+The app uses Resend when `RESEND_API_KEY` is set. **Until the domain is verified,
+Resend is in test mode:** it only accepts `from: onboarding@resend.dev` sending
+`to:` your own signup address, and rejects everything else with a 403
+("You can only send testing emails to your own email address… verify a domain").
+That is why customer emails, the shop@ CC, and even sends to the signup address
+fail — our `from` is `shop@thetyremall.co.za` (correct for production, blocked in
+test mode). **No code change fixes this — verify the domain:**
+- [ ] resend.com → **Domains → Add Domain** → `thetyremall.co.za`.
+- [ ] Add the DNS records Resend shows (generated per-domain). They sit on a
+  **`send.` subdomain**, so they DO NOT disturb Microsoft 365 inbound mail:
+  - `MX`  on `send` → `feedback-smtp.<region>.amazonses.com` (priority 10)
+  - `TXT` (SPF) on `send` → `v=spf1 include:amazonses.com ~all`
+  - `TXT` (DKIM) on `resend._domainkey` → the long key value Resend gives
+- [ ] Click **Verify** in Resend (DNS can take minutes–hours). Wait for green.
+- [ ] Confirm Vercel env has `MAIL_FROM=The Tyre Mall <shop@thetyremall.co.za>`
+  (already the default) and `RESEND_API_KEY` set. No redeploy needed after verify.
+- [ ] Test: in Admin → Leads → open a lead → send a test email to a customer
+  address; it should now show **sent** (not failed) in Admin → Emails.
+
 ## 4. Deliverability (keep order emails out of spam)
 - [ ] **SPF** — already correct for M365. ✅ No change.
 - [ ] **DKIM** — Microsoft Defender portal → Email & collaboration → Policies & rules →

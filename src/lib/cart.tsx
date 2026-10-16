@@ -210,7 +210,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setDelivery: (method) => dispatch({ type: "SET_DELIVERY", method }),
     setFitment: (storeId) => dispatch({ type: "SET_FITMENT", storeId }),
     setFitmentDate: (date) => dispatch({ type: "SET_FITMENT_DATE", date }),
-    clear: () => dispatch({ type: "CLEAR" }),
+    // Remove the persisted cart FIRST, then clear state. On the order-success
+    // page the provider re-mounts and its hydrate effect runs *after* this call;
+    // nuking localStorage here means that hydrate finds nothing to restore, so
+    // the cart genuinely empties (and can't come back from a stale copy).
+    clear: () => {
+      try { localStorage.removeItem(STORAGE_KEY); } catch { /* private mode */ }
+      dispatch({ type: "CLEAR" });
+    },
     totals,
     drawerOpen,
     setDrawerOpen,

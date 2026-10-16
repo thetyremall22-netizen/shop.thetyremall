@@ -9,7 +9,14 @@ import { Check } from "@/components/icons";
 function ReturnInner() {
   const ref = useSearchParams().get("ref");
   const { clear } = useCart();
-  useEffect(() => { clear(); }, [clear]);
+  // Order placed: empty the cart AND wipe the saved checkout (customer details +
+  // applied coupon). The coupon is persisted in sessionStorage so it survives the
+  // trip to the payment gateway — but if we don't clear it on success, the next
+  // checkout silently re-applies it (e.g. a 100%-off coupon = free again).
+  useEffect(() => {
+    clear();
+    try { sessionStorage.removeItem("ttm-checkout"); } catch { /* private mode */ }
+  }, [clear]);
 
   return (
     <div className="container-x grid place-items-center py-24 text-center">

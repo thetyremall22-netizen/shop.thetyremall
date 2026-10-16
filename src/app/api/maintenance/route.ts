@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
-import { getSettings } from "@/lib/settings";
+import { connection } from "next/server";
+import { libsql } from "@/lib/db";
 
-// Lightweight public flag used by middleware to decide whether to show the
-// "coming soon" gate. getSettings() is cached, so this is cheap.
+// Public flag the proxy uses to decide whether to show the "coming soon" gate.
+// Read DIRECTLY from the DB (not the cached getSettings) and force dynamic —
+// on the self-hosted standalone build, `"use cache"` getters and prerendered
+// routes are frozen at build time, so a cached read would never reflect the
+// admin toggle.
 export async function GET() {
+  await connection();
+  let enabled = false;
   try {
-    const s = await getSettings();
-    return NextResponse.json({ enabled: !!s.maintenance.enabled }, { headers: { "Cache-Control": "no-store" } });
-  } catch {
-    // Fail open: never hide the live store because of a transient read error.
-    return NextResponse.json({ enabled: false }, { headers: { "Cache-Control": "no-store" } });
-  }
+    const r = await libsql.execute({ sql: "SELECT value FROM settings WHERE key = 'maintenance' LIMIT 1", args: [] });
+    const raw = r.rows[0]?.value;
+    if (raw) enabled = !!(JSON.parse(String(raw)) as { enabled?: boolean }).enabled;
+  } catch { /* table/row missing — default off (fail open) */ }
+  return NextResponse.json({ enabled }, { headers: { "Cache-Control": "no-store" } });
 }

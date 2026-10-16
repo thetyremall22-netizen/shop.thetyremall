@@ -30,6 +30,18 @@ export interface SiteSettings {
     heading: string;
     message: string;
   };
+  email: {
+    // How the site sends email. Read at runtime (admin-editable) because the
+    // self-hosted build freezes env-based config. Leave blank to use env vars.
+    smtpHost: string;
+    smtpPort: number;
+    smtpSecure: boolean; // true = port 465 SSL, false = 587 STARTTLS
+    smtpUser: string;
+    smtpPass: string;
+    mailFrom: string;    // e.g. The Tyre Mall <shop@thetyremall.co.za>
+    emailCc: string;     // comma-separated BCC/CC on every send (optional)
+    resendApiKey: string; // optional: use Resend HTTP API instead of SMTP
+  };
 }
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -61,6 +73,16 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     enabled: false,
     heading: "We're launching soon",
     message: "Our online store is getting its final touches. We'll be open for orders very soon — in the meantime, give us a call and our team will sort you out.",
+  },
+  email: {
+    smtpHost: "",
+    smtpPort: 587,
+    smtpSecure: false,
+    smtpUser: "",
+    smtpPass: "",
+    mailFrom: "",
+    emailCc: "",
+    resendApiKey: "",
   },
 };
 

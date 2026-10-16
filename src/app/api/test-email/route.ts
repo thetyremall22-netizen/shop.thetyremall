@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { connection } from "next/server";
 import { isAuthorizedCron } from "@/lib/cron-auth";
 import { sendMail, emailConfigured, SHOP_EMAIL } from "@/lib/email";
 
@@ -7,14 +8,15 @@ import { sendMail, emailConfigured, SHOP_EMAIL } from "@/lib/email";
  *  Sends a test to shop@thetyremall.co.za (plus whatever EMAIL_CC is set to).
  *  Only ever emails the fixed shop address — never an arbitrary recipient. */
 export async function GET(req: NextRequest) {
+  await connection(); // never prerender — read live config + send at request time
   if (!isAuthorizedCron(req)) {
     return NextResponse.json({ error: "unauthorized — add ?key=CRON_SECRET" }, { status: 401 });
   }
-  if (!emailConfigured()) {
+  if (!(await emailConfigured())) {
     return NextResponse.json({
       ok: false,
       configured: false,
-      message: "SMTP not configured — set SMTP_HOST, SMTP_USER and SMTP_PASS in Vercel env vars, then redeploy.",
+      message: "Email not configured — set it in Admin → Settings → Email (SMTP host/user/password, or a Resend API key).",
     });
   }
   const html = `<!doctype html><html><body style="margin:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:#14171a">

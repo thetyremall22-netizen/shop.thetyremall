@@ -1,50 +1,58 @@
 import "server-only";
-import nodemailer, { type Transporter } from "nodemailer";
+import nodemailer from "nodemailer";
 import type { Order } from "./orders";
 import { logEmail, type EmailType } from "./email-log";
+import { libsql } from "./db";
+import type { SiteSettings } from "./settings";
 
-const HOST = process.env.SMTP_HOST;
-const PORT = Number(process.env.SMTP_PORT ?? 587);
-const USER = process.env.SMTP_USER;
-const PASS = process.env.SMTP_PASS;
-const SECURE = (process.env.SMTP_SECURE ?? "false") === "true"; // true for 465, false for 587 STARTTLS
-const FROM = process.env.MAIL_FROM ?? "The Tyre Mall <shop@thetyremall.co.za>";
 export const SHOP_EMAIL = process.env.SHOP_EMAIL ?? "shop@thetyremall.co.za";
 
-// Preferred on Vercel: Resend's HTTP API (no SMTP ports, no M365 basic-auth
-// blocks). If RESEND_API_KEY is set we use it; otherwise we fall back to SMTP.
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-
-export function emailConfigured(): boolean {
-  return Boolean(RESEND_API_KEY || (HOST && USER && PASS));
+interface ResolvedEmail {
+  resendKey: string; host: string; port: number; secure: boolean;
+  user: string; pass: string; from: string; cc: string[];
 }
 
-// Testing: copy every outgoing email to these addresses so the look & feel can
-// be reviewed. Set EMAIL_CC="" in Vercel env vars to turn this off once signed
-// off. Any address that is already the primary recipient is skipped.
-const CC_LIST = (process.env.EMAIL_CC ?? "tracy@iheartdigital.co.za, shop@thetyremall.co.za")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-let transporter: Transporter | null = null;
-function getTransport() {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: HOST,
-      port: PORT,
-      secure: SECURE,
-      auth: { user: USER, pass: PASS },
-    });
-  }
-  return transporter;
+/**
+ * Resolve email config at CALL time: admin DB settings first, then env vars,
+ * then sensible defaults.
+ *
+ * NOTE: on the self-hosted standalone build, BOTH this module's top-level
+ * `process.env` reads AND Next's `"use cache"` getters (getSettings) are frozen
+ * at build time. So we read the admin-saved email settings with a DIRECT,
+ * uncached DB query here — that reflects live admin edits. (env is still read as
+ * a fallback for Vercel, where it works at build + runtime.)
+ */
+async function emailConfig(): Promise<ResolvedEmail> {
+  let e: Partial<SiteSettings["email"]> = {};
+  try {
+    const r = await libsql.execute({ sql: "SELECT value FROM settings WHERE key = 'email' LIMIT 1", args: [] });
+    const raw = r.rows[0]?.value;
+    if (raw) e = JSON.parse(String(raw)) as Partial<SiteSettings["email"]>;
+  } catch { /* table/row missing — fall back to env */ }
+  const pick = (dbv: string | undefined, env: string | undefined, def = "") =>
+    (dbv && dbv.trim()) || (env && env.trim()) || def;
+  return {
+    resendKey: pick(e.resendApiKey, process.env.RESEND_API_KEY),
+    host: pick(e.smtpHost, process.env.SMTP_HOST),
+    port: Number((e.smtpPort ? String(e.smtpPort) : "") || process.env.SMTP_PORT || 587),
+    secure: typeof e.smtpSecure === "boolean" ? e.smtpSecure : process.env.SMTP_SECURE === "true",
+    user: pick(e.smtpUser, process.env.SMTP_USER),
+    pass: pick(e.smtpPass, process.env.SMTP_PASS),
+    from: pick(e.mailFrom, process.env.MAIL_FROM, "The Tyre Mall <shop@thetyremall.co.za>"),
+    cc: pick(e.emailCc, process.env.EMAIL_CC, "").split(",").map((s) => s.trim()).filter(Boolean),
+  };
 }
 
-async function sendViaResend(to: string, subject: string, html: string, cc: string[]): Promise<void> {
+export async function emailConfigured(): Promise<boolean> {
+  const c = await emailConfig();
+  return Boolean(c.resendKey || (c.host && c.user && c.pass));
+}
+
+async function sendViaResend(cfg: ResolvedEmail, to: string, subject: string, html: string, cc: string[]): Promise<void> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: FROM, to: [to], ...(cc.length ? { cc } : {}), subject, html }),
+    headers: { Authorization: `Bearer ${cfg.resendKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: cfg.from, to: [to], ...(cc.length ? { cc } : {}), subject, html }),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -67,18 +75,23 @@ export async function sendMail(to: string, subject: string, html: string, meta: 
   const orderRef = meta.orderRef ?? null;
   const resend = meta.resend ?? false;
 
-  if (!emailConfigured()) {
-    console.warn(`[email] not configured (set RESEND_API_KEY or SMTP_*) — skipped "${subject}" to ${to}`);
+  const cfg = await emailConfig();
+  const configured = Boolean(cfg.resendKey || (cfg.host && cfg.user && cfg.pass));
+  if (!configured) {
+    console.warn(`[email] not configured (set it in Admin → Settings → Email, or RESEND_API_KEY / SMTP_*) — skipped "${subject}" to ${to}`);
     await logEmail({ toAddr: to, subject, html, type, orderRef, status: "skipped", provider: "none", resend });
     return;
   }
-  const ccSet = new Set(meta.noCc ? [] : CC_LIST.map((a) => a));
+  const ccSet = new Set(meta.noCc ? [] : cfg.cc);
   if (meta.ccShop && !meta.noCc) ccSet.add(SHOP_EMAIL);
   const cc = [...ccSet].filter((a) => a.toLowerCase() !== to.toLowerCase());
-  const provider = RESEND_API_KEY ? "resend" : "smtp";
+  const provider = cfg.resendKey ? "resend" : "smtp";
   try {
-    if (RESEND_API_KEY) await sendViaResend(to, subject, html, cc);
-    else await getTransport().sendMail({ from: FROM, to, subject, html, ...(cc.length ? { cc } : {}) });
+    if (cfg.resendKey) await sendViaResend(cfg, to, subject, html, cc);
+    else {
+      const transporter = nodemailer.createTransport({ host: cfg.host, port: cfg.port, secure: cfg.secure, auth: { user: cfg.user, pass: cfg.pass } });
+      await transporter.sendMail({ from: cfg.from, to, subject, html, ...(cc.length ? { cc } : {}) });
+    }
     await logEmail({ toAddr: to, cc, subject, html, type, orderRef, status: "sent", provider, resend });
   } catch (e) {
     await logEmail({ toAddr: to, cc, subject, html, type, orderRef, status: "failed", provider, error: (e as Error).message, resend });

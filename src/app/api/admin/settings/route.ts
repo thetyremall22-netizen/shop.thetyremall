@@ -64,6 +64,19 @@ export async function PATCH(req: NextRequest) {
       message: s(mt.message, 600),
     }) as SiteSettings["maintenance"];
   }
+  if (body.email) {
+    const em = body.email;
+    patch.email = clean({
+      smtpHost: s(em.smtpHost, 200),
+      smtpPort: n(em.smtpPort) !== undefined ? Math.max(1, Math.min(65535, Math.round(n(em.smtpPort)!))) : undefined,
+      smtpSecure: b(em.smtpSecure),
+      smtpUser: s(em.smtpUser, 200),
+      smtpPass: s(em.smtpPass, 400),
+      mailFrom: s(em.mailFrom, 200),
+      emailCc: s(em.emailCc, 400),
+      resendApiKey: s(em.resendApiKey, 200),
+    }) as SiteSettings["email"];
+  }
 
   try {
     const next = await updateSettings(patch);

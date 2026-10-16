@@ -135,6 +135,28 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
         </label>
       </Group>
 
+      <Group title="Email (sending)">
+        <p className="col-span-full -mb-1 text-sm text-muted">How the site sends order confirmations and notifications. For Microsoft 365, use host <span className="font-mono text-fg">smtp.office365.com</span>, port <span className="font-mono text-fg">587</span>, your <span className="font-mono text-fg">shop@</span> address and its password (or app password). Leave blank to fall back to server env vars.</p>
+        <label className="block"><span className={label}>SMTP host</span>
+          <input value={v.email.smtpHost} onChange={(e) => up("email", "smtpHost", e.target.value)} placeholder="smtp.office365.com" className={field} /></label>
+        <label className="block"><span className={label}>SMTP port</span>
+          <input type="number" min={1} max={65535} value={v.email.smtpPort} onChange={(e) => up("email", "smtpPort", Number(e.target.value))} className={field} /></label>
+        <label className="block"><span className={label}>SMTP username</span>
+          <input value={v.email.smtpUser} onChange={(e) => up("email", "smtpUser", e.target.value)} placeholder="shop@thetyremall.co.za" autoComplete="off" className={field} /></label>
+        <label className="block"><span className={label}>SMTP password</span>
+          <input type="password" value={v.email.smtpPass} onChange={(e) => up("email", "smtpPass", e.target.value)} autoComplete="new-password" className={field} /></label>
+        <label className="block"><span className={label}>From address</span>
+          <input value={v.email.mailFrom} onChange={(e) => up("email", "mailFrom", e.target.value)} placeholder="The Tyre Mall <shop@thetyremall.co.za>" className={field} /></label>
+        <label className="block"><span className={label}>CC on every email (optional)</span>
+          <input value={v.email.emailCc} onChange={(e) => up("email", "emailCc", e.target.value)} placeholder="shop@thetyremall.co.za" className={field} /></label>
+        <label className="flex items-center gap-2.5 pt-6">
+          <input type="checkbox" checked={v.email.smtpSecure} onChange={(e) => up("email", "smtpSecure", e.target.checked)} className="size-4 accent-volt" />
+          <span className="text-sm font-semibold text-fg">Use SSL (port 465). Leave off for 587/STARTTLS.</span>
+        </label>
+        <label className="block sm:col-span-2"><span className={label}>Resend API key (optional — use instead of SMTP)</span>
+          <input type="password" value={v.email.resendApiKey} onChange={(e) => up("email", "resendApiKey", e.target.value)} placeholder="re_…" autoComplete="off" className={field} /></label>
+      </Group>
+
       <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center gap-3 border-t border-line bg-ink/80 px-1 py-3 backdrop-blur">
         <button onClick={save} disabled={busy} className="btn btn-volt px-6 disabled:opacity-50">{busy ? "Saving…" : "Save settings"}</button>
         {done && <span className="text-sm font-semibold text-pay">✓ Saved — live on the storefront</span>}

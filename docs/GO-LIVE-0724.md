@@ -33,49 +33,113 @@ the custom site owns its catalogue, orders, admin, payments and emails.
 
 ## PHASE A — do now (before the transfer; nothing customer-facing changes)
 
+**No SSH on 0724** → we do **not** build on the server. A GitHub Action builds the
+app on Linux (so the native SQLite binding matches the server) and **FTP-uploads**
+the finished standalone bundle. You only use the DirectAdmin web UI.
+
+> **One-time: add the workflow via GitHub's web UI.** The pipeline is in the repo at
+> [`docs/ci/deploy-0724.yml`](ci/deploy-0724.yml) (GitHub blocks pushing workflow
+> files without special token scope). On github.com → **Actions → New workflow → set
+> up a workflow yourself**, name it `deploy-0724.yml`, paste that file's contents, and
+> commit. It then lives at `.github/workflows/deploy-0724.yml` and runs on every push.
+
+> **Runtime = Nginx Unit** (DirectAdmin → Advanced Features → **Nginx Unit** →
+> Create Application), not Phusion Passenger. Unit runs the app's main script
+> (`server.js`) through a `unit-http` loader so a standard Next.js server works
+> unchanged — see the gotcha in A4.
+
 ### A0. Prerequisites
-- [ ] **Node.js 20** enabled on the 0724 account (Node.js Selector / Passenger).
-- [ ] DirectAdmin + SSH/Git access, and a **temp URL** to test on (server IP or a
-      temporary subdomain) while the real domain is still elsewhere.
+- [ ] **Node.js 20** available in the 0724 Nginx Unit app type.
+- [ ] An **FTP account** for the 0724 site (DirectAdmin → FTP Management) — host,
+      username, password.
+- [ ] A **temp URL** to test on (a temporary subdomain, e.g. `new.thetyremall.co.za`,
+      or the server's test URL) while the real domain is still elsewhere.
 
-### A1. Code onto the server
-```bash
-git clone https://github.com/thetyremall22-netizen/shop.thetyremall.git
-cd shop.thetyremall
-npm ci
+### A1. Add the FTP details to GitHub (one-time)
+In the repo → **Settings → Secrets and variables → Actions**:
+- [ ] Secret `FTP_SERVER` = your FTP host (e.g. `ftp.thetyremall.co.za` or the server IP)
+- [ ] Secret `FTP_USERNAME` = the FTP user
+- [ ] Secret `FTP_PASSWORD` = the FTP password
+- [ ] Variable `FTP_SERVER_DIR` = the folder the Node app will run from, **with a
+      trailing slash**, e.g. `/domains/thetyremall.co.za/app/`
+      *(create this empty folder first in DirectAdmin File Manager — see A2).*
+- [ ] If the server has no FTPS, change `protocol: ftps` → `ftp` in the workflow.
+
+### A2. Create the app folder + clear the Laravel default (DirectAdmin File Manager)
+- [ ] Create a **dedicated app folder** under the domain, e.g.
+      `/domains/thetyremall.co.za/app/` — this is the `FTP_SERVER_DIR` and the Unit
+      **Working directory**. Keep it **separate from `public_html`**.
+- [ ] **Remove the leftover default Laravel app** from the domain's document root
+      (`public_html`) so it doesn't serve instead of our app — move it aside or delete
+      it. *(Our app is Next.js; the Laravel page is unrelated and not in our repo.)*
+- [ ] Inside the `app/` folder, create an empty **`.data`** folder (holds the live
+      SQLite DB; the deploy never overwrites it).
+
+The uploaded folder must look like:
 ```
-- [ ] Add `output: "standalone"` to `next.config.ts` (ping me — 1 line) so Passenger
-      can run the self-contained `server.js`.
-- [ ] `npm run build`
-- [ ] Point the Node.js App's **startup file** at the standalone server (exact entry
-      when the Node.js Selector screen is up).
+app/
+├── server.js        ← Unit "Webapp" entry
+├── package.json
+├── node_modules/    ← traced deps (bundled by the build; no npm install needed for the app)
+├── .next/           ← incl. .next/static
+├── public/          ← all images
+└── .data/           ← you create this; live DB
+```
 
-### A2. Environment variables (in the Node.js App's "Environment variables")
-Generate secrets **on the server** (never through chat):
+### A3. Run the first deploy
+- [ ] Push to `main` (or Actions tab → **Build & deploy to 0724 → Run workflow**).
+- [ ] The Action builds and uploads the bundle into `FTP_SERVER_DIR`. The first
+      upload is large (~200 MB incl. product images) and slow; later deploys are
+      incremental.
+
+### A4. Create the app in Nginx Unit (DirectAdmin → Advanced Features → Nginx Unit → Create Application)
+- [ ] **Name** = `tyremall`
+- [ ] **Type** = **Node.js** (change it from the default `Java`)
+- [ ] **Version** = **20** (highest available)
+- [ ] **Working directory** = the app folder (`/domains/thetyremall.co.za/app/`)
+- [ ] **Webapp** = `server.js`
+- [ ] **Create**, then point the temp subdomain at this app.
+
+> **Unit + Node gotcha:** Unit runs `server.js` via a `unit-http` loader that
+> swaps in Unit's HTTP layer, so our standard Next.js server works unchanged. But
+> `unit-http` is platform/version-specific to the server's Unit and must exist in
+> the app's `node_modules` — the DirectAdmin Node.js app type normally installs it
+> for you. If the app won't start and the log says **`Cannot find module
+> 'unit-http/loader'`**, let the UI run its npm install for the app (it adds the
+> matching `unit-http`), or add `unit-http` there. (Our *app* deps are already
+> bundled; this is only Unit's own http shim.)
+
+### A5. Environment variables (in the Node.js app's "Environment variables")
+Generate the secrets **locally on your Mac** (Terminal — never paste them into chat):
 ```bash
-echo "TyreMall-$(openssl rand -base64 9 | tr -d '/+=')"   # admin password
+echo "TyreMall-$(openssl rand -base64 9 | tr -d '/+=')"   # ADMIN_PASSWORD
 openssl rand -hex 32                                      # SESSION_SECRET (64 hex)
 openssl rand -hex 24                                      # CRON_SECRET
 ```
+Then add these variables to the app:
 ```
-NEXT_PUBLIC_SITE_URL = https://thetyremall.co.za
+NEXT_PUBLIC_SITE_URL = https://<temp-subdomain for now, real domain in Phase B>
 NODE_ENV             = production
 ADMIN_PASSWORD       = <generated>
-SESSION_SECRET       = <generated>      # encrypts payment creds + signs admin logins; keep STABLE
+SESSION_SECRET       = <generated>      # encrypts payment creds + signs logins; keep STABLE forever
 CRON_SECRET          = <generated>
-DATABASE_URL         = file:.data/ttm.db
+# Absolute path is safest under Unit (File Manager shows the full path):
+DATABASE_URL         = file:/home/<user>/domains/thetyremall.co.za/app/.data/ttm.db
 
-# PayFast — SANDBOX first (switch to live in Phase B)
+# PayFast — SANDBOX first (switch to live in Phase B); creds can also go in Admin → Payments
 PAYFAST_SANDBOX      = true
-# (sandbox creds can be set here OR entered in Admin → Payments)
 
-# Email — set in Phase B once the domain/MX is settled (see A-note below)
+# Email — fill in Phase B
 MAIL_FROM            = The Tyre Mall <shop@thetyremall.co.za>
 SHOP_EMAIL           = shop@thetyremall.co.za
 ```
-*SESSION_SECRET is generated fresh here (fine — we are not sharing the Vercel DB).*
+- [ ] Click **Restart** on the Node app.
 
-### A3. First run + admin
+> **Re-deploys:** push to `main` → the Action re-uploads changed files → click
+> **Restart** on the Node app in DirectAdmin for the new code to take effect. (The
+> `.data` DB is always preserved.)
+
+### A6. First run + admin
 - [ ] Confirm `.data/` is writable on persistent disk.
 - [ ] Load the temp URL → storefront renders, catalogue auto-seeded from the snapshot.
 - [ ] Log in at `<temp-url>/admin` with `ADMIN_PASSWORD` (break-glass owner).
@@ -83,12 +147,12 @@ SHOP_EMAIL           = shop@thetyremall.co.za
       **store timezone**. (Content/theme/images already ship with the code — only
       add coupons/staff/new media if you want them.)
 
-### A4. Turn ON maintenance mode
+### A7. Turn ON maintenance mode
 - [ ] Admin → **Settings → Maintenance / Coming-soon mode → On → Save.**
       So the instant DNS flips in Phase B, the public sees the "coming soon" page —
       not a half-ready store. (You, logged in, still see the real site to finish setup.)
 
-### A5. Smoke test on the temp URL
+### A8. Smoke test on the temp URL
 - [ ] Place **one sandbox PayFast order** end-to-end → appears in **Orders** (processing),
       stock decrements.
 - [ ] Test HappyPay redirect from checkout.

@@ -1,0 +1,57 @@
+name: Build & deploy to 0724
+
+# Builds the standalone Next.js app on Linux (so the native SQLite binding
+# matches the server) and FTP-uploads it to the 0724 (DirectAdmin) server.
+# No SSH or server-side build needed.
+#
+# One-time setup in GitHub → Settings:
+#   Secrets  → FTP_SERVER      e.g. ftp.thetyremall.co.za  (or the 0724 server IP)
+#              FTP_USERNAME    the FTP account user
+#              FTP_PASSWORD    the FTP account password
+#   Variables → FTP_SERVER_DIR the app folder on the server the Node app runs from,
+#                              e.g. /domains/thetyremall.co.za/nodeapp/   (trailing slash)
+#
+# Runs on every push to main, or manually from the Actions tab.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-0724
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build standalone bundle
+        run: npm run build:deploy
+
+      - name: Deploy to 0724 over FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps              # change to "ftp" if the server has no FTPS
+          local-dir: ./.next/standalone/
+          server-dir: ${{ vars.FTP_SERVER_DIR }}
+          # Upload everything INCLUDING node_modules (traced deps the server needs).
+          # Never touch the live SQLite database or git metadata.
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .data/**
+            tmp/restart.txt

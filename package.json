@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "package:standalone": "node scripts/package-standalone.mjs",
+    "build:deploy": "next build && node scripts/package-standalone.mjs",
     "lint": "eslint"
   },
   "dependencies": {

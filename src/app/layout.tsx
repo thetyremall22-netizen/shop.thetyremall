@@ -8,6 +8,7 @@ import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
 import { FloatingWidgets } from "@/components/FloatingWidgets";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { themeCss } from "@/lib/theme";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -32,9 +33,10 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://thetyremall.co.za"),
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const themeVars = await themeCss();
   return (
     <html lang="en" className={`${inter.variable} ${anton.variable}`} suppressHydrationWarning>
       <head>
@@ -43,6 +45,7 @@ export default function RootLayout({
             __html: `try{if(localStorage.getItem('ttm-theme')==='light')document.documentElement.dataset.theme='light';}catch(e){}`,
           }}
         />
+        {themeVars && <style id="ttm-theme" dangerouslySetInnerHTML={{ __html: themeVars }} />}
       </head>
       <body>
         <CartProvider>

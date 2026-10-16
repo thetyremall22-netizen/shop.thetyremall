@@ -36,6 +36,7 @@ export const orders = sqliteTable("orders", {
   // true for PayFast-sandbox / test orders, so they can be labelled and
   // filtered apart from real paid orders in the admin.
   test: integer("test", { mode: "boolean" }).notNull().default(false),
+  refunded: integer("refunded").notNull().default(0), // cumulative refunded (cents)
   createdAt: integer("created_at").notNull().default(0),
   updatedAt: integer("updated_at").notNull().default(0),
 });

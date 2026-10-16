@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { OrderStatusForm } from "@/components/admin/OrderStatusForm";
 import { ComposeEmailForm } from "@/components/admin/ComposeEmailForm";
+import { RefundForm } from "@/components/admin/RefundForm";
 import { getOrder } from "@/lib/orders";
 import { listEmailsForOrder, EMAIL_TYPE_LABELS } from "@/lib/email-log";
 
@@ -86,6 +87,22 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
         <h2 className="font-display text-lg">Update status</h2>
         <div className="mt-3"><OrderStatusForm id={o.id} current={o.status} /></div>
       </div>
+
+      {(() => {
+        const refunded = o.refundedAmount ?? 0;
+        const remaining = t.total - refunded;
+        const canRefund = ["processing", "completed", "partially_refunded"].includes(o.status) && remaining > 0;
+        if (refunded === 0 && !canRefund) return null;
+        return (
+          <div className="mt-5 card p-5">
+            <h2 className="font-display text-lg">Refund</h2>
+            {refunded > 0 && <p className="mt-1 text-sm text-muted">Refunded so far: <span className="font-semibold text-fg">{zar(refunded)}</span> of {zar(t.total)}{remaining > 0 ? ` · ${zar(remaining)} remaining` : " · fully refunded"}.</p>}
+            {canRefund
+              ? <div className="mt-3"><RefundForm id={o.id} maxRefundCents={remaining} paymentMethod={o.paymentMethod} /></div>
+              : <p className="mt-1 text-sm text-muted">This order is fully refunded.</p>}
+          </div>
+        );
+      })()}
 
       <div className="mt-5 card p-5">
         <h2 className="font-display text-lg">Emails for this order</h2>

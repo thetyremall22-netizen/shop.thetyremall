@@ -11,6 +11,7 @@ export type OrderStatus =
   | "failed"
   | "cancelled"
   | "refunded"
+  | "partially_refunded"
   | "on-hold";
 
 export interface Order {
@@ -30,6 +31,8 @@ export interface Order {
   pfPaymentId?: string;
   /** true for PayFast-sandbox / test orders (labelled apart from real orders). */
   test?: boolean;
+  /** cumulative amount refunded (minor units). */
+  refundedAmount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -54,15 +57,13 @@ async function ensureSchema() {
     payment_method TEXT NOT NULL DEFAULT '',
     pf_payment_id TEXT,
     test INTEGER NOT NULL DEFAULT 0,
+    refunded INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL DEFAULT 0,
     updated_at INTEGER NOT NULL DEFAULT 0
   )`);
-  // Add the `test` column to tables created before it existed (ignore if present).
-  try {
-    await libsql.execute("ALTER TABLE orders ADD COLUMN test INTEGER NOT NULL DEFAULT 0");
-  } catch {
-    /* column already exists */
-  }
+  // Add columns to tables created before they existed (ignore if present).
+  try { await libsql.execute("ALTER TABLE orders ADD COLUMN test INTEGER NOT NULL DEFAULT 0"); } catch { /* exists */ }
+  try { await libsql.execute("ALTER TABLE orders ADD COLUMN refunded INTEGER NOT NULL DEFAULT 0"); } catch { /* exists */ }
   await libsql.execute(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')`);
   await libsql.execute(`INSERT OR IGNORE INTO meta (key, value) VALUES ('order_seq', '0')`);
   ensured = true;
@@ -80,6 +81,7 @@ function rowToOrder(r: Row): Order {
     paymentMethod: r.paymentMethod,
     pfPaymentId: r.pfPaymentId ?? undefined,
     test: !!r.test,
+    refundedAmount: Number(r.refunded) || 0,
     createdAt: new Date(r.createdAt).toISOString(),
     updatedAt: new Date(r.updatedAt).toISOString(),
   };
@@ -101,6 +103,7 @@ export async function saveOrder(order: Order): Promise<void> {
       paymentMethod: order.paymentMethod,
       pfPaymentId: order.pfPaymentId ?? null,
       test: order.test ?? false,
+      refunded: order.refundedAmount ?? 0,
       createdAt: Date.parse(order.createdAt) || now,
       updatedAt: now,
     })
@@ -114,6 +117,7 @@ export async function saveOrder(order: Order): Promise<void> {
         totals: JSON.stringify(order.totals),
         paymentMethod: order.paymentMethod,
         pfPaymentId: order.pfPaymentId ?? null,
+        refunded: order.refundedAmount ?? 0,
         updatedAt: now,
       },
     });

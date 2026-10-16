@@ -8,7 +8,10 @@ import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
 import { FloatingWidgets } from "@/components/FloatingWidgets";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { GoogleTracking, GoogleTagManagerNoScript } from "@/components/GoogleTracking";
+import { CookieConsent } from "@/components/CookieConsent";
 import { themeCss } from "@/lib/theme";
+import { SEARCH_CONSOLE_VERIFICATION } from "@/lib/analytics";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -31,6 +34,7 @@ export const metadata: Metadata = {
   description:
     "Buy tyres, mag wheels and 4x4 rubber online in South Africa. Free nationwide delivery on 2 or more tyres. Buy now, pay later with HappyPay.",
   metadataBase: new URL("https://thetyremall.co.za"),
+  verification: { google: SEARCH_CONSOLE_VERIFICATION },
 };
 
 export default async function RootLayout({
@@ -46,8 +50,10 @@ export default async function RootLayout({
           }}
         />
         {themeVars && <style id="ttm-theme" dangerouslySetInnerHTML={{ __html: themeVars }} />}
+        <GoogleTracking />
       </head>
       <body>
+        <GoogleTagManagerNoScript />
         <CartProvider>
           <CompareProvider>
             <ScrollToTop />
@@ -56,6 +62,7 @@ export default async function RootLayout({
             <Footer />
             <CartDrawer />
             <FloatingWidgets />
+            <CookieConsent />
           </CompareProvider>
         </CartProvider>
       </body>

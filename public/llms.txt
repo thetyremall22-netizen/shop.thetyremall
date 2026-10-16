@@ -1,0 +1,30 @@
+# The Tyre Mall
+
+> The Tyre Mall is South Africa's largest online tyre supplier. We sell car, SUV, 4x4 and bakkie tyres plus mag wheels online, with free nationwide delivery on two or more tyres and "buy now, pay later" via HappyPay. Shop 24/7 with a 14-day guarantee.
+
+The Tyre Mall is an e-commerce store serving customers across South Africa. Prices are in South African Rand (ZAR) and include VAT. Delivery is nationwide; orders of two or more tyres ship free. Payment options include card (PayFast) and HappyPay instalments.
+
+## Shop
+
+- [Shop all tyres](https://thetyremall.co.za/shop): Browse and filter the full tyre range by width, profile, rim size, brand and vehicle type.
+- [Mag wheels](https://thetyremall.co.za/mag-wheels): Alloy and mag wheels by size, PCD and brand.
+- [Find tyres by vehicle](https://thetyremall.co.za/vehicle-search): Look up the correct tyre and wheel sizes by make, model and year.
+
+## Help & policies
+
+- [Delivery areas](https://thetyremall.co.za/delivery-areas): Where we deliver in South Africa and lead times.
+- [Returns](https://thetyremall.co.za/returns): 14-day returns and guarantee details.
+- [RadarProtect road-hazard cover](https://thetyremall.co.za/radar-protect): Optional per-tyre road-hazard protection.
+- [FAQ](https://thetyremall.co.za/faq): Common questions about ordering, fitment, payment and delivery.
+- [Terms & privacy](https://thetyremall.co.za/terms): Terms of sale and privacy information.
+
+## Company
+
+- [About The Tyre Mall](https://thetyremall.co.za/about): Who we are and how the store works.
+- [Stores & contact](https://thetyremall.co.za/stores): Physical store locations and contact details.
+- [Contact us](https://thetyremall.co.za/contact): Get in touch with the sales and support team.
+- [Blog](https://thetyremall.co.za/blog): Tyre news, brand info and buying guides.
+
+## Optional
+
+- [Sitemap](https://thetyremall.co.za/sitemap.xml): Full list of indexable pages including every product.

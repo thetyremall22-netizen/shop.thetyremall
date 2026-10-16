@@ -12,6 +12,14 @@ const STATUS_FILTERS = [
   { v: "skipped", label: "Not sent" },
 ];
 
+const TYPE_FILTERS = [
+  { v: "", label: "All types" },
+  { v: "order_new_admin", label: "New orders (shop)" },
+  { v: "order_paid", label: "Order confirmations" },
+  { v: "enquiry", label: "Enquiries" },
+  { v: "abandoned_cart", label: "Abandoned carts" },
+];
+
 function statusBadge(s: string) {
   if (s === "sent") return "badge-pay";
   if (s === "failed") return "badge-sale";
@@ -23,8 +31,18 @@ export default async function AdminEmails({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page) || 1);
   const status = sp.status || undefined;
-  const { rows, total, perPage } = await listEmails({ page, perPage: 40, status });
+  const type = sp.type || undefined;
+  const { rows, total, perPage } = await listEmails({ page, perPage: 40, status, type });
   const pages = Math.max(1, Math.ceil(total / perPage));
+
+  const qs = (next: Record<string, string | number | undefined>) => {
+    const p = new URLSearchParams();
+    if (status) p.set("status", status);
+    if (type) p.set("type", type);
+    for (const [k, v] of Object.entries(next)) { if (v === undefined || v === "") p.delete(k); else p.set(k, String(v)); }
+    const s = p.toString();
+    return s ? `/admin/emails?${s}` : "/admin/emails";
+  };
 
   return (
     <AdminShell>
@@ -35,12 +53,23 @@ export default async function AdminEmails({ searchParams }: { searchParams: Prom
       <p className="mt-1 text-sm text-muted">Every email the site sends — order confirmations, failures, cancellations, refunds, enquiries and abandoned-cart nudges. Open one to read, resend, or edit &amp; resend.</p>
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {TYPE_FILTERS.map((f) => {
+          const active = (type ?? "") === f.v;
+          return (
+            <Link key={f.label} href={qs({ type: f.v, page: undefined })}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${active ? "bg-volt text-volt-ink" : "border border-line text-muted hover:text-fg"}`}>
+              {f.label}
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="mt-2 flex flex-wrap gap-2">
         {STATUS_FILTERS.map((f) => {
           const active = (status ?? "") === f.v;
-          const href = f.v ? `/admin/emails?status=${f.v}` : "/admin/emails";
           return (
-            <Link key={f.label} href={href}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${active ? "bg-volt text-volt-ink" : "border border-line text-muted hover:text-fg"}`}>
+            <Link key={f.label} href={qs({ status: f.v, page: undefined })}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${active ? "bg-fg text-ink-2" : "border border-line text-muted hover:text-fg"}`}>
               {f.label}
             </Link>
           );
@@ -87,8 +116,8 @@ export default async function AdminEmails({ searchParams }: { searchParams: Prom
             <div className="mt-4 flex items-center justify-between text-sm">
               <span className="text-muted">Page {page} of {pages}</span>
               <div className="flex gap-2">
-                {page > 1 && <Link href={`/admin/emails?${status ? `status=${status}&` : ""}page=${page - 1}`} className="btn btn-ghost h-9 px-4 text-sm">← Prev</Link>}
-                {page < pages && <Link href={`/admin/emails?${status ? `status=${status}&` : ""}page=${page + 1}`} className="btn btn-ghost h-9 px-4 text-sm">Next →</Link>}
+                {page > 1 && <Link href={qs({ page: page - 1 })} className="btn btn-ghost h-9 px-4 text-sm">← Prev</Link>}
+                {page < pages && <Link href={qs({ page: page + 1 })} className="btn btn-ghost h-9 px-4 text-sm">Next →</Link>}
               </div>
             </div>
           )}

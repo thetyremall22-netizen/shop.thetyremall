@@ -8,6 +8,7 @@ import { getLive, decrementStock } from "@/lib/db/queries";
 import { validateCoupon, recordRedemption } from "@/lib/coupons";
 import { sendOrderPaid } from "@/lib/email";
 import { markRecovered } from "@/lib/abandoned";
+import { getSettings } from "@/lib/settings";
 import type { DeliveryMethod } from "@/lib/shop-config";
 
 interface Body {
@@ -19,6 +20,14 @@ interface Body {
 }
 
 export async function POST(req: NextRequest) {
+  // Block all orders while the store is in maintenance / "coming soon" mode.
+  try {
+    const s = await getSettings();
+    if (s.maintenance.enabled) {
+      return NextResponse.json({ error: "Our store is not taking orders just yet — please check back soon." }, { status: 503 });
+    }
+  } catch { /* fail open — don't block checkout on a settings read error */ }
+
   let body: Body;
   try {
     body = (await req.json()) as Body;

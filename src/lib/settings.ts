@@ -25,6 +25,11 @@ export interface SiteSettings {
     roadHazardFee: number; // minor units
     timezone: string; // IANA tz for coupon/special start-end times (e.g. Africa/Johannesburg)
   };
+  maintenance: {
+    enabled: boolean; // hide the public storefront behind a "coming soon" page
+    heading: string;
+    message: string;
+  };
 }
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -51,6 +56,11 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     happyPayMonths: 2,
     roadHazardFee: sc.ROAD_HAZARD_FEE,
     timezone: "Africa/Johannesburg",
+  },
+  maintenance: {
+    enabled: false,
+    heading: "We're launching soon",
+    message: "Our online store is getting its final touches. We'll be open for orders very soon — in the meantime, give us a call and our team will sort you out.",
   },
 };
 

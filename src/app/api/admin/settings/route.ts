@@ -53,7 +53,16 @@ export async function PATCH(req: NextRequest) {
       vatIncluded: b(m.vatIncluded),
       happyPayMonths: n(m.happyPayMonths) !== undefined ? Math.max(1, Math.round(n(m.happyPayMonths)!)) : undefined,
       roadHazardFee: n(m.roadHazardFee) !== undefined ? Math.max(0, Math.round(n(m.roadHazardFee)!)) : undefined,
+      timezone: s(m.timezone, 64),
     }) as SiteSettings["commerce"];
+  }
+  if (body.maintenance) {
+    const mt = body.maintenance;
+    patch.maintenance = clean({
+      enabled: b(mt.enabled),
+      heading: s(mt.heading, 120),
+      message: s(mt.message, 600),
+    }) as SiteSettings["maintenance"];
   }
 
   try {

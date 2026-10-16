@@ -52,6 +52,29 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
 
   return (
     <div className="space-y-5">
+      <div className={`card p-5 ${v.maintenance.enabled ? "border-amber-500/50" : ""}`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg">Maintenance / Coming-soon mode
+              {v.maintenance.enabled && <span className="ml-2 badge badge-warn">LIVE — store hidden</span>}
+            </h2>
+            <p className="mt-1 max-w-xl text-sm text-muted">When on, the public storefront is replaced by a &quot;coming soon&quot; page and no orders can be placed. The admin panel stays open, and you (while logged in) still see the real site.</p>
+          </div>
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" checked={v.maintenance.enabled} onChange={(e) => up("maintenance", "enabled", e.target.checked)} className="size-5 accent-volt" />
+            {v.maintenance.enabled ? "On" : "Off"}
+          </label>
+        </div>
+        <div className="mt-4 grid gap-4">
+          <label className="block"><span className={label}>Heading</span>
+            <input value={v.maintenance.heading} onChange={(e) => up("maintenance", "heading", e.target.value)} className={field} /></label>
+          <label className="block"><span className={label}>Message</span>
+            <textarea value={v.maintenance.message} onChange={(e) => up("maintenance", "message", e.target.value)} rows={3}
+              className="mt-1 w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-fg outline-none focus:border-volt" /></label>
+          <p className="text-xs text-muted">Changes take effect within about half a minute of saving. Remember to turn this <span className="font-semibold text-fg">off</span> when you&apos;re ready to open the store.</p>
+        </div>
+      </div>
+
       <Group title="Site identity">
         <label className="block"><span className={label}>Site name</span>
           <input value={v.site.name} onChange={(e) => up("site", "name", e.target.value)} className={field} /></label>

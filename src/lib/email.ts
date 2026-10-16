@@ -194,7 +194,7 @@ function layout(title: string, bodyHtml: string): string {
       </td></tr>
       <tr><td style="background:#f4f5f7;padding:18px 28px;font-size:12px;color:#6b7280;text-align:center">
         The Tyre Mall · 31 Heronmere Road, Reuven, Johannesburg · 078 0088 788<br>
-        <a href="https://shop-thetyremall.vercel.app" style="color:${BRAND}">shop.thetyremall.co.za</a>
+        <a href="https://thetyremall.co.za" style="color:${BRAND}">thetyremall.co.za</a>
       </td></tr>
     </table>
    </td></tr>

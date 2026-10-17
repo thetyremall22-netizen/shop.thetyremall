@@ -17,8 +17,15 @@ const nextConfig: NextConfig = {
   // The libSQL client loads a platform-specific native binding at runtime that
   // file tracing can miss — force it into the standalone bundle so the file DB
   // works on the server.
+  // The SQLite driver loads a platform-specific native binding at runtime that
+  // file tracing can miss — force better-sqlite3 and its loader deps into the
+  // standalone bundle so the file DB works on the server.
   outputFileTracingIncludes: {
-    "**": ["./node_modules/@libsql/**", "./node_modules/libsql/**"],
+    "**": [
+      "./node_modules/better-sqlite3/**",
+      "./node_modules/bindings/**",
+      "./node_modules/file-uri-to-path/**",
+    ],
   },
   images: {
     // Product images are pre-sized local webp — serve them directly instead of

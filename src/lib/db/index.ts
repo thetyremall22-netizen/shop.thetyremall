@@ -1,51 +1,89 @@
 import "server-only";
-import { drizzle } from "drizzle-orm/libsql";
-import { createClient, type Client } from "@libsql/client";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
 
-// Local dev uses a file (.data/ttm.db). Production points DATABASE_URL at Turso
-// (libsql://…) with DATABASE_AUTH_TOKEN — same driver, no code change.
-// If opening the configured DB fails (e.g. on Vercel before Turso is connected
-// there is no .data file), fall back to an in-memory DB so nothing crashes at
-// build or runtime — the storefront falls back to the product snapshot.
-const url = process.env.DATABASE_URL || "file:.data/ttm.db";
-const authToken = process.env.DATABASE_AUTH_TOKEN;
+// Local embedded SQLite via better-sqlite3. It is SYNCHRONOUS with no background
+// native threads (unlike @libsql/client's Rust/tokio runtime), which removes the
+// V8-GC-vs-native segfaults the shared host observed and lets the worker shut
+// down promptly. DATABASE_URL is a file path (optionally "file:"-prefixed);
+// default .data/ttm.db. A remote URL (e.g. Turso libsql://) isn't supported by
+// this driver and falls back to in-memory so boot never crashes.
+function resolvePath(): string {
+  const raw = process.env.DATABASE_URL || "file:.data/ttm.db";
+  if (raw === ":memory:") return ":memory:";
+  const p = raw.replace(/^file:/, "");
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(p)) return ":memory:";
+  return p;
+}
 
-function connect(): Client {
+function open(): Database.Database {
   try {
-    return createClient(authToken ? { url, authToken } : { url });
+    const sdb = new Database(resolvePath());
+    // Lean, durable-enough config for the memory-constrained shared host.
+    sdb.pragma("journal_mode = WAL");
+    sdb.pragma("synchronous = NORMAL");
+    sdb.pragma("busy_timeout = 5000");
+    sdb.pragma("cache_size = -8000"); // ~8 MB page cache cap
+    sdb.pragma("wal_autocheckpoint = 400");
+    return sdb;
   } catch {
-    return createClient({ url: ":memory:" });
+    return new Database(":memory:");
   }
 }
 
-const client = connect();
+const sqlite = open();
 
-// Keep the native SQLite footprint small on the memory-constrained shared host.
-// mmap_size=0 disables memory-mapped I/O (otherwise libsql maps a very large
-// virtual region); cache_size caps the page cache at ~8 MB; synchronous=NORMAL
-// is safe under WAL and avoids extra fsyncs. Fire-and-forget, local DB only —
-// ignored for a remote libsql:// URL.
-if (url.startsWith("file:") || url === ":memory:") {
-  for (const pragma of [
-    "PRAGMA mmap_size=0",
-    "PRAGMA cache_size=-8000",
-    "PRAGMA busy_timeout=5000",
-    "PRAGMA synchronous=NORMAL",
-    "PRAGMA wal_autocheckpoint=400",
-  ]) {
-    client.execute(pragma).catch(() => {});
-  }
-}
-
-// Release the native DB client (and its background threads) on shutdown so the
-// process can exit promptly. Without this the libsql native runtime can keep the
-// worker alive past Unit's stop timeout, leaving orphaned processes that pile up
-// and consume memory.
-for (const sig of ["SIGTERM", "SIGINT"] as const) {
-  try { process.once(sig, () => { try { client.close(); } catch { /* already closed */ } }); } catch { /* no process (edge) */ }
-}
-
-export const db = drizzle(client, { schema });
+export const db = drizzle(sqlite, { schema });
 export { schema };
-export { client as libsql };
+
+// Close on shutdown (instant for better-sqlite3) so the worker exits cleanly.
+for (const sig of ["SIGTERM", "SIGINT"] as const) {
+  try { process.once(sig, () => { try { sqlite.close(); } catch { /* already closed */ } }); } catch { /* no process */ }
+}
+
+// ---- libsql-compatible shim -------------------------------------------------
+// The app has ~110 raw queries written against @libsql/client's
+// `execute({ sql, args })` / `batch([...])` API returning `{ rows, lastInsertRowid }`.
+// This preserves that exact surface so no caller changes. better-sqlite3 only
+// binds numbers/strings/bigint/Buffer/null, so coerce booleans and undefined
+// (which libsql accepted) to keep callers working.
+type RawStmt = string | { sql: string; args?: readonly unknown[] };
+interface ExecResult {
+  rows: Record<string, unknown>[];
+  rowsAffected: number;
+  lastInsertRowid: number | bigint;
+  columns: string[];
+}
+
+const isRead = (sql: string) => /^\s*(SELECT|PRAGMA|WITH|EXPLAIN)\b/i.test(sql);
+const coerce = (v: unknown): unknown => (typeof v === "boolean" ? (v ? 1 : 0) : v === undefined ? null : v);
+
+function runOne(stmt: RawStmt): ExecResult {
+  const sql = typeof stmt === "string" ? stmt : stmt.sql;
+  const args = ((typeof stmt === "string" ? [] : stmt.args ?? []) as unknown[]).map(coerce);
+  if (isRead(sql)) {
+    const rows = sqlite.prepare(sql).all(...args) as Record<string, unknown>[];
+    return { rows, rowsAffected: 0, lastInsertRowid: 0, columns: rows.length ? Object.keys(rows[0]) : [] };
+  }
+  if (args.length === 0) {
+    // DDL / no-param writes — exec() also handles multi-statement blocks.
+    sqlite.exec(sql);
+    return { rows: [], rowsAffected: 0, lastInsertRowid: 0, columns: [] };
+  }
+  const info = sqlite.prepare(sql).run(...args);
+  return { rows: [], rowsAffected: info.changes, lastInsertRowid: info.lastInsertRowid, columns: [] };
+}
+
+export const libsql = {
+  execute(stmt: RawStmt): Promise<ExecResult> {
+    return Promise.resolve(runOne(stmt));
+  },
+  // Second arg is libsql's transaction mode ("write"/"read"/…) — ignored here;
+  // better-sqlite3's transaction is already write-capable and atomic.
+  batch(stmts: RawStmt[], _mode?: string): Promise<ExecResult[]> {
+    void _mode;
+    const tx = sqlite.transaction((items: RawStmt[]) => items.map(runOne));
+    return Promise.resolve(tx(stmts));
+  },
+};

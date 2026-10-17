@@ -1,5 +1,4 @@
 import "server-only";
-import productsData from "@/data/products.json";
 import categoriesData from "@/data/categories.json";
 import metaData from "@/data/meta.json";
 import { cacheLife } from "next/cache";
@@ -8,7 +7,17 @@ import { db, schema } from "./db";
 import { detectTyreSize } from "./voice-search";
 import { parseTyreSpec } from "./tyre-spec";
 
-const snapshot = productsData as unknown as Product[];
+// The 11 MB product snapshot is only a fallback for when the DB is empty. Load
+// (and parse) it lazily so it never sits in heap on the server once the DB has
+// products — important on the memory-constrained shared host.
+let snapshotCache: Product[] | null = null;
+async function getSnapshot(): Promise<Product[]> {
+  if (!snapshotCache) {
+    const mod = await import("@/data/products.json");
+    snapshotCache = (mod.default ?? mod) as unknown as Product[];
+  }
+  return snapshotCache;
+}
 export const categories = categoriesData as unknown as Category[];
 export const meta = metaData as unknown as CatalogueMeta;
 
@@ -110,7 +119,7 @@ async function loadFromDb(): Promise<Product[] | null> {
 export async function getProducts(): Promise<Product[]> {
   "use cache";
   cacheLife("minutes");
-  return (await loadFromDb()) ?? snapshot;
+  return (await loadFromDb()) ?? (await getSnapshot());
 }
 
 export async function getProduct(slug: string): Promise<Product | undefined> {

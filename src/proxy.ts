@@ -25,7 +25,18 @@ async function maintenanceOn(origin: string): Promise<boolean> {
   return cache.on;
 }
 
+// Legacy WordPress / WooCommerce paths — this is a Next.js app, there is no
+// WP here. A stale Java integration polls /wp-json/wc/v3/products thousands of
+// times a day; answer those (and other wp-* probes) with a cheap, cacheable
+// 410 Gone before any DB read or page render, so the flood costs almost nothing
+// and well-behaved clients stop retrying.
+const LEGACY_WP = /^\/(wp-json|wp-admin|wp-includes|wp-content|wp-login|wp-cron|wp-config|wordpress|xmlrpc)/i;
+
 export async function proxy(req: NextRequest) {
+  if (LEGACY_WP.test(req.nextUrl.pathname) || req.nextUrl.pathname.startsWith("/wp-")) {
+    return new NextResponse("Gone", { status: 410, headers: { "cache-control": "public, max-age=86400" } });
+  }
+
   // Admins preview the real site even while the gate is on.
   if (req.cookies.get(ADMIN_COOKIE)) return NextResponse.next();
 

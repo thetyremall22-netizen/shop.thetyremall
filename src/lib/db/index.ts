@@ -20,6 +20,32 @@ function connect(): Client {
 }
 
 const client = connect();
+
+// Keep the native SQLite footprint small on the memory-constrained shared host.
+// mmap_size=0 disables memory-mapped I/O (otherwise libsql maps a very large
+// virtual region); cache_size caps the page cache at ~8 MB; synchronous=NORMAL
+// is safe under WAL and avoids extra fsyncs. Fire-and-forget, local DB only —
+// ignored for a remote libsql:// URL.
+if (url.startsWith("file:") || url === ":memory:") {
+  for (const pragma of [
+    "PRAGMA mmap_size=0",
+    "PRAGMA cache_size=-8000",
+    "PRAGMA busy_timeout=5000",
+    "PRAGMA synchronous=NORMAL",
+    "PRAGMA wal_autocheckpoint=400",
+  ]) {
+    client.execute(pragma).catch(() => {});
+  }
+}
+
+// Release the native DB client (and its background threads) on shutdown so the
+// process can exit promptly. Without this the libsql native runtime can keep the
+// worker alive past Unit's stop timeout, leaving orphaned processes that pile up
+// and consume memory.
+for (const sig of ["SIGTERM", "SIGINT"] as const) {
+  try { process.once(sig, () => { try { client.close(); } catch { /* already closed */ } }); } catch { /* no process (edge) */ }
+}
+
 export const db = drizzle(client, { schema });
 export { schema };
 export { client as libsql };

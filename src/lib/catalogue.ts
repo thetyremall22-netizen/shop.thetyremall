@@ -1,7 +1,8 @@
 import "server-only";
 import categoriesData from "@/data/categories.json";
 import metaData from "@/data/meta.json";
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
+import { PRODUCTS_TAG } from "./catalogue-cache";
 import type { Product, Category, CatalogueMeta, ProductType } from "./types";
 import { db, schema } from "./db";
 import { detectTyreSize } from "./voice-search";
@@ -115,10 +116,15 @@ async function loadFromDb(): Promise<Product[] | null> {
   }
 }
 
-/** All products from the DB (cached ~1 min); falls back to the static snapshot. */
+/** All products from the DB. Cached by TAG and refreshed on-demand the moment a
+ *  product is created/updated/deleted (revalidateProducts), with an hourly
+ *  safety refresh — instead of rebuilding the whole 4,000+ product array every
+ *  minute, which churned memory and briefly blocked the single synchronous
+ *  worker. Falls back to the static snapshot when the DB is empty. */
 export async function getProducts(): Promise<Product[]> {
   "use cache";
-  cacheLife("minutes");
+  cacheTag(PRODUCTS_TAG);
+  cacheLife("hours");
   return (await loadFromDb()) ?? (await getSnapshot());
 }
 

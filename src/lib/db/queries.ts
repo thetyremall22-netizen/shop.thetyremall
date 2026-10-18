@@ -2,6 +2,7 @@ import "server-only";
 import { and, or, like, eq, sql, inArray } from "drizzle-orm";
 import { db, schema, libsql } from "./index";
 import productsData from "@/data/products.json";
+import { revalidateProducts } from "../catalogue-cache";
 
 type Snap = {
   id: number; slug: string; name: string; brand?: string; type?: string; sku?: string;
@@ -205,6 +206,7 @@ export interface ProductPatch {
 
 export async function updateProductFields(slug: string, patch: ProductPatch): Promise<void> {
   await db.update(schema.products).set({ ...patch, updatedAt: Date.now() }).where(eq(schema.products.slug, slug));
+  revalidateProducts();
 }
 
 export async function getAllProducts() {
@@ -262,11 +264,13 @@ export async function createProduct(p: NewProduct): Promise<{ ok: boolean; error
     visible: p.visible ?? true,
     updatedAt: Date.now(),
   });
+  revalidateProducts();
   return { ok: true };
 }
 
 export async function deleteProduct(slug: string): Promise<void> {
   await db.delete(schema.products).where(eq(schema.products.slug, slug));
+  revalidateProducts();
 }
 
 /** Bulk update price/stock/sale/visibility by slug or SKU. Returns counts. */
@@ -387,6 +391,7 @@ export async function bulkUpdateProducts(opts: { slugs?: string[]; q?: string; f
   for (let i = 0; i < stmts.length; i += 200) {
     await libsql.batch(stmts.slice(i, i + 200));
   }
+  revalidateProducts();
   return { updated: targets.length };
 }
 

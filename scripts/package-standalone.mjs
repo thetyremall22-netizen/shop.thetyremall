@@ -56,6 +56,21 @@ if (await exists(path.join(root, ".next", "static"))) {
   console.log("✓ copied .next/static -> .next/standalone/.next/static");
 }
 
+// We build on macOS, but CP1 is Linux x86-64. Next bundles a copy of the native
+// better-sqlite3 module into .next/node_modules/better-sqlite3-<hash> (a symlink
+// to node_modules/better-sqlite3), and the deploy zip dereferences it — so the
+// binary that lands in the deployed .next MUST be the Linux one, or the server
+// gets "invalid ELF header / ERR_DLOPEN_FAILED". Overwrite the symlink target so
+// both the node_modules copy and the bundled .next copy ship the Linux binary.
+const linuxBsq = path.join(root, "scripts", "native", "better_sqlite3-linux-x64.node");
+const bsqTarget = path.join(standalone, "node_modules", "better-sqlite3", "build", "Release", "better_sqlite3.node");
+if ((await exists(linuxBsq)) && (await exists(bsqTarget))) {
+  await cp(linuxBsq, bsqTarget);
+  console.log("✓ swapped better-sqlite3 native binary for the Linux x86-64 build");
+} else if (await exists(bsqTarget)) {
+  console.warn("⚠ scripts/native/better_sqlite3-linux-x64.node missing — the bundle will ship the HOST platform's binary (wrong for a Linux server).");
+}
+
 // Inject the Nginx Unit startup shim at the top of server.js (idempotent).
 const serverJs = path.join(standalone, "server.js");
 if (await exists(serverJs)) {

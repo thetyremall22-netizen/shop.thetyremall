@@ -36,6 +36,23 @@ const UNIT_POLYFILL = `/* TTM-UNIT-PATCH: load app/.env + appendHeader/setHeader
   try{var http=require('http');var pr=http&&http.ServerResponse&&http.ServerResponse.prototype; if(pr&&typeof pr.appendHeader!=='function'){pr.appendHeader=function(n,val){var p=this.getHeader(n);if(p===undefined)return this.setHeader(n,val);var a=Array.isArray(p)?p.slice():[String(p)];if(Array.isArray(val)){for(var i=0;i<val.length;i++)a.push(val[i]);}else{a.push(val);}return this.setHeader(n,a);};} if(pr&&typeof pr.setHeaders!=='function'){pr.setHeaders=function(h){var s=this;if(h&&typeof h.forEach==='function'){h.forEach(function(v,k){s.setHeader(k,v);});}else if(h){Object.keys(h).forEach(function(k){s.setHeader(k,h[k]);});}return this;};} }catch(e){}
   try{var lf=path.join(__dirname,'error.log');var w=function(s){try{fs.appendFileSync(lf,s+'\\n');}catch(e){}};var o=console.error.bind(console);console.error=function(){var a=Array.prototype.slice.call(arguments);w(a.map(function(x){return (x&&x.stack)||String(x);}).join(' '));o.apply(null,a);};process.on('uncaughtException',function(e){w('UNCAUGHT: '+((e&&e.stack)||e));});process.on('unhandledRejection',function(e){w('REJECT: '+((e&&e.stack)||e));});w('--- TTM start '+new Date().toISOString()+' node '+process.version+' ---');}catch(e){}
   try{['SIGTERM','SIGINT'].forEach(function(sig){process.on(sig,function(){try{w('--- TTM '+sig+' — force-exit in 4s '+new Date().toISOString()+' ---');}catch(e){}setTimeout(function(){try{process.exit(0);}catch(e){}},4000).unref();});});}catch(e){}
+  // Memory logger + self-recycle watchdog. Every 60s it records rss/heap/external
+  // to error.log (so we can SEE if memory climbs, how fast, and which kind), AND
+  // if rss crosses TTM_MEM_LIMIT_MB (default 2000, safely under the ~3 GB cgroup)
+  // it exits the worker CLEANLY. Unit then starts a fresh worker in ~1-2s, so a
+  // slow leak becomes a sub-second blip instead of a hard OOM-kill that stalls the
+  // site, 500s, and leaves stuck (D-state) processes. Tune the limit in app/.env
+  // (TTM_MEM_LIMIT_MB=…) with no host access needed. Unref'd so it never keeps the
+  // worker alive on its own.
+  try{
+    var _MB=function(b){return Math.round(b/1048576);};
+    var _LIM=parseInt(process.env.TTM_MEM_LIMIT_MB||'2000',10)||2000;
+    setInterval(function(){try{
+      var m=process.memoryUsage(),rss=_MB(m.rss);
+      w('[mem] up='+Math.round(process.uptime())+'s rss='+rss+' heapUsed='+_MB(m.heapUsed)+' heapTotal='+_MB(m.heapTotal)+' external='+_MB(m.external)+' arrayBuffers='+_MB(m.arrayBuffers||0)+' (MB)');
+      if(rss>=_LIM){w('[mem] rss '+rss+'MB >= limit '+_LIM+'MB — recycling worker cleanly to avoid an OOM kill/stall');setTimeout(function(){try{process.exit(0);}catch(e){}},500).unref();}
+    }catch(e){}},60000).unref();
+  }catch(e){}
 })();
 `;
 

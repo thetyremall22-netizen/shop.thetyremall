@@ -11,16 +11,22 @@ import { NextRequest, NextResponse } from "next/server";
 
 const ADMIN_COOKIE = "ttm_admin";
 let cache = { on: false, at: 0 };
-const TTL = 15_000; // ms
+const TTL = 30_000; // ms — check at most once every 30s per worker
 
 async function maintenanceOn(origin: string): Promise<boolean> {
   if (Date.now() - cache.at < TTL) return cache.on;
+  // Hard 2s timeout + fail-open so this self-request can never hang the worker
+  // or pile up under load (it runs on every page request).
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 2000);
   try {
-    const res = await fetch(new URL("/api/maintenance", origin), { headers: { "x-ttm-mw": "1" } });
+    const res = await fetch(new URL("/api/maintenance", origin), { headers: { "x-ttm-mw": "1" }, signal: ctrl.signal });
     const data = (await res.json()) as { enabled?: boolean };
     cache = { on: !!data.enabled, at: Date.now() };
   } catch {
     cache = { on: false, at: Date.now() }; // fail open
+  } finally {
+    clearTimeout(timer);
   }
   return cache.on;
 }

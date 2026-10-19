@@ -19,6 +19,11 @@ export default function robots(): MetadataRoute.Robots {
           "/compare",
           "/maintenance",
           "/coming-soon",
+          // Stop crawlers exploring the /shop filter combinations (width, profile,
+          // rim, brand, sort, page, sizes…) — a near-infinite faceted-navigation
+          // crawl trap that hammers the server. Clean URLs (/shop, /product/*,
+          // categories) are still crawled and indexed.
+          "/*?",
         ],
       },
     ],

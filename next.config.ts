@@ -3,6 +3,17 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  // Build-time static generation only. Each prerender worker independently
+  // parses the 11 MB catalogue + 4 MB vehicle data, so the default ~10 workers
+  // thrash memory on a dev machine and pages falsely "time out". Cap the worker
+  // count (high min-pages-per-worker → few workers) and the per-worker
+  // concurrency so the build is slower but reliable. This has NO effect on the
+  // running server — product pages are prerendered (seed) or generated
+  // on-demand at request time and then cached; the server is one shared process.
+  experimental: {
+    staticGenerationMaxConcurrency: 2,
+    staticGenerationMinPagesPerWorker: 2000,
+  },
   // Nginx Unit's unit-http response shim doesn't reliably forward the
   // Content-Encoding header that Next sets when it gzips a response, so
   // dynamically-rendered pages (e.g. /admin) arrive gzipped but undecoded —

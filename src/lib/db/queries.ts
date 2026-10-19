@@ -117,6 +117,8 @@ export async function decrementStock(slug: string, qty: number): Promise<void> {
       .update(schema.products)
       .set({ stockQty: sql`MAX(0, ${schema.products.stockQty} - ${qty})`, updatedAt: Date.now() })
       .where(eq(schema.products.slug, slug));
+    // Product pages are static (prerendered); revalidate so the new stock shows.
+    revalidateProducts();
   } catch (e) {
     console.error("[db] decrementStock failed", slug, (e as Error).message);
   }
@@ -129,6 +131,8 @@ export async function incrementStock(slug: string, qty: number): Promise<void> {
       .update(schema.products)
       .set({ stockQty: sql`${schema.products.stockQty} + ${qty}`, updatedAt: Date.now() })
       .where(eq(schema.products.slug, slug));
+    // Product pages are static (prerendered); revalidate so the new stock shows.
+    revalidateProducts();
   } catch (e) {
     console.error("[db] incrementStock failed", slug, (e as Error).message);
   }

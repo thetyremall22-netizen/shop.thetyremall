@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   if (!subject) return NextResponse.json({ error: "Subject is required." }, { status: 400 });
   if (!message) return NextResponse.json({ error: "Message is required." }, { status: 400 });
 
-  if (!emailConfigured()) {
+  if (!(await emailConfigured())) {
     return NextResponse.json({ error: "Email isn't configured yet (set RESEND_API_KEY or SMTP_* in the environment)." }, { status: 503 });
   }
 

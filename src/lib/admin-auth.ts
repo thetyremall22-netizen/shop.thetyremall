@@ -1,6 +1,7 @@
 import "server-only";
 import crypto from "crypto";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { getUserById, can, type Role, type Perm } from "./admin-users";
 
@@ -75,8 +76,13 @@ export async function isAdmin(): Promise<boolean> {
   return (await getAdminUser()) !== null;
 }
 
-/** Use at the top of every protected admin page. Redirects to login if needed. */
+/** Use at the top of every protected admin page. Redirects to login if needed.
+ *  `connection()` marks the whole admin render request-bound (admin is private,
+ *  session-gated and time-sensitive) so Cache Components never tries to prerender
+ *  an admin shell — which otherwise reads the session token's `Date.now()` expiry
+ *  during prerender and throws (blocking-prerender-current-time). */
 export async function requireAdmin(): Promise<SessionUser> {
+  await connection();
   const u = await getAdminUser();
   if (!u) redirect("/admin/login");
   return u;
@@ -85,6 +91,7 @@ export async function requireAdmin(): Promise<SessionUser> {
 /** Page-level permission gate: redirect to login if not signed in, or to the
  *  dashboard (access denied) if the role lacks the permission. */
 export async function requirePermission(perm: Perm): Promise<SessionUser> {
+  await connection();
   const u = await getAdminUser();
   if (!u) redirect("/admin/login");
   if (!can(u.role, perm)) redirect("/admin?denied=1");

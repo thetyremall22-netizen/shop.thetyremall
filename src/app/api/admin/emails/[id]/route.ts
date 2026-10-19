@@ -25,7 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const html = body.html ?? original.html;
   if (!to || !subject || !html) return NextResponse.json({ error: "Recipient, subject and message are all required." }, { status: 400 });
 
-  if (!emailConfigured()) {
+  if (!(await emailConfigured())) {
     return NextResponse.json({ error: "Email isn't configured yet (set RESEND_API_KEY or SMTP_* in the environment)." }, { status: 503 });
   }
 

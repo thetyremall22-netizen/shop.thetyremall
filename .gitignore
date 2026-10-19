@@ -44,3 +44,6 @@ next-env.d.ts
 
 # local order store (dev)
 /.data/
+
+# Deploy bundles (built artifacts, not source)
+ttm-*.zip

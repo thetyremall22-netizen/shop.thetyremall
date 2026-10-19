@@ -1,34 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
+import fs from "node:fs";
+import path from "node:path";
 
 // Maintenance / "coming soon" gate. When the admin toggles it on, public
 // storefront pages are rewritten to /maintenance. Admin (/admin, /api) and
 // static assets are never gated, and anyone with an admin session cookie
 // bypasses it so they can preview the real site.
 //
-// The flag lives in the DB (admin-toggleable). Middleware can't read the DB
-// directly, so it fetches the cached /api/maintenance flag and caches the
-// result in-module for a few seconds to avoid a request per navigation.
+// The admin Settings save writes the flag to a plain file next to the DB
+// (.data/maintenance.flag → "1"/"0"). In Next 16 the proxy runs in the Node.js
+// runtime, so it reads that file straight off disk. We do NOT self-fetch
+// /api/maintenance: behind Nginx Unit the worker has no localhost port to reach
+// itself on, so that round-trip failed and — failing open — the gate never
+// activated. A direct file read has no network, no SSL, and can't time out.
 
 const ADMIN_COOKIE = "ttm_admin";
 let cache = { on: false, at: 0 };
-const TTL = 30_000; // ms — check at most once every 30s per worker
+const TTL = 10_000; // ms — re-read the flag file at most this often per worker
 
-async function maintenanceOn(origin: string): Promise<boolean> {
-  if (Date.now() - cache.at < TTL) return cache.on;
-  // Hard 2s timeout + fail-open so this self-request can never hang the worker
-  // or pile up under load (it runs on every page request).
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 2000);
-  try {
-    const res = await fetch(new URL("/api/maintenance", origin), { headers: { "x-ttm-mw": "1" }, signal: ctrl.signal });
-    const data = (await res.json()) as { enabled?: boolean };
-    cache = { on: !!data.enabled, at: Date.now() };
-  } catch {
-    cache = { on: false, at: Date.now() }; // fail open
-  } finally {
-    clearTimeout(timer);
+function maintenanceFlagPath(): string {
+  const raw = (process.env.DATABASE_URL || "file:.data/ttm.db").replace(/^file:/, "");
+  if (raw === ":memory:" || /^[a-z][a-z0-9+.-]*:\/\//i.test(raw)) {
+    return path.join(process.cwd(), ".data", "maintenance.flag");
   }
-  return cache.on;
+  return path.join(path.dirname(raw) || ".", "maintenance.flag");
+}
+
+function maintenanceOn(): boolean {
+  if (Date.now() - cache.at < TTL) return cache.on;
+  let on = false;
+  try {
+    on = fs.readFileSync(maintenanceFlagPath(), "utf8").trim() === "1";
+  } catch {
+    on = false; // no flag file / unreadable → gate off (fail open, site stays up)
+  }
+  cache = { on, at: Date.now() };
+  return on;
 }
 
 // Legacy WordPress / WooCommerce paths — this is a Next.js app, there is no
@@ -46,7 +53,7 @@ export async function proxy(req: NextRequest) {
   // Admins preview the real site even while the gate is on.
   if (req.cookies.get(ADMIN_COOKIE)) return NextResponse.next();
 
-  if (await maintenanceOn(req.nextUrl.origin)) {
+  if (maintenanceOn()) {
     const url = req.nextUrl.clone();
     url.pathname = "/maintenance";
     url.search = "";

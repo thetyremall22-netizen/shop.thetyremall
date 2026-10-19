@@ -1,12 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Metadata } from "next";
-import { getProduct, relatedProducts, dealProducts, similarTyres, crossFitment } from "@/lib/catalogue";
-import { getLive } from "@/lib/db/queries";
+import { getProduct, getProducts, relatedProducts, dealProducts, similarTyres, crossFitment } from "@/lib/catalogue";
 import { vehiclesForSize } from "@/lib/vehicles";
 import { formatPrice, discountPct } from "@/lib/format";
 import { hasSetPricing, setPriceOf4 } from "@/lib/pricing";
@@ -23,6 +21,45 @@ import { OnPageCompare } from "@/components/OnPageCompare";
 import { Chevron, Check, Truck, Shield, Bolt, Star } from "@/components/icons";
 
 export const instant = false;
+
+// Require the whole product route to be static: it is prerendered to HTML at
+// build time (one file per product) and served straight off disk, instead of
+// running a fresh server render on every request. This is what lets a single
+// shared-host worker absorb a full Googlebot crawl of thousands of product
+// URLs — each hit is a cheap file read, not a render. `next build` will FAIL
+// loudly if anything in this route reads request-time data (so a regression
+// can't silently turn it dynamic again). Stock/price stay fresh because the
+// catalogue is cached by PRODUCTS_TAG and revalidated on every edit/order.
+export const ensureStatic = "navigation";
+
+const LOW_STOCK_THRESHOLD = 4;
+
+// Prerender a SEED of the most-visited product pages at build; every other
+// product page is generated on its first request and then cached to disk
+// (ISR / `dynamicParams` defaults to true). We don't prerender all ~4,500 at
+// build because:
+//   • a single render is fast, and on the running server the catalogue is
+//     loaded ONCE and shared across all requests, so on-demand first-hits are
+//     cheap (a crawl renders each URL once, then serves it static);
+//   • on-demand pages render against the LIVE database on the server, so prices
+//     and stock are correct — not frozen to the build-time snapshot;
+//   • it keeps `next build` fast instead of spawning many workers that each
+//     parse the 11 MB catalogue + 4 MB vehicle data and thrash memory.
+// Seed = in-stock products that have an image (the ones actually linked from
+// the storefront), capped so the build stays quick AND stays under V8's ~512 MB
+// max string length: prerendering too many pages at once overflows the build's
+// final serialization step (~400 product pages is the cliff → "RangeError:
+// Invalid string length"). 150 pre-warms the popular pages with comfortable
+// headroom; every other product page is generated on-demand at runtime (which
+// serializes one page at a time and never hits that aggregate limit).
+const SEED_LIMIT = Number(process.env.TTM_SEED_LIMIT ?? 24);
+export async function generateStaticParams() {
+  const all = await getProducts();
+  return all
+    .filter((p) => p.inStock && p.image)
+    .slice(0, SEED_LIMIT)
+    .map((p) => ({ slug: p.slug }));
+}
 
 /** Use a real white/transparent brand logo from /public/brand/logos/<slug>.(svg|png|webp) when present. */
 function brandLogoSrc(brand: string): string | null {
@@ -42,21 +79,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
-  // Render per-request (not a long-lived edge cache) so live stock/price and
-  // new deploys show immediately on product pages.
-  await connection();
   const { slug } = await params;
   const p = await getProduct(slug);
   if (!p) notFound();
 
-  // Live stock + price from our database (falls back to the snapshot).
-  const live = await getLive(slug);
-  const inStock = live ? live.inStock : p.inStock;
-  const price = live ? live.price : p.price;
-  const regularPrice = live ? live.regularPrice : p.regularPrice;
-  const salePrice = live ? live.salePrice : p.salePrice;
-  const onSale = live ? live.onSale : p.onSale;
-  const lowStock = live?.lowStockRemaining ?? null;
+  // Stock + price come from the cached catalogue (PRODUCTS_TAG) — refreshed the
+  // moment a product is edited or an order changes stock — so the page needs no
+  // per-request DB read and can be served as static HTML.
+  const { inStock, price, regularPrice, salePrice, onSale } = p;
+  const lowStock = inStock && p.stockQty != null && p.stockQty > 0 && p.stockQty <= LOW_STOCK_THRESHOLD ? p.stockQty : null;
 
   const pct = discountPct(regularPrice, salePrice);
   const brandSrc = brandLogoSrc(p.brand);

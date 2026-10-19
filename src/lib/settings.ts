@@ -1,7 +1,28 @@
 import "server-only";
+import fs from "node:fs";
+import path from "node:path";
 import { cacheTag, cacheLife, revalidateTag } from "next/cache";
 import { db, schema, libsql } from "./db";
 import * as sc from "./shop-config";
+
+// The "coming soon" gate is enforced by the proxy (Node runtime), which reads a
+// plain flag file off disk rather than self-fetching /api/maintenance (that
+// round-trip is unreliable behind Nginx Unit). Keep that file in sync here, on
+// every maintenance save, so a toggle takes effect without any network call.
+function maintenanceFlagPath(): string {
+  const raw = (process.env.DATABASE_URL || "file:.data/ttm.db").replace(/^file:/, "");
+  if (raw === ":memory:" || /^[a-z][a-z0-9+.-]*:\/\//i.test(raw)) {
+    return path.join(process.cwd(), ".data", "maintenance.flag");
+  }
+  return path.join(path.dirname(raw) || ".", "maintenance.flag");
+}
+function writeMaintenanceFlag(enabled: boolean): void {
+  try {
+    const p = maintenanceFlagPath();
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, enabled ? "1" : "0");
+  } catch { /* non-fatal: the gate just won't change until the next save */ }
+}
 
 // ---- shape -----------------------------------------------------------------
 export interface SiteSettings {
@@ -147,6 +168,8 @@ export async function updateSettings(patch: Partial<SiteSettings>): Promise<Site
       .insert(schema.settings)
       .values({ key: g, value: JSON.stringify(merged), updatedAt: now })
       .onConflictDoUpdate({ target: schema.settings.key, set: { value: JSON.stringify(merged), updatedAt: now } });
+    // Mirror the coming-soon flag to disk for the proxy to read (see note above).
+    if (g === "maintenance") writeMaintenanceFlag(!!(merged as { enabled?: boolean }).enabled);
   }
   // On-demand invalidation of the cached settings (footer/header shell etc.).
   revalidateTag(SETTINGS_TAG, "max");

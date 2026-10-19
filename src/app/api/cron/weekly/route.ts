@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     newStock(7),
     callTapSummary(weekAgo),
     fetchMarketNews(),
-    listLeads(500),
+    listLeads({ limit: 500 }),
   ]);
   const newLeads = leads.filter((l) => Number(l.created_at) > weekAgo);
 

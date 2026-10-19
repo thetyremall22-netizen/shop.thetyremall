@@ -173,6 +173,46 @@ export async function sendEnquiryEmail(e: {
   );
 }
 
+/** Source → human label for the shop notification + the admin Leads tab. */
+const LEAD_SOURCE_LABEL: Record<string, string> = {
+  "contact": "Contact form",
+  "whatsapp-quote": "WhatsApp quote request",
+  "whatsapp-enquiry": "WhatsApp product enquiry",
+  "tyrone": "Tyrone chat",
+};
+
+/** Unified "new lead" notification to the shop — used by EVERY website form
+ *  (contact page, WhatsApp quote, WhatsApp product enquiry, Tyrone). Always
+ *  includes all captured contact + product details so nothing has to be chased. */
+export async function sendLeadEmail(l: {
+  source: string; name?: string; email?: string; phone?: string;
+  productName?: string; sku?: string; price?: number; productUrl?: string; message?: string;
+}): Promise<void> {
+  const label = LEAD_SOURCE_LABEL[l.source] ?? l.source;
+  const row = (k: string, v: string) =>
+    `<tr><td style="padding:5px 0;color:#6b7280;white-space:nowrap;vertical-align:top">${k}</td><td style="padding:5px 0 5px 18px;font-weight:600;color:${INK}">${v}</td></tr>`;
+  const rows: string[] = [];
+  if (l.name) rows.push(row("Name", escapeHtml(l.name)));
+  if (l.phone) rows.push(row("Phone", `<a href="tel:${escapeHtml(l.phone)}" style="color:${INK}">${escapeHtml(l.phone)}</a>`));
+  if (l.email) rows.push(row("Email", `<a href="mailto:${escapeHtml(l.email)}" style="color:${INK}">${escapeHtml(l.email)}</a>`));
+  if (l.productName) rows.push(row("Product", escapeHtml(l.productName)));
+  if (l.sku) rows.push(row("SKU", escapeHtml(l.sku)));
+  if (l.price != null) rows.push(row("Price", zar(l.price)));
+  if (l.productUrl) rows.push(row("Link", `<a href="${escapeHtml(l.productUrl)}">${escapeHtml(l.productUrl)}</a>`));
+  if (l.message) rows.push(row("Message", escapeHtml(l.message).replace(/\n/g, "<br>")));
+  const who = l.name || l.phone || l.email || "website";
+  await sendMail(
+    SHOP_EMAIL,
+    `New lead — ${label} — ${who}`,
+    layout(
+      label,
+      `<p style="margin:0 0 14px;font-size:14px">A customer submitted a <b>${label.toLowerCase()}</b> on the website. Please follow up so it doesn't drop off:</p>
+       <table role="presentation" style="font-size:14px;border-collapse:collapse">${rows.join("")}</table>`
+    ),
+    { type: "enquiry" }
+  );
+}
+
 // ---- formatting helpers -----------------------------------------------------
 const zar = (minor: number) =>
   "R" + (minor / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -185,8 +225,8 @@ function layout(title: string, bodyHtml: string): string {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:24px 0">
    <tr><td align="center">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)">
-      <tr><td style="background:${INK};padding:20px 28px">
-        <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:.5px">THE TYRE <span style="color:${BRAND}">MALL</span></span>
+      <tr><td style="background:${INK};padding:18px 28px">
+        <img src="${SITE_URL}/brand/logo.png" alt="The Tyre Mall" width="96" height="47" style="display:block;border:0;outline:none;text-decoration:none;height:47px;width:auto" />
       </td></tr>
       <tr><td style="padding:28px">
         <h1 style="margin:0 0 16px;font-size:20px;color:${INK}">${title}</h1>

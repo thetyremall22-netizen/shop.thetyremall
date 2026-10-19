@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendMail, SHOP_EMAIL } from "@/lib/email";
-
-function esc(s: string): string {
-  return String(s).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]!));
-}
+import { saveLead } from "@/lib/contacts";
+import { sendLeadEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   let b: Record<string, string>;
@@ -14,20 +11,19 @@ export async function POST(req: NextRequest) {
   }
   const name = (b.name ?? "").trim();
   const email = (b.email ?? "").trim();
+  const phone = (b.phone ?? "").trim();
+  const reason = (b.reason ?? "").trim();
   const message = (b.message ?? "").trim();
   if (!name || !email || !message) {
     return NextResponse.json({ error: "Please fill in your name, email and message." }, { status: 400 });
   }
+  const fullMessage = reason ? `Reason: ${reason}\n\n${message}` : message;
 
-  const html = `<h2>New contact enquiry</h2>
-    <p><b>Name:</b> ${esc(name)}<br>
-    <b>Email:</b> ${esc(email)}<br>
-    <b>Phone:</b> ${esc(b.phone ?? "—")}<br>
-    <b>Reason:</b> ${esc(b.reason ?? "—")}</p>
-    <p><b>Message:</b><br>${esc(message).replace(/\n/g, "<br>")}</p>`;
+  // Record in Admin → Leads (Contact form tab). Never blocks the notification.
+  await saveLead({ email, phone: phone || undefined, name, source: "contact", message: fullMessage });
 
   try {
-    await sendMail(SHOP_EMAIL, `Website enquiry — ${name}`, html);
+    await sendLeadEmail({ source: "contact", name, email, phone: phone || undefined, message: fullMessage });
   } catch (e) {
     console.error("[contact] send failed", e);
     return NextResponse.json({ error: "Couldn't send right now. Please call us on 078 0088 788." }, { status: 502 });

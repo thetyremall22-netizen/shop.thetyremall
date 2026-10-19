@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { saveLead, extractContact } from "@/lib/contacts";
-import { sendMail, SHOP_EMAIL } from "@/lib/email";
+import { sendLeadEmail } from "@/lib/email";
 
+// Single entry point for every website lead that carries contact details:
+// the WhatsApp quote panel, the WhatsApp product-enquiry pre-step, and Tyrone.
+// Saves to Admin → Leads (under its source tab) AND emails the shop with ALL
+// details. The contact page posts to /api/contact, which saves the same way.
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch {}
@@ -10,7 +14,7 @@ export async function POST(req: NextRequest) {
   const source = str(body.source) ?? "tyrone";
   const message = str(body.message);
 
-  // Accept explicit email/phone, or extract from a free-text message.
+  // Accept explicit email/phone, or extract from a free-text message (Tyrone).
   let email = str(body.email);
   let phone = str(body.phone);
   if ((!email || !phone) && message) {
@@ -18,18 +22,17 @@ export async function POST(req: NextRequest) {
     email = email ?? found.email;
     phone = phone ?? found.phone;
   }
+  const name = str(body.name);
+  const productName = str(body.productName);
+  const sku = str(body.sku);
+  const productUrl = str(body.productUrl);
+  const price = typeof body.price === "number" ? body.price : undefined;
 
-  const saved = await saveLead({ email, phone, name: str(body.name), source, message });
+  const saved = await saveLead({ email, phone, name, source, message, productName, sku, productUrl });
 
   if (saved) {
-    sendMail(
-      SHOP_EMAIL,
-      `New contact lead${email ? ` — ${email}` : phone ? ` — ${phone}` : ""}`,
-      `<p>A visitor shared their contact details via <b>${source}</b>:</p>
-       <ul>${email ? `<li>Email: ${email}</li>` : ""}${phone ? `<li>Phone: ${phone}</li>` : ""}</ul>
-       ${message ? `<p><b>Message:</b> ${message.replace(/</g, "&lt;")}</p>` : ""}
-       <p>Follow up so the enquiry doesn't drop off.</p>`
-    ).catch((e) => console.error("[lead] email failed", e));
+    sendLeadEmail({ source, name, email, phone, productName, sku, price, productUrl, message })
+      .catch((e) => console.error("[lead] email failed", e));
   }
 
   return NextResponse.json({ ok: true, captured: saved });

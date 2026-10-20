@@ -99,7 +99,7 @@ export function Hero({ image = "/brand/hero-bg.webp" }: { image?: string }) {
             <Link href="/shop" className="btn btn-volt-outline px-8 py-4 text-base font-extrabold">
               SHOP NOW <Arrow width={18} height={18} />
             </Link>
-            <Link href="/shop?onSale=1" className="deal-fire" aria-label="Red hot dealz on wheelz">
+            <Link href="/product-category/hot-dealz" className="deal-fire" aria-label="Red hot dealz on wheelz">
               <span className="relative z-10 inline-flex items-center gap-2">
                 <Flame width={18} height={18} /> RED HOT DEALZ ON WHEELZ
               </span>

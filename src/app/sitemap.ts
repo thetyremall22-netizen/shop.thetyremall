@@ -11,6 +11,8 @@ const BASE = "https://thetyremall.co.za";
 const STATIC_PATHS: { path: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] }[] = [
   { path: "/", priority: 1, changeFrequency: "daily" },
   { path: "/shop", priority: 0.9, changeFrequency: "daily" },
+  { path: "/product-category/tyres", priority: 0.9, changeFrequency: "daily" },
+  { path: "/product-category/hot-dealz", priority: 0.8, changeFrequency: "daily" },
   { path: "/mag-wheels", priority: 0.9, changeFrequency: "weekly" },
   { path: "/vehicle-search", priority: 0.8, changeFrequency: "weekly" },
   { path: "/radar-protect", priority: 0.6, changeFrequency: "monthly" },

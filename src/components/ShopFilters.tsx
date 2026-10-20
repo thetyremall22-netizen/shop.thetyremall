@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { shopHref } from "@/lib/shop-url";
+import { shopHref, WHEELS_CATEGORY } from "@/lib/shop-url";
 import { useCallback, useState } from "react";
 import { Close, Filter, ChevronDown } from "./icons";
 import type { Category } from "@/lib/types";
@@ -134,7 +134,7 @@ function FilterBody({
       <Group title="Category">
         <ul className="space-y-1">
           <Radio name="type-cat" checked={!current("category") && !current("type")} label="All products" onChange={() => setParams({ type: null, category: null })} />
-          <Radio name="type-cat" checked={current("type") === "wheel"} label="Mag Wheels" onChange={() => setParams({ type: "wheel", category: null })} />
+          <Radio name="type-cat" checked={current("type") === "wheel" || current("category") === WHEELS_CATEGORY} label="Mag Wheels" onChange={() => setParams({ type: "wheel", category: null })} />
           {categories.filter((c) => c.primary && c.slug !== "mag-wheel").map((c) => (
             <Radio
               key={c.slug}

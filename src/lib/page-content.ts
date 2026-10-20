@@ -2,6 +2,7 @@ import "server-only";
 import { cacheTag, cacheLife, revalidateTag } from "next/cache";
 import type { Metadata } from "next";
 import { libsql } from "./db";
+import { cleanShopLink } from "./shop-url";
 
 // Admin-editable parts of the main landing pages: header (small line, two-tone
 // heading, intro), an optional banner, an optional extra content block, and the
@@ -95,7 +96,7 @@ function normalise(raw: unknown): PageOverride {
   const s = (v: unknown) => (typeof v === "string" ? v : "");
   return {
     eyebrow: s(o.eyebrow), silver: s(o.silver), green: s(o.green), intro: s(o.intro),
-    banner: { src: s(b.src), href: s(b.href), alt: s(b.alt) },
+    banner: { src: s(b.src), href: cleanShopLink(s(b.href)), alt: s(b.alt) },
     extraHeading: s(o.extraHeading), extraBody: s(o.extraBody), extraPosition: o.extraPosition === "top" ? "top" : "bottom",
     seoTitle: s(o.seoTitle), seoDescription: s(o.seoDescription),
   };

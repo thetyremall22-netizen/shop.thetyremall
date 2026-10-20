@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ShopListing } from "@/components/ShopListing";
 import { findCategory } from "@/lib/special-categories";
-import { categoryPath, brandPath } from "@/lib/shop-url";
+import { categoryPath, brandPath, FILTER_PAGES } from "@/lib/shop-url";
 import { getBrandDirectory } from "@/lib/brand-registry";
 
 /** A brand with products, by its page slug (e.g. "bridgestone"). */
@@ -29,6 +29,12 @@ function parse(segments: string[]): { slug: string; page?: string } {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string[] }> }): Promise<Metadata> {
   const { slug } = parse((await params).slug);
+  const f = FILTER_PAGES[slug];
+  if (f) return {
+    title: f.name,
+    description: `Shop ${f.name.toLowerCase()} at The Tyre Mall — South Africa's largest online tyre range, free delivery on 2+ tyres, pay later with HappyPay.`,
+    alternates: { canonical: categoryPath(f.canonical ?? slug) },
+  };
   const c = await findCategory(slug);
   if (!c) {
     const b = await findBrand(slug);
@@ -52,6 +58,9 @@ export default async function ProductCategoryPage({ params, searchParams }: { pa
   const c = await findCategory(slug);
   const sp = await searchParams;
   const pageSp = page && !sp.page ? { page } : {};
+  // All tyres (/product-category/tyres) and everything on sale (/product-category/hot-dealz, also /on-sale).
+  const f = FILTER_PAGES[slug];
+  if (f) return <ShopListing sp={{ ...sp, ...f.params, ...pageSp }} />;
   // An old link to a category that no longer exists still lands somewhere
   // useful: a search for its words (e.g. "womens-month-specials").
   if (!c) {

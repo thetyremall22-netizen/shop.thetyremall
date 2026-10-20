@@ -163,7 +163,7 @@ export default async function Home() {
                 <span className="text-chrome">{home.deals.silver}</span> <span className="text-volt-grad">{home.deals.green}</span>
               </h2>
             </div>
-            <Link href={viewAll(home.deals, "/shop?onSale=1")} className="btn btn-ghost shrink-0">All deals</Link>
+            <Link href={viewAll(home.deals, "/product-category/hot-dealz")} className="btn btn-ghost shrink-0">All deals</Link>
           </div>
         </Reveal>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

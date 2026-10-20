@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ShopListing } from "@/components/ShopListing";
 import { findCategory } from "@/lib/special-categories";
-import { categoryPath, brandPath } from "@/lib/shop-url";
+import { categoryPath, brandPath, shopHref } from "@/lib/shop-url";
 
 export const instant = false;
 
@@ -16,6 +16,9 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const brand = one((await searchParams).brand);
   // A brand on its own is the same listing as its /product-category/<brand> page.
   if (brand && !one((await searchParams).q)) return { title: `${brand} tyres`, alternates: { canonical: brandPath(brand) } };
+  // All tyres / everything on sale have their own pages too.
+  const href = shopHref(new URLSearchParams(Object.entries(await searchParams).flatMap(([k, v]) => (one(v) ? [[k, one(v)!]] : []))));
+  if (href.startsWith("/product-category/") && !href.includes("?")) return { title: "Shop tyres & mag wheels", alternates: { canonical: href } };
   return { title: "Shop tyres & mag wheels" };
 }
 

@@ -1,6 +1,7 @@
 import "server-only";
 import { cacheTag, cacheLife, revalidateTag } from "next/cache";
 import { libsql } from "./db";
+import { cleanShopLink } from "./shop-url";
 
 // Admin-editable home page: marketing banners (1 static or up to 3 rotating),
 // hero background, the two feature tiles, section headings + show/hide, the
@@ -45,7 +46,7 @@ export const HOME_DEFAULTS: HomeContent = {
   tiles: {
     show: true,
     items: [
-      { title: "TYRES", tags: "Passenger | SUV & 4×4 | Light Truck | Truck & Bus", href: "/shop?type=tyre", cta: "Shop Tyres", image: "/brand/tile-tyres.webp" },
+      { title: "TYRES", tags: "Passenger | SUV & 4×4 | Light Truck | Truck & Bus", href: "/product-category/tyres", cta: "Shop Tyres", image: "/brand/tile-tyres.webp" },
       { title: "WHEELS", tags: "Alloy | Steel | Off-Road | OEM Fitment", href: "/product-category/mag-wheel", cta: "Shop Wheels", image: "/brand/tile-wheels.webp" },
     ],
   },
@@ -95,7 +96,8 @@ export async function readHomeRaw(): Promise<HomeContent> {
     const r = await libsql.execute({ sql: "SELECT value FROM page_content WHERE page = 'home'", args: [] });
     const stored = r.rows.length ? JSON.parse(String(r.rows[0].value)) : {};
     const out = merge(HOME_DEFAULTS, stored);
-    out.banners.slides = (out.banners.slides ?? []).slice(0, MAX_BANNERS);
+    out.banners.slides = (out.banners.slides ?? []).slice(0, MAX_BANNERS).map((b) => ({ ...b, href: cleanShopLink(b.href ?? "") }));
+    out.tiles.items = out.tiles.items.map((t) => ({ ...t, href: cleanShopLink(t.href ?? "") })) as [Tile, Tile];
     return out;
   } catch {
     return HOME_DEFAULTS;

@@ -88,7 +88,7 @@ function toRecord(v: VehicleGroup, year: number): VehicleRecord {
     tyreOptions: v.tyreOptions, rimOptions: v.rimOptions, pcd: v.pcd, bore: v.bore,
     nutThread: v.nutThread, boltThread: v.boltThread,
     image: imgPath(v.image), imageLabel: v.imageLabel, imageYearRange: v.imageYearRange,
-    tyreHrefs, rimHrefs, tyreHref: tyreHrefs[0]?.href ?? "/shop?type=tyre",
+    tyreHrefs, rimHrefs, tyreHref: tyreHrefs[0]?.href ?? "/product-category/tyres",
   };
 }
 

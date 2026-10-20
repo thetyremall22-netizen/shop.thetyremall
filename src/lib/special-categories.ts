@@ -2,6 +2,7 @@ import "server-only";
 import { cacheTag, cacheLife, revalidateTag } from "next/cache";
 import { libsql } from "./db";
 import { categories as STATIC_CATEGORIES, getCategory } from "./catalogue";
+import { FILTER_PAGES } from "./shop-url";
 import { revalidateProducts } from "./catalogue-cache";
 import type { Category } from "./types";
 
@@ -137,7 +138,7 @@ export async function shopCategories(): Promise<Category[]> {
 export interface SpecialInput { kind?: SpecialKind; name: string; slug?: string; description?: string; image?: string; startAt?: number | null; endAt?: number | null; enabled?: boolean }
 
 async function slugTaken(slug: string, exceptId?: number): Promise<boolean> {
-  if (getCategory(slug)) return true;
+  if (getCategory(slug) || slug in FILTER_PAGES) return true;
   const s = await getSpecialBySlug(slug);
   return !!s && s.id !== exceptId;
 }

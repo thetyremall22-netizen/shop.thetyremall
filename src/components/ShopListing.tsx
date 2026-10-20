@@ -82,8 +82,10 @@ export async function ShopListing({ sp }: { sp: SP }) {
           ? `${one(sp.brand)} Tyres & Wheels`
         : type === "wheel"
           ? "Mag Wheels"
+          : type === "tyre"
+            ? "Tyres"
           : one(sp.onSale) === "1"
-            ? "Hot Deals"
+            ? "Hot Dealz"
             : "All Tyres & Wheels";
 
   // current query string (single-valued) for client filter controls + pagination
@@ -146,7 +148,7 @@ export async function ShopListing({ sp }: { sp: SP }) {
               if (others.length) u.set("sizes", others.join("|"));
               if (vehicleCtx) u.set("vehicle", vehicleCtx);
               return (
-                <Link key={s} href={`/shop?${u.toString()}`} className="inline-flex items-center gap-1.5 rounded-full border border-volt/40 bg-volt/10 px-3 py-1 text-xs font-semibold text-volt hover:bg-volt/20">
+                <Link key={s} href={shopHref(u)} className="inline-flex items-center gap-1.5 rounded-full border border-volt/40 bg-volt/10 px-3 py-1 text-xs font-semibold text-volt hover:bg-volt/20">
                   {s} <span aria-hidden>✕</span>
                 </Link>
               );

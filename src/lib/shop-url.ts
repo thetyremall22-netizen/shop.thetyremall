@@ -15,6 +15,14 @@ export function brandPath(brand: string): string {
 /** The Mag Wheels category (every wheel product is in it). */
 export const WHEELS_CATEGORY = "mag-wheel";
 
+/** Listing pages that are a filter rather than a stored category, so they get
+ *  a clean /product-category/<slug> address too. */
+export const FILTER_PAGES: Record<string, { name: string; params: Record<string, string>; canonical?: string }> = {
+  tyres: { name: "Tyres", params: { type: "tyre" } },
+  "hot-dealz": { name: "Hot Dealz", params: { onSale: "1" } },
+  "on-sale": { name: "Hot Dealz", params: { onSale: "1" }, canonical: "hot-dealz" },
+};
+
 export function shopHref(params: URLSearchParams | string): string {
   const p = new URLSearchParams(params);
   // "All wheels" is the Mag Wheels category page.
@@ -32,6 +40,21 @@ export function shopHref(params: URLSearchParams | string): string {
     const qs = p.toString();
     return `${brandPath(brand)}${qs ? `?${qs}` : ""}`;
   }
+  // All tyres / everything on sale.
+  if (!p.get("q") && !brand) {
+    const slug = p.get("type") === "tyre" ? "tyres" : p.get("onSale") === "1" && !p.get("type") ? "hot-dealz" : null;
+    if (slug) {
+      for (const k of Object.keys(FILTER_PAGES[slug].params)) p.delete(k);
+      const qs = p.toString();
+      return `${categoryPath(slug)}${qs ? `?${qs}` : ""}`;
+    }
+  }
   const qs = p.toString();
   return qs ? `/shop?${qs}` : "/shop";
+}
+
+/** Old-style "/shop?…" links (e.g. typed into the content editor) → their clean address. */
+export function cleanShopLink(href: string): string {
+  const m = /^\/shop\/?\?(.*)$/.exec(href.trim());
+  return m ? shopHref(m[1]) : href;
 }

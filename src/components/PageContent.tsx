@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { getPageContent, type PageOverride } from "@/lib/page-content";
+import { cleanShopLink } from "@/lib/shop-url";
 
 /** Inline formatting for admin-written text: **bold** and [link](url). */
 function inline(text: string, keyBase: string): ReactNode[] {
@@ -11,7 +12,7 @@ function inline(text: string, keyBase: string): ReactNode[] {
     if (m.index > last) out.push(text.slice(last, m.index));
     if (m[1]) out.push(<strong key={`${keyBase}-${n++}`} className="text-fg">{m[1]}</strong>);
     else {
-      const href = m[3];
+      const href = cleanShopLink(m[3]);
       out.push(/^\//.test(href)
         ? <Link key={`${keyBase}-${n++}`} href={href} className="font-semibold text-volt hover:underline">{m[2]}</Link>
         : <a key={`${keyBase}-${n++}`} href={href} className="font-semibold text-volt hover:underline" {...(/^https?:/.test(href) ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{m[2]}</a>);

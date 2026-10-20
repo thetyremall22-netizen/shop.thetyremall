@@ -10,6 +10,8 @@ const TABLES = {
   enquiry: { table: "enquiries", key: "id", perm: "leads.edit" },
   cart: { table: "cart_recovery", key: "id", perm: "leads.reply" },
   order: { table: "orders", key: "order_id", perm: "orders.edit" },
+  support: { table: "support_requests", key: "id", perm: "orders.edit" },
+  client: { table: "customers", key: "id", perm: "orders.edit" },
 } as const;
 type Kind = keyof typeof TABLES;
 

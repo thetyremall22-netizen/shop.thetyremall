@@ -8,12 +8,13 @@ const BASE_NAV = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/products", label: "Products" },
   { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/support", label: "Support" },
   { href: "/admin/emails", label: "Emails" },
   { href: "/admin/leads", label: "Leads & Enquiries" },
   { href: "/admin/cart-recovery", label: "Abandoned Cart" },
 ];
 
-interface Me { name: string; email: string; role: string; isOwner: boolean; canManageUsers: boolean; canManageSettings: boolean; canManageDeals: boolean; canEditContent: boolean }
+interface Me { name: string; email: string; role: string; isOwner: boolean; canManageUsers: boolean; canManageSettings: boolean; canManageDeals: boolean; canEditContent: boolean; supportNew?: number }
 const ROLE_LABEL: Record<string, string> = { super_admin: "Super Admin", manager: "Manager", editor: "Editor", viewer: "Viewer" };
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -65,6 +66,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   }`}
                 >
                   {n.label}
+                  {n.href === "/admin/support" && (me?.supportNew ?? 0) > 0 && (
+                    <span className="ml-1.5 inline-grid min-w-5 place-items-center rounded-full bg-sale px-1 text-[11px] font-black text-white">{me!.supportNew}</span>
+                  )}
                 </Link>
               );
             })}

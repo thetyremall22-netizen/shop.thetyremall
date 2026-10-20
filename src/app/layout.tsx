@@ -4,6 +4,7 @@ import { Anton, Inter } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/lib/cart";
 import { CompareProvider } from "@/lib/compare";
+import { AccountProvider } from "@/lib/account-client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
@@ -58,6 +59,7 @@ export default async function RootLayout({
         <GoogleTagManagerNoScript />
         <CartProvider>
           <CompareProvider>
+          <AccountProvider>
             <ScrollToTop />
             <Header brands={brands} />
             <main>{children}</main>
@@ -65,6 +67,7 @@ export default async function RootLayout({
             <CartDrawer />
             <FloatingWidgets />
             <CookieConsent />
+          </AccountProvider>
           </CompareProvider>
         </CartProvider>
       </body>

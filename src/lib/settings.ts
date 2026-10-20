@@ -59,6 +59,10 @@ export interface SiteSettings {
     regNumber: string;   // company registration number (optional)
     footer: string;      // e.g. banking details / terms, shown at the bottom
   };
+  clientZone: {
+    wishlistAlerts: boolean; // email clients when a wishlist item goes on sale / is back in stock
+    supportEmail: string;    // where new support requests are sent (blank = shop email)
+  };
   maintenance: {
     enabled: boolean; // hide the public storefront behind a "coming soon" page
     heading: string;
@@ -111,6 +115,10 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     vatNumber: "",
     regNumber: "",
     footer: "Thank you for your business.",
+  },
+  clientZone: {
+    wishlistAlerts: true,
+    supportEmail: "",
   },
   maintenance: {
     enabled: false,
@@ -168,6 +176,9 @@ async function readSettings(): Promise<SiteSettings> {
     return DEFAULT_SETTINGS;
   }
 }
+
+/** Uncached read, for background jobs and emails that must see the latest admin edits. */
+export const getSettingsFresh = readSettings;
 
 /** Cached site settings for storefront + admin reads (tag-revalidated on save). */
 export async function getSettings(): Promise<SiteSettings> {

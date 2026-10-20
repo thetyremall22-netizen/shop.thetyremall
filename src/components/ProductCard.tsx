@@ -4,6 +4,7 @@ import type { Product } from "@/lib/types";
 import { formatPrice, formatPriceShort, discountPct } from "@/lib/format";
 import { hasSetPricing, setPriceOf4 } from "@/lib/pricing";
 import { CompareToggle } from "./CompareToggle";
+import { WishlistButton } from "./WishlistButton";
 import type { CompareItem } from "@/lib/compare";
 import { Star, Arrow } from "./icons";
 import { BurstLink } from "./BurstLink";
@@ -48,8 +49,9 @@ export async function ProductCard({ p }: { p: Product }) {
 
   return (
     <div
-      className="glow-hover group flex flex-col overflow-hidden rounded-[14px] bg-white text-[#14171a] shadow-lg shadow-black/20 ring-1 ring-black/5"
+      className="glow-hover group relative flex flex-col overflow-hidden rounded-[14px] bg-white text-[#14171a] shadow-lg shadow-black/20 ring-1 ring-black/5"
     >
+      <WishlistButton slug={p.slug} className="absolute right-2 top-2 z-10" />
       <Link href={`/product/${p.slug}`} className="relative block">
         <div className="relative aspect-square overflow-hidden bg-white">
           {p.image ? (

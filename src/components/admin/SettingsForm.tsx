@@ -122,6 +122,16 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
           <textarea value={v.invoice.footer} onChange={(e) => up("invoice", "footer", e.target.value)} rows={3} className={`${field} h-auto py-2`} /></label>
       </Group>
 
+      <Group title="Client zone (customer accounts)">
+        <label className="flex items-center gap-2 text-sm sm:col-span-2">
+          <input type="checkbox" checked={v.clientZone.wishlistAlerts} onChange={(e) => up("clientZone", "wishlistAlerts", e.target.checked)} className="size-5 accent-volt" />
+          Email clients when an item on their wishlist goes on sale, drops in price or is back in stock
+        </label>
+        <p className="sm:col-span-2 -mt-2 text-xs text-muted">Checked every 30 minutes. Each client gets at most one email per check, listing all their changed items, and can switch these emails off in their account or from the email itself.</p>
+        <label className="block sm:col-span-2"><span className={label}>Send new support requests to (leave empty for the shop email)</span>
+          <input value={v.clientZone.supportEmail} onChange={(e) => up("clientZone", "supportEmail", e.target.value)} placeholder="shop@thetyremall.co.za" className={field} /></label>
+      </Group>
+
       <Group title="Social links">
         <p className="sm:col-span-2 text-xs text-muted">Paste the full link to each page, e.g. https://www.facebook.com/thetyremall (or just the page name). Icons show in the website footer. On phones they open the Facebook, Instagram, TikTok or YouTube app; on computers, the website. Leave a box empty to hide that icon.</p>
         <label className="block"><span className={label}>Facebook URL</span>

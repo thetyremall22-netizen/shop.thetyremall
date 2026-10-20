@@ -69,6 +69,10 @@ export async function PATCH(req: NextRequest) {
       regNumber: s(iv.regNumber, 40), footer: s(iv.footer, 1000),
     }) as SiteSettings["invoice"];
   }
+  if (body.clientZone) {
+    const cz = body.clientZone;
+    patch.clientZone = clean({ wishlistAlerts: b(cz.wishlistAlerts), supportEmail: s(cz.supportEmail, 160) }) as SiteSettings["clientZone"];
+  }
   if (body.maintenance) {
     const mt = body.maintenance;
     patch.maintenance = clean({

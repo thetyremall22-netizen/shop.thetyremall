@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/lib/cart";
+import { useAccount } from "@/lib/account-client";
 import { formatPrice } from "@/lib/format";
 import { FITMENT_CENTRES, PAYMENT_METHODS } from "@/lib/shop-config";
 import { Check, Truck, Pin, Shield, Bolt } from "@/components/icons";
@@ -45,6 +46,22 @@ export default function CheckoutPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length]);
+
+  // Signed-in client: fill in their saved details and address (only empty boxes,
+  // so anything typed or restored above is kept).
+  const { customer } = useAccount();
+  useEffect(() => {
+    const form = formRef.current;
+    if (!customer || !form || items.length === 0) return;
+    const vals: Record<string, string> = {
+      firstName: customer.firstName, lastName: customer.lastName, email: customer.email,
+      phone: customer.phone.replace(/^\+27/, "0"), ...customer.address,
+    };
+    for (const [k, v] of Object.entries(vals)) {
+      const el = form.elements.namedItem(k) as HTMLInputElement | null;
+      if (el && !el.value && v) el.value = v;
+    }
+  }, [customer, items.length, deliveryMethod]);
 
   // Cart Recovery: as the shopper fills in checkout, save their cart + details
   // (once a valid email is entered) so a recovery email can go out if they

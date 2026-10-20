@@ -7,6 +7,9 @@ import type { SiteSettings } from "./settings";
 import { getProduct } from "./catalogue";
 import { getSettings } from "./settings";
 import { getOrIssueInvoice, type InvoiceInfo } from "./invoices";
+import { TOPIC_LABEL, type SupportRequest } from "./support";
+import type { WishlistChange } from "./wishlist";
+import { getSettingsFresh } from "./settings";
 
 export const SHOP_EMAIL = process.env.SHOP_EMAIL ?? "shop@thetyremall.co.za";
 
@@ -593,4 +596,119 @@ export async function sendOrderOnHold(order: Order): Promise<void> {
     sendMail(o.customer.email, c.subject, c.html, { type: "order_on_hold", orderRef: o.reference }),
     sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, shopOrder(o, `Order ${o.reference} on hold`), { type: "order_on_hold", orderRef: o.reference }),
   ]);
+}
+
+// ---- client zone ---------------------------------------------------------------
+const button = (href: string, label: string) =>
+  `<p style="margin:20px 0"><a href="${escapeHtml(href)}" style="display:inline-block;background:${BRAND};color:${INK};font-weight:800;text-decoration:none;padding:12px 22px;border-radius:10px">${label}</a></p>`;
+const small = (html: string) => `<p style="font-size:12px;color:#6b7280">${html}</p>`;
+const firstOf = (name: string) => escapeHtml((name || "").trim().split(/\s+/)[0] || "there");
+
+export async function sendCustomerAccountEmail(kind: "verify" | "reset", to: string, name: string, link: string, hours: number): Promise<void> {
+  const verify = kind === "verify";
+  const title = verify ? "Confirm your email address" : "Reset your password";
+  const intro = verify
+    ? `Hi ${firstOf(name)}, thanks for creating your Tyre Mall account. Please confirm this is your email address to finish setting it up. Once confirmed, you'll see all your orders, wishlist and support requests in one place.`
+    : `Hi ${firstOf(name)}, we received a request to reset the password for your Tyre Mall account. Click below to choose a new one.`;
+  await sendMail(
+    to,
+    verify ? "Confirm your email — The Tyre Mall account" : "Reset your Tyre Mall password",
+    layout(title, `<p style="font-size:14px;line-height:1.6">${intro}</p>
+      ${button(link, verify ? "Confirm my email →" : "Choose a new password →")}
+      ${small(`This link works once and expires in ${hours} hours. If you didn't ask for this, you can ignore this email — nothing will change.`)}`),
+    { type: "customer_account", noCc: true },
+  );
+}
+
+function supportSummary(r: SupportRequest): string {
+  const row = (k: string, v: string) => `<tr><td style="padding:4px 12px 4px 0;color:#6b7280;font-size:13px;white-space:nowrap;vertical-align:top">${k}</td><td style="padding:4px 0;font-size:13px">${v}</td></tr>`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 16px">
+    ${row("Request", `<b>${escapeHtml(r.ref)}</b>`)}
+    ${row("Topic", escapeHtml(TOPIC_LABEL[r.topic]))}
+    ${row("Order(s)", r.orderRefs.length ? escapeHtml(r.orderRefs.join(", ")) : "—")}
+  </table>`;
+}
+const quote = (body: string) =>
+  `<div style="border-left:3px solid ${BRAND};background:#f8faf5;padding:12px 14px;font-size:14px;line-height:1.6;white-space:pre-wrap">${escapeHtml(body)}</div>`;
+
+async function supportInbox(): Promise<string> {
+  try {
+    const s = await getSettingsFresh();
+    const v = s.clientZone?.supportEmail?.trim();
+    if (v && /@/.test(v)) return v;
+  } catch { /* fall back */ }
+  return SHOP_EMAIL;
+}
+
+/** New request: tell the shop (with a link to Admin → Support) and confirm to the client. */
+export async function sendSupportRequestEmails(r: SupportRequest, message: string): Promise<void> {
+  const adminLink = `${SITE_URL}/admin/support/${r.id}`;
+  const contact = `${escapeHtml(r.name)} · <a href="mailto:${escapeHtml(r.email)}" style="color:${INK}">${escapeHtml(r.email)}</a>${r.phone ? ` · ${escapeHtml(r.phone)}` : ""}`;
+  await sendMail(
+    await supportInbox(),
+    `${r.topic === "cancel" ? "⚠ Cancellation request" : "Support request"} ${r.ref}${r.orderRefs.length ? ` — ${r.orderRefs.join(", ")}` : ""}${r.test ? " [TEST]" : ""}`,
+    layout(`New support request ${r.ref}`, `<p style="font-size:14px">From ${contact}</p>${supportSummary(r)}${quote(message)}${button(adminLink, "Open in Admin → Support →")}`),
+    { type: "support_request", orderRef: r.orderRefs[0] ?? null, noCc: true },
+  );
+  await sendMail(
+    r.email,
+    `We've received your request ${r.ref} — The Tyre Mall`,
+    layout("We've received your request", `<p style="font-size:14px;line-height:1.6">Hi ${firstOf(r.name)}, thanks for getting in touch. Our team will look at your request and reply as soon as possible (usually within one working day).</p>
+      ${supportSummary(r)}${quote(message)}
+      ${button(`${SITE_URL}/account/support/${r.ref}`, "View my request →")}
+      ${small("You can follow up or add more information from your account at any time.")}`),
+    { type: "support_request", orderRef: r.orderRefs[0] ?? null, noCc: true },
+  );
+}
+
+/** Staff replied: email the client. */
+export async function sendSupportReplyToClient(r: SupportRequest, body: string, statusLabel: string): Promise<void> {
+  await sendMail(
+    r.email,
+    `Reply to your request ${r.ref} — The Tyre Mall`,
+    layout(`Reply to your request ${r.ref}`, `<p style="font-size:14px;line-height:1.6">Hi ${firstOf(r.name)}, our team has replied to your request:</p>
+      ${quote(body)}${supportSummary(r)}
+      <p style="font-size:13px;color:#6b7280">Status: <b style="color:${INK}">${escapeHtml(statusLabel)}</b></p>
+      ${button(`${SITE_URL}/account/support/${r.ref}`, "Reply or view the conversation →")}`),
+    { type: "support_reply", orderRef: r.orderRefs[0] ?? null, noCc: true },
+  );
+}
+
+/** Client wrote back: tell the shop. */
+export async function sendSupportClientFollowUp(r: SupportRequest, body: string): Promise<void> {
+  await sendMail(
+    await supportInbox(),
+    `Client replied — ${r.ref}${r.orderRefs.length ? ` (${r.orderRefs.join(", ")})` : ""}${r.test ? " [TEST]" : ""}`,
+    layout(`${escapeHtml(r.name)} replied to ${r.ref}`, `${supportSummary(r)}${quote(body)}${button(`${SITE_URL}/admin/support/${r.id}`, "Open in Admin → Support →")}`),
+    { type: "support_reply", orderRef: r.orderRefs[0] ?? null, noCc: true },
+  );
+}
+
+export async function sendWishlistAlert(to: string, firstName: string, changes: WishlistChange[], unsubscribeLink: string): Promise<void> {
+  const label = (c: WishlistChange) =>
+    c.reasons.includes("stock") && c.reasons.length === 1 ? "Back in stock"
+      : c.reasons.includes("stock") ? "Back in stock & on sale"
+      : c.reasons.includes("sale") ? "Now on sale" : "Price dropped";
+  const rows = changes.map((c) => {
+    const img = c.image ? `<img src="${escapeHtml(c.image.startsWith("http") ? c.image : SITE_URL + c.image)}" alt="" width="72" height="72" style="display:block;width:72px;height:72px;object-fit:contain;border-radius:8px;background:#fff;border:1px solid #eee">` : "";
+    const was = c.regularPrice > c.price ? c.regularPrice : c.oldPrice > c.price ? c.oldPrice : 0;
+    return `<tr>
+      <td style="padding:10px 12px 10px 0;vertical-align:top;width:72px">${img}</td>
+      <td style="padding:10px 0;vertical-align:top;font-size:14px">
+        <span style="display:inline-block;background:${c.reasons.includes("stock") ? BRAND : "#e11d48"};color:${c.reasons.includes("stock") ? INK : "#fff"};font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;text-transform:uppercase">${label(c)}</span><br>
+        <b>${escapeHtml(c.name)}</b><br>
+        <span style="font-size:15px;font-weight:800">${zar(c.price)}</span>${was ? ` <span style="color:#9ca3af;text-decoration:line-through;font-size:13px">${zar(was)}</span>` : ""}<br>
+        <a href="${SITE_URL}/product/${encodeURIComponent(c.slug)}" style="color:${INK};font-size:13px;font-weight:700">View &amp; buy →</a>
+      </td></tr>`;
+  }).join("");
+  const n = changes.length;
+  await sendMail(
+    to,
+    n === 1 ? `Good news: ${changes[0].name} is ${label(changes[0]).toLowerCase()}` : `Good news on ${n} items in your wishlist`,
+    layout("Good news from your wishlist", `<p style="font-size:14px;line-height:1.6">Hi ${firstOf(firstName)}, ${n === 1 ? "an item" : `${n} items`} on your Tyre Mall wishlist ${n === 1 ? "has" : "have"} changed:</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>
+      ${button(`${SITE_URL}/wishlist`, "Open my wishlist →")}
+      ${small(`Prices and stock can change quickly. You're getting this because you saved these items to your wishlist. <a href="${escapeHtml(unsubscribeLink)}" style="color:#6b7280">Stop wishlist emails</a>`)}`),
+    { type: "wishlist_alert", noCc: true },
+  );
 }

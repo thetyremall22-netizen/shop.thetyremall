@@ -11,6 +11,7 @@ import { OrderCustomerEditor, OrderItemsEditor, OrderStatusEditor, OrderEmailAct
 import { getOrder, STATUS_LABEL, STATUS_BADGE } from "@/lib/orders";
 import { listAudit } from "@/lib/audit";
 import { getInvoice } from "@/lib/invoices";
+import { supportForOrder, SUPPORT_STATUS_LABEL, SUPPORT_STATUS_BADGE, TOPIC_LABEL } from "@/lib/support";
 import { listEmailsForOrder, EMAIL_TYPE_LABELS } from "@/lib/email-log";
 import { getProduct } from "@/lib/catalogue";
 import { Close } from "@/components/icons";
@@ -25,7 +26,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   const { id } = await params;
   const o = await getOrder(id);
   if (!o) notFound();
-  const [orderEmails, history, invoice] = await Promise.all([listEmailsForOrder(o.reference), listAudit("order", o.id), getInvoice(o.id)]);
+  const [orderEmails, history, invoice, support] = await Promise.all([listEmailsForOrder(o.reference), listAudit("order", o.id), getInvoice(o.id), supportForOrder(o.reference)]);
   // Show part numbers for orders placed before SKUs were saved on the order.
   const items = await Promise.all(o.items.map(async (i) => (i.sku ? i : { ...i, sku: (await getProduct(i.slug).catch(() => undefined))?.sku || undefined })));
   const canEdit = can(me.role, "orders.edit");
@@ -49,6 +50,21 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           <Close width={16} height={16} />
         </Link>
       </div>
+
+      {support.length > 0 && (
+        <div className={`mt-5 rounded-xl border p-4 text-sm ${support.some((r) => r.topic === "cancel" && !["resolved", "closed"].includes(r.status)) ? "border-sale/50 bg-sale/10" : "border-line"}`}>
+          <b className="text-fg">Support requests about this order</b>
+          <div className="mt-2 space-y-1">
+            {support.map((r) => (
+              <Link key={r.id} href={`/admin/support/${r.id}`} className="flex flex-wrap items-center gap-2 hover:text-volt">
+                <span className="font-bold text-volt">{r.ref}</span>
+                <span className={r.topic === "cancel" ? "font-semibold text-sale" : "text-fg"}>{TOPIC_LABEL[r.topic]}</span>
+                <span className={`badge ${SUPPORT_STATUS_BADGE[r.status]}`}>{SUPPORT_STATUS_LABEL[r.status]}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-5 card p-4">
         <OrderEmailActions id={o.id} customerEmail={o.customer.email} canSend={can(me.role, "emails.send")} />

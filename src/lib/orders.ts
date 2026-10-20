@@ -227,3 +227,43 @@ export async function listOrders(opts: { page?: number; perPage?: number; status
     return { orders: [] as Order[], total: 0, page, perPage };
   }
 }
+
+// ---- client zone ---------------------------------------------------------------
+/** Orders placed with this email address (newest first). Only call with a
+ *  VERIFIED account email — this is what links a client to their orders. */
+export async function listOrdersForEmail(email: string, limit = 100): Promise<Order[]> {
+  const e = email.trim().toLowerCase();
+  if (!e) return [];
+  try {
+    await ensureSchema();
+    const rows = await db.select().from(schema.orders)
+      .where(sql`LOWER(json_extract(${schema.orders.customer}, '$.email')) = ${e}`)
+      .orderBy(desc(schema.orders.id)).limit(limit);
+    return rows.map(rowToOrder);
+  } catch (e2) {
+    console.error("[db] listOrdersForEmail failed:", (e2 as Error).message);
+    return [];
+  }
+}
+
+/** One order by its number, only if it belongs to this email address. */
+export async function getOrderForEmail(reference: string, email: string): Promise<Order | null> {
+  const e = email.trim().toLowerCase();
+  if (!e || !reference) return null;
+  await ensureSchema();
+  const rows = await db.select().from(schema.orders)
+    .where(and(eq(schema.orders.reference, reference.trim().toUpperCase()), sql`LOWER(json_extract(${schema.orders.customer}, '$.email')) = ${e}`))
+    .orderBy(desc(schema.orders.id)).limit(1);
+  return rows[0] ? rowToOrder(rows[0]) : null;
+}
+
+/** order_id for each order number (for linking to Admin → Orders). */
+export async function orderIdsByReference(refs: string[]): Promise<Record<string, string>> {
+  if (!refs.length) return {};
+  try {
+    await ensureSchema();
+    const rows = await db.select({ ref: schema.orders.reference, id: schema.orders.orderId }).from(schema.orders)
+      .where(sql`${schema.orders.reference} IN (${sql.join(refs.map((r) => sql`${r}`), sql`, `)})`);
+    return Object.fromEntries(rows.map((r) => [r.ref, r.id]));
+  } catch { return {}; }
+}

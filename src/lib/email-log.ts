@@ -17,6 +17,10 @@ export type EmailType =
   | "enquiry"
   | "lead_confirmation"
   | "staff_account"
+  | "customer_account"
+  | "support_request"
+  | "support_reply"
+  | "wishlist_alert"
   | "custom";
 
 export type EmailStatus = "sent" | "failed" | "skipped";
@@ -86,6 +90,9 @@ export const EMAIL_TABS: { v: string; label: string; types: string[] }[] = [
   { v: "carts", label: "Abandoned carts", types: ["abandoned_cart"] },
   { v: "custom", label: "Written by staff", types: ["custom"] },
   { v: "staff", label: "Staff accounts", types: ["staff_account"] },
+  { v: "support", label: "Support", types: ["support_request", "support_reply"] },
+  { v: "clients", label: "Client accounts", types: ["customer_account"] },
+  { v: "wishlist", label: "Wishlist alerts", types: ["wishlist_alert"] },
 ];
 
 /** Email counts per tab (and per status within a tab). */
@@ -191,5 +198,9 @@ export const EMAIL_TYPE_LABELS: Record<string, string> = {
   enquiry: "Enquiry (shop)",
   lead_confirmation: "Enquiry received (customer)",
   staff_account: "Staff account (password reset / invite)",
+  customer_account: "Client account (confirm email / reset password)",
+  support_request: "Support request",
+  support_reply: "Support reply",
+  wishlist_alert: "Wishlist alert (on sale / back in stock)",
   custom: "Custom",
 };

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { can } from "@/lib/admin-users";
+import { supportCounts } from "@/lib/support";
 
 export async function GET() {
   const u = await getAdminUser();
@@ -14,5 +15,7 @@ export async function GET() {
     canManageSettings: can(u.role, "settings.manage"),
     canManageDeals: can(u.role, "deals.manage"),
     canEditContent: can(u.role, "content.edit"),
+    // New support requests waiting for staff (badge on the Support tab).
+    supportNew: can(u.role, "orders.view") ? (await supportCounts()).open ?? 0 : 0,
   });
 }

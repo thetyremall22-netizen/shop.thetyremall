@@ -10,7 +10,7 @@ export function TestBadge({ test, className = "" }: { test?: boolean | number | 
 }
 
 /** Button to mark an entry as a test, or back to real. */
-export function TestToggle({ kind, id, test }: { kind: "lead" | "enquiry" | "cart" | "order"; id: string | number; test: boolean }) {
+export function TestToggle({ kind, id, test }: { kind: "lead" | "enquiry" | "cart" | "order" | "support" | "client"; id: string | number; test: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);

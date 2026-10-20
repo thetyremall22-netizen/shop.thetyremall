@@ -10,6 +10,7 @@ import { Cart, Menu, Close, Bolt, User, Heart, Chevron } from "./icons";
 import { ThemeToggle } from "./ThemeToggle";
 import { PROMOS, NAV_PRIMARY } from "@/lib/nav";
 import { useCart } from "@/lib/cart";
+import { useAccount } from "@/lib/account-client";
 
 const NAV = [
   { label: "Home", href: "/" },
@@ -22,6 +23,8 @@ const NAV = [
 
 export function Header({ brands = [] }: { brands?: { name: string; logo: string | null }[] }) {
   const { totals, setDrawerOpen } = useCart();
+  const { signedIn, wishlist } = useAccount();
+  const wishCount = wishlist.length;
   const [promoIdx, setPromoIdx] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -51,10 +54,16 @@ export function Header({ brands = [] }: { brands?: { name: string; logo: string 
           <Logo className="shrink-0" priority />
 
           {/* mobile actions (desktop shows these inside the column below) */}
-          <div className="ml-auto flex items-center gap-1 lg:hidden">
+          <div className="ml-auto flex items-center gap-0 lg:hidden [&>*]:!size-9">
             <ThemeToggle />
-            <Link href="/coming-soon?for=Account" className="grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Account">
+            <Link href="/account" className="grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Account">
               <User />
+            </Link>
+            <Link href="/wishlist" className="relative grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Wishlist">
+              <Heart />
+              {wishCount > 0 && (
+                <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-sale px-1 text-[11px] font-black text-white">{wishCount}</span>
+              )}
             </Link>
             <button onClick={() => setDrawerOpen(true)} className="relative grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Open cart">
               <Cart />
@@ -131,11 +140,14 @@ export function Header({ brands = [] }: { brands?: { name: string; logo: string 
               {/* desktop icons */}
               <div className="ml-auto flex items-center gap-1">
                 <ThemeToggle />
-                <Link href="/coming-soon?for=Account" className="grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Account">
+                <Link href="/account" className="grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Account">
                   <User />
                 </Link>
-                <Link href="/coming-soon?for=Wishlist" className="grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Wishlist">
+                <Link href="/wishlist" className="relative grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Wishlist">
                   <Heart />
+                  {wishCount > 0 && (
+                    <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-sale px-1 text-[11px] font-black text-white">{wishCount}</span>
+                  )}
                 </Link>
                 <button onClick={() => setDrawerOpen(true)} className="relative grid size-10 place-items-center rounded-lg text-fg hover:text-volt" aria-label="Open cart">
                   <Cart />
@@ -176,7 +188,8 @@ export function Header({ brands = [] }: { brands?: { name: string; logo: string 
                   </Link>
                 ))}
               </div>
-              <Link href="/coming-soon?for=Account" onClick={() => setMenuOpen(false)} className="mt-3 border-t border-line py-3 font-medium text-muted">My Account</Link>
+              <Link href="/account" onClick={() => setMenuOpen(false)} className="mt-3 border-t border-line py-3 font-medium text-muted">{signedIn ? "My Account" : "Sign in / Register"}</Link>
+              <Link href="/wishlist" onClick={() => setMenuOpen(false)} className="border-t border-line py-3 font-medium text-muted">My Wishlist{wishCount > 0 ? ` (${wishCount})` : ""}</Link>
             </div>
           </div>
         </div>

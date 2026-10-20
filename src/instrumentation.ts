@@ -5,4 +5,6 @@ export async function register() {
   startBackups();
   const { startCartRecovery } = await import("./lib/cart-recovery-scheduler");
   startCartRecovery();
+  const { startWishlistAlerts } = await import("./lib/wishlist-scheduler");
+  startWishlistAlerts();
 }

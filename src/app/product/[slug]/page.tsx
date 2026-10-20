@@ -14,6 +14,7 @@ import { ProductCustomiser } from "@/components/ProductCustomiser";
 import { ProductRailCard } from "@/components/ProductCard";
 import { DragScroll } from "@/components/DragScroll";
 import { CompareToggle } from "@/components/CompareToggle";
+import { WishlistButton } from "@/components/WishlistButton";
 import type { CompareItem } from "@/lib/compare";
 import type { Product } from "@/lib/types";
 import { YouMayLike } from "@/components/YouMayLike";
@@ -225,6 +226,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <span className="flex items-center gap-1 text-sm text-amber-400"><Star width={14} height={14} /> {p.rating} ({p.reviews})</span>
             )}
             <CompareToggle item={compareItem} dark labelAdd="Add to compare" className="text-sm" />
+            <WishlistButton slug={p.slug} variant="text" className="text-sm" />
           </div>
 
           <div className="mt-4 flex items-end justify-between gap-4">

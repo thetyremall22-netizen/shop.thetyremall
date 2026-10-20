@@ -30,10 +30,10 @@ export async function POST(req: NextRequest) {
 
   const base = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
   const link = `${base}/admin/reset?token=${created.token}`;
-  const html = `<!doctype html><html><body style="margin:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:${INK}">
+  const html = `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:${INK}">
     <table role="presentation" width="100%" style="padding:24px 0"><tr><td align="center">
       <table role="presentation" width="600" style="max-width:600px;background:#fff;border-radius:12px;overflow:hidden">
-        <tr><td style="background:${INK};padding:18px 28px"><span style="font-size:20px;font-weight:800;color:#fff">THE TYRE <span style="color:${BRAND}">MALL</span> ADMIN</span></td></tr>
+        <tr><td style="background:${INK};padding:18px 28px"><img src="${base}/brand/logo.png" alt="The Tyre Mall" width="96" height="47" style="display:block;border:0;height:47px;width:auto"></td></tr>
         <tr><td style="padding:28px">
           <h1 style="margin:0 0 14px;font-size:18px">Reset your admin password</h1>
           <p style="font-size:14px">We received a request to reset the password for this admin account. This link is valid for 1 hour and can be used once.</p>

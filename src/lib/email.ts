@@ -334,21 +334,17 @@ function itemsTable(o: Order, showSku = false): string {
   </table>`;
 }
 
-function deliveryBlock(o: Order): string {
-  if (o.delivery.method === "fitment") {
-    return `<p style="font-size:14px"><b>Fitment:</b> ${o.delivery.fitmentStore ?? "Partner centre"}${
-      o.delivery.fitmentDate ? ` on ${o.delivery.fitmentDate}` : ""
-    }<br><span style="color:#6b7280">We'll call to confirm your fitment slot.</span></p>`;
-  }
-  const a = o.delivery.address;
-  return a
-    ? `<p style="font-size:14px"><b>Deliver to:</b><br>${a.street}, ${a.suburb}<br>${a.city}, ${a.province} ${a.postalCode}</p>`
-    : "";
-}
-
 /** Everything the shop needs to action an order, at the top of every shop
  *  notification: customer details, delivery address / fitment, and payment. */
-function shopDetails(o: Order): string {
+const STATUS_TEXT: Record<string, string> = {
+  pending: "Awaiting payment", processing: "Paid — processing", "on-hold": "On hold", completed: "Completed",
+  cancelled: "Cancelled", refunded: "Refunded", partially_refunded: "Partly refunded", failed: "Payment failed",
+};
+const PAYMENT_TEXT: Record<string, string> = { payfast: "PayFast (card / instant EFT)", happypay: "HappyPay (pay later)", coupon: "Coupon (no payment due)" };
+
+/** Full order details — customer, contact, delivery address or fitment,
+ *  payment and status — at the top of EVERY order email (customer and shop). */
+function shopDetails(o: Order, title = "Customer details"): string {
   const c = o.customer;
   const row = (k: string, v: string) =>
     `<tr><td style="padding:4px 12px 4px 0;color:#6b7280;white-space:nowrap;vertical-align:top">${k}</td><td style="padding:4px 0">${v}</td></tr>`;
@@ -358,14 +354,17 @@ function shopDetails(o: Order): string {
     : row("Delivery address", a
         ? [a.street, a.suburb, a.city, a.province, a.postalCode].filter(Boolean).map(escapeHtml).join("<br>")
         : "<i>No address captured</i>");
-  return `<h3 style="margin:8px 0 4px;font-size:15px">Customer details</h3>
+  const placed = new Date(o.createdAt).toLocaleString("en-ZA", { dateStyle: "long", timeStyle: "short", timeZone: "Africa/Johannesburg" });
+  return `<h3 style="margin:8px 0 4px;font-size:15px">${escapeHtml(title)}</h3>
     <table role="presentation" style="border-collapse:collapse;font-size:14px">
       ${row("Name", `<b>${escapeHtml(`${c.firstName} ${c.lastName}`.trim())}</b>`)}
       ${row("Email", `<a href="mailto:${escapeHtml(c.email)}" style="color:${INK}">${escapeHtml(c.email)}</a>`)}
       ${row("Phone", c.phone ? `<a href="tel:${escapeHtml(c.phone.replace(/\s+/g, ""))}" style="color:${INK}">${escapeHtml(c.phone)}</a>` : "—")}
-      ${row("Order", `<b>${escapeHtml(o.reference)}</b> · ${escapeHtml(o.status)}`)}
+      ${row("Order", `<b>${escapeHtml(o.reference)}</b> · ${escapeHtml(STATUS_TEXT[o.status] ?? o.status)}`)}
+      ${row("Placed", escapeHtml(placed))}
+      ${row("Delivery", o.delivery.method === "fitment" ? "Fitment at a partner centre" : "Delivery to your address")}
       ${where}
-      ${row("Payment", `${escapeHtml(o.paymentMethod)}${o.pfPaymentId ? ` · PF ${escapeHtml(o.pfPaymentId)}` : ""}`)}
+      ${row("Payment", `${escapeHtml(PAYMENT_TEXT[o.paymentMethod] ?? o.paymentMethod)}${o.pfPaymentId ? ` · ref ${escapeHtml(o.pfPaymentId)}` : ""}`)}
     </table>
     <h3 style="margin:18px 0 0;font-size:15px">Items</h3>`;
 }
@@ -394,7 +393,7 @@ function tProcessingCustomer(o: Order): Tmpl {
     html: layout(
       `Thanks ${o.customer.firstName} — your order is confirmed! 🎉`,
       `<p style="font-size:14px">We've received your payment and your order <b>${o.reference}</b> is now being processed.</p>
-       ${itemsTable(o)}${deliveryBlock(o)}
+       ${shopDetails(o, "Your order details")}${itemsTable(o, true)}
        <p style="font-size:14px;color:#6b7280">We'll be in touch with delivery/fitment details shortly.</p>`
     ),
   };
@@ -411,7 +410,7 @@ function tFailedCustomer(o: Order): Tmpl {
     html: layout(
       "Your payment didn't go through",
       `<p style="font-size:14px">We couldn't process payment for order <b>${o.reference}</b>. No charge was made.</p>
-       <p style="font-size:14px">You can try again any time — your cart details are below.</p>${itemsTable(o)}`
+       <p style="font-size:14px">You can try again any time — your order details are below. Need help? Call 078 0088 788.</p>${shopDetails(o, "Your order details")}${itemsTable(o, true)}`
     ),
   };
 }
@@ -421,7 +420,7 @@ function tFailedAdmin(o: Order): Tmpl {
 function tCancelledCustomer(o: Order): Tmpl {
   return {
     subject: `Order ${o.reference} cancelled`,
-    html: layout("Your order was cancelled", `<p style="font-size:14px">Order <b>${o.reference}</b> was cancelled and you were not charged.</p>${itemsTable(o)}`),
+    html: layout("Your order was cancelled", `<p style="font-size:14px">Order <b>${o.reference}</b> was cancelled and you were not charged.</p>${shopDetails(o, "Your order details")}${itemsTable(o, true)}`),
   };
 }
 function tCancelledAdmin(o: Order): Tmpl {
@@ -430,19 +429,19 @@ function tCancelledAdmin(o: Order): Tmpl {
 function tRefundedCustomer(o: Order): Tmpl {
   return {
     subject: `Your order ${o.reference} has been refunded`,
-    html: layout("Your refund is on its way", `<p style="font-size:14px">We've refunded order <b>${o.reference}</b> (${zar(o.totals.total)}).</p>${itemsTable(o)}`),
+    html: layout("Your refund is on its way", `<p style="font-size:14px">We've refunded order <b>${o.reference}</b> (${zar(o.totals.total)}).</p>${shopDetails(o, "Your order details")}${itemsTable(o, true)}`),
   };
 }
 function tCompletedCustomer(o: Order): Tmpl {
   return {
     subject: `Your order ${o.reference} is complete`,
-    html: layout(`Your order is complete 🏁`, `<p style="font-size:14px">Order <b>${o.reference}</b> is all done. Thanks for shopping with The Tyre Mall!</p>${itemsTable(o)}`),
+    html: layout(`Your order is complete 🏁`, `<p style="font-size:14px">Order <b>${o.reference}</b> is all done. Thanks for shopping with The Tyre Mall!</p>${shopDetails(o, "Your order details")}${itemsTable(o, true)}`),
   };
 }
 function tOnHoldCustomer(o: Order): Tmpl {
   return {
     subject: `Order ${o.reference} is on hold`,
-    html: layout("Your order is on hold", `<p style="font-size:14px">Order <b>${o.reference}</b> is on hold while we confirm a few details. We'll be in touch shortly.</p>${itemsTable(o)}`),
+    html: layout("Your order is on hold", `<p style="font-size:14px">Order <b>${o.reference}</b> is on hold while we confirm a few details. We'll be in touch shortly.</p>${shopDetails(o, "Your order details")}${itemsTable(o, true)}`),
   };
 }
 

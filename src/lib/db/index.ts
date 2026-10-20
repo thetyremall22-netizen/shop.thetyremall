@@ -56,7 +56,9 @@ interface ExecResult {
   columns: string[];
 }
 
-const isRead = (sql: string) => /^\s*(SELECT|PRAGMA|WITH|EXPLAIN)\b/i.test(sql);
+// Statements that return rows: reads, and writes with RETURNING (e.g. the
+// order-number counter), which must be run with .all() to get the row back.
+const isRead = (sql: string) => /^\s*(SELECT|PRAGMA|WITH|EXPLAIN)\b/i.test(sql) || /\bRETURNING\b/i.test(sql);
 const coerce = (v: unknown): unknown => (typeof v === "boolean" ? (v ? 1 : 0) : v === undefined ? null : v);
 
 function runOne(stmt: RawStmt): ExecResult {

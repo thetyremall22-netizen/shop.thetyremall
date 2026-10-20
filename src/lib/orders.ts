@@ -179,14 +179,20 @@ export async function orderStatusCounts(opts: { test?: boolean } = {}): Promise<
   } catch { return {}; }
 }
 
-/** Atomic incrementing order reference via the meta counter. */
+/** Next order number (TTM-1001, TTM-1002, …) from the meta counter. Skips any
+ *  number already used, so a reference is never shared by two orders. */
 export async function nextReference(): Promise<string> {
   await ensureSchema();
-  const res = await libsql.execute(
-    "UPDATE meta SET value = CAST(value AS INTEGER) + 1 WHERE key = 'order_seq' RETURNING value"
-  );
-  const n = res.rows.length ? Number(res.rows[0].value) : Date.now() % 100000;
-  return `TTM-${1000 + n}`;
+  for (let attempt = 0; attempt < 50; attempt++) {
+    await libsql.execute("UPDATE meta SET value = CAST(value AS INTEGER) + 1 WHERE key = 'order_seq'");
+    const r = await libsql.execute("SELECT value FROM meta WHERE key = 'order_seq'");
+    const n = Number(r.rows[0]?.value);
+    if (!Number.isFinite(n) || n <= 0) break;
+    const ref = `TTM-${1000 + n}`;
+    const used = await libsql.execute({ sql: "SELECT 1 FROM orders WHERE reference = ? LIMIT 1", args: [ref] });
+    if (!used.rows.length) return ref;
+  }
+  throw new Error("order counter unavailable");
 }
 
 // ---- admin ------------------------------------------------------------------

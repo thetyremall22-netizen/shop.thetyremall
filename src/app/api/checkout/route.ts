@@ -86,8 +86,10 @@ export async function POST(req: NextRequest) {
   let reference: string;
   try {
     reference = await nextReference();
-  } catch {
-    reference = `TTM-${1000 + (Date.now() % 100000)}`;
+  } catch (e) {
+    // Last resort only: a long, time-based number that can't repeat.
+    console.error("[checkout] order counter failed:", (e as Error).message);
+    reference = `TTM-${Date.now().toString().slice(-9)}`;
   }
   const id = `${reference}-${Date.now().toString(36)}`;
   const now = new Date().toISOString();

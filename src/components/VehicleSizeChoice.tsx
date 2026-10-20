@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { shopHref } from "@/lib/shop-url";
 import { useRouter } from "next/navigation";
 import { Check, Close, WhatsApp, Search } from "./icons";
 import { parseSize, sizeToShopHref } from "@/lib/tyre-size";
@@ -67,7 +68,7 @@ export function VehicleSizeChoice({ record, compact = false }: { record: Vehicle
   }
   function searchAll() {
     const u = new URLSearchParams({ type: "tyre", sizes: tyreOptions.join("|"), ...ctx });
-    router.push(`/shop?${u.toString()}`);
+    router.push(shopHref(u));
   }
 
   const caption = (i: number, raw: string) =>

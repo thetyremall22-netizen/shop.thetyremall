@@ -56,7 +56,7 @@ export async function Footer() {
                 <Link href={categoryPath(c.slug)} className="hover:text-volt">{c.label} Tyres</Link>
               </li>
             ))}
-            <li><Link href="/shop?type=wheel" className="hover:text-volt">Mag Wheels</Link></li>
+            <li><Link href={categoryPath("mag-wheel")} className="hover:text-volt">Mag Wheels</Link></li>
           </ul>
         </div>
 

@@ -50,8 +50,14 @@ export async function proxy(req: NextRequest) {
     return new NextResponse("Gone", { status: 410, headers: { "cache-control": "public, max-age=86400" } });
   }
 
-  // Admins preview the real site even while the gate is on.
-  if (req.cookies.get(ADMIN_COOKIE)) return NextResponse.next();
+  // Admins preview the real site even while the gate is on. A small readable
+  // cookie tells the storefront to show them a "Coming soon is ON" bar.
+  if (req.cookies.get(ADMIN_COOKIE)) {
+    const res = NextResponse.next();
+    if (maintenanceOn()) res.cookies.set("ttm_gate_on", "1", { path: "/", sameSite: "lax", maxAge: 300 });
+    else if (req.cookies.get("ttm_gate_on")) res.cookies.delete("ttm_gate_on");
+    return res;
+  }
 
   // Gate with a temporary REDIRECT, not a rewrite. When the server runs with
   // HOSTNAME=127.0.0.1 behind an HTTPS proxy, Next treats a rewrite as an

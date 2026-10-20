@@ -22,4 +22,5 @@ const LOGO_SLUGS = new Set([
 export const hasBrandLogo = (b: string) => LOGO_SLUGS.has(brandSlug(b));
 export const brandLogoPath = (b: string) =>
   brandSlug(b) === "radar" ? "/brand/logos/radar.png" : `/brand/logos/${brandSlug(b)}.webp`;
-export const brandHref = (b: string) => `/shop?brand=${encodeURIComponent(b)}`;
+// Brand pages: /product-category/<brand-slug> (served directly, no redirect).
+export const brandHref = (b: string) => `/product-category/${brandSlug(b)}`;

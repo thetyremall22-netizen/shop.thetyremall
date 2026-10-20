@@ -1,3 +1,4 @@
+import { shopHref } from "./shop-url";
 // Shared tyre-size parser used by /api/vehicles, /vehicle-search, the homepage
 // vehicle box, Tyrone and /shop. Turns a raw size string from the fitment data
 // (or a search box) into width/profile/rim, or flags it as non-standard so it
@@ -61,5 +62,5 @@ export function sizeToShopHref(raw: string, extra: Record<string, string> = {}):
   } else {
     u.set("q", p.q ?? raw.trim());
   }
-  return `/shop?${u.toString()}`;
+  return shopHref(u);
 }

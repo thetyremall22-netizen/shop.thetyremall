@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { shopHref } from "@/lib/shop-url";
 import { useState } from "react";
 import { ChevronDown } from "./icons";
 
@@ -56,7 +57,7 @@ export function TyreFinder({
     if (width) params.set("width", width);
     if (profile) params.set("profile", profile);
     if (rim) params.set("rim", rim);
-    router.push(`/shop?${params.toString()}`);
+    router.push(shopHref(params));
   }
 
   return (

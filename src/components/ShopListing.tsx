@@ -78,6 +78,8 @@ export async function ShopListing({ sp }: { sp: SP }) {
       ? `Results for “${q}”`
       : cat
         ? cat.name
+        : one(sp.brand)
+          ? `${one(sp.brand)} Tyres & Wheels`
         : type === "wheel"
           ? "Mag Wheels"
           : one(sp.onSale) === "1"
@@ -107,6 +109,7 @@ export async function ShopListing({ sp }: { sp: SP }) {
         <Chevron width={12} height={12} />
         <Link href="/shop" className="hover:text-volt">Shop</Link>
         {cat && (<><Chevron width={12} height={12} /><span className="text-fg">{cat.name}</span></>)}
+        {!cat && one(sp.brand) && (<><Chevron width={12} height={12} /><span className="text-fg">{one(sp.brand)}</span></>)}
       </nav>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div>

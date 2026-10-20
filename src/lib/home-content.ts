@@ -37,7 +37,7 @@ export const HOME_DEFAULTS: HomeContent = {
     show: true, mode: "static", intervalSec: 6,
     slides: [{
       src: "/promo/radar-renegade-outdoorfest.webp",
-      href: "/shop?q=Renegade",
+      href: "/product-category/radar",
       alt: "Radar Renegade Outdoor Fest — buy a set of 4 Renegades and stand a chance to win a braai. 4 weeks, 4 winners.",
     }],
   },
@@ -46,7 +46,7 @@ export const HOME_DEFAULTS: HomeContent = {
     show: true,
     items: [
       { title: "TYRES", tags: "Passenger | SUV & 4×4 | Light Truck | Truck & Bus", href: "/shop?type=tyre", cta: "Shop Tyres", image: "/brand/tile-tyres.webp" },
-      { title: "WHEELS", tags: "Alloy | Steel | Off-Road | OEM Fitment", href: "/shop?type=wheel", cta: "Shop Wheels", image: "/brand/tile-wheels.webp" },
+      { title: "WHEELS", tags: "Alloy | Steel | Off-Road | OEM Fitment", href: "/product-category/mag-wheel", cta: "Shop Wheels", image: "/brand/tile-wheels.webp" },
     ],
   },
   reviews: { show: true, eyebrow: "{rating}★ loved across Mzansi", silver: "HAPPY", green: "CUSTOMERS" },

@@ -14,7 +14,7 @@ import { useCart } from "@/lib/cart";
 const NAV = [
   { label: "Home", href: "/" },
   { label: "Tyre Mall", href: "/shop?type=tyre" },
-  { label: "Wheel Mall", href: "/shop?type=wheel" },
+  { label: "Wheel Mall", href: "/product-category/mag-wheel" },
   { label: "Find by Vehicle", href: "/vehicle-search" },
   { label: "Contact us", href: "/contact" },
 ];
@@ -80,13 +80,13 @@ export function Header({ brands = [] }: { brands?: { name: string; logo: string 
                   </Link>
                   <div className="invisible absolute left-0 top-full z-50 w-56 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
                     <div className="overflow-hidden rounded-xl border border-line bg-ink-2 shadow-2xl shadow-black/60">
-                      {NAV_PRIMARY.filter((c) => c.slug !== "wheel-rims").map((c) => (
+                      {NAV_PRIMARY.map((c) => (
                         <Link
                           key={c.slug}
                           href={categoryPath(c.slug)}
                           className="block px-4 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface hover:text-volt"
                         >
-                          {c.label} Tyres
+                          {c.slug === "mag-wheel" ? c.label : `${c.label} Tyres`}
                         </Link>
                       ))}
                       <Link href="/shop" className="block border-t border-line px-4 py-2.5 text-sm font-bold text-volt transition-colors hover:bg-surface">
@@ -170,7 +170,7 @@ export function Header({ brands = [] }: { brands?: { name: string; logo: string 
               ))}
               <div className="mt-3 border-t border-line pt-3">
                 <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted">Shop by category</div>
-                {NAV_PRIMARY.filter((c) => c.slug !== "wheel-rims").map((c) => (
+                {NAV_PRIMARY.map((c) => (
                   <Link key={c.slug} href={categoryPath(c.slug)} onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-medium text-fg">
                     {c.label} Tyres
                   </Link>

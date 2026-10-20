@@ -1,4 +1,5 @@
 import "server-only";
+import { shopHref } from "./shop-url";
 import vehiclesData from "@/data/vehicles.json";
 import { parseSize, canonicalSize, sizeToShopHref } from "./tyre-size";
 
@@ -223,5 +224,5 @@ export function wheelSearchHref(rimSize: string, pcd: string): string {
   if (d) u.set("rim", d);
   const p = normPcd(pcd);
   if (p) u.set("pcd", p);
-  return `/shop?${u.toString()}`;
+  return shopHref(u);
 }

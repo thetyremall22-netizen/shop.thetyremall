@@ -12,7 +12,7 @@ export const NAV_PRIMARY: { label: string; slug: string }[] = [
   { label: "Commercial", slug: "commercial-tyres" },
   { label: "Truck & Bus", slug: "truck-bus-tyres" },
   { label: "Runflat", slug: "runflat-tyres" },
-  { label: "Mag Wheels", slug: "wheel-rims" },
+  { label: "Mag Wheels", slug: "mag-wheel" },
   { label: "Bike", slug: "bike-tyres" },
 ];
 

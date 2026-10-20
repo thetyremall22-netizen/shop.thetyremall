@@ -118,7 +118,7 @@ export function HomeContentManager({ initial, defaults, categoryOptions = [] }: 
   return (
     <div className="space-y-5">
       <Section title="Marketing banners" show={v.banners.show} onShow={(x) => up("banners", { ...v.banners, show: x })}
-        note={`Wide banner under the search (best size 2000 × 668 px). Show 1 static banner, or up to ${MAX} that rotate. Each can link to any page, e.g. a product, a brand (/shop?brand=Radar) or a search (/shop?q=Renegade). Images are compressed automatically to keep the page fast.`}>
+        note={`Wide banner under the search (best size 2000 × 668 px). Show 1 static banner, or up to ${MAX} that rotate. Each can link to any page, e.g. a category (/product-category/passenger-tyres), a brand (/product-category/radar) or a search (/shop?q=Renegade). Images are compressed automatically to keep the page fast.`}>
         <div className="flex flex-wrap items-center gap-4 text-sm">
           <label className="flex items-center gap-2"><input type="radio" checked={v.banners.mode === "static"} onChange={() => up("banners", { ...v.banners, mode: "static" })} className="accent-[var(--color-volt)]" /> 1 static banner</label>
           <label className="flex items-center gap-2"><input type="radio" checked={v.banners.mode === "rotate"} onChange={() => up("banners", { ...v.banners, mode: "rotate" })} className="accent-[var(--color-volt)]" /> Rotate up to {MAX} banners</label>

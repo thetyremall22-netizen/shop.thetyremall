@@ -50,7 +50,7 @@ export default function RadarProtectPage() {
           </span>}
           intro={<>Selected Radar tyres from The Tyre Mall include Radar Protect — extra peace of mind if your eligible
             Radar tyre is damaged by everyday road hazards. Offered by Radar Tyres and their authorised distributors.</>}>
-          <Link href="/shop?q=radar" className="btn btn-volt mt-6 h-12 px-6">Shop Radar tyres</Link>
+          <Link href="/product-category/radar" className="btn btn-volt mt-6 h-12 px-6">Shop Radar tyres</Link>
         </PageHeader>
       </div>
       <PageExtras page="radar-protect" position="top" />

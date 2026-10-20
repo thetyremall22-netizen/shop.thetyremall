@@ -177,7 +177,7 @@ export default async function Home() {
       {/* ============ MAG WHEELS ============ */}
       {home.mags.show && mags.length > 0 && (
         <section className="container-x pb-12">
-          <Reveal><SectionHead eyebrow={home.mags.eyebrow} silver={home.mags.silver} green={home.mags.green} href={viewAll(home.mags, "/shop?type=wheel")} /></Reveal>
+          <Reveal><SectionHead eyebrow={home.mags.eyebrow} silver={home.mags.silver} green={home.mags.green} href={viewAll(home.mags, "/product-category/mag-wheel")} /></Reveal>
           <DragScroll className="no-scrollbar -mx-4 mt-4 flex gap-4 overflow-x-auto px-4 py-6">
             {mags.map((p, i) => (
               <Reveal key={p.id} delay={i * 50} className="shrink-0"><ProductRailCard p={p} /></Reveal>

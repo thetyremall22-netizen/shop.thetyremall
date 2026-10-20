@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { brandPath, shopHref } from "@/lib/shop-url";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { existsSync } from "node:fs";
@@ -207,7 +208,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         {/* buy box */}
         <div>
           <div className="flex items-center gap-2">
-            <Link href={`/shop?brand=${encodeURIComponent(p.brand)}`} className="text-sm font-bold uppercase tracking-wider text-volt">{p.brand}</Link>
+            <Link href={brandPath(p.brand)} className="text-sm font-bold uppercase tracking-wider text-volt">{p.brand}</Link>
             {p.specs.size && <span className="rounded-md border border-line bg-surface px-2 py-0.5 text-xs font-semibold text-muted">{p.specs.size}</span>}
           </div>
           <h1 className="mt-2 font-display text-3xl leading-tight sm:text-4xl">{p.name}</h1>
@@ -350,7 +351,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               </p>
             </div>
             <Link
-              href={crossRim ? `/shop?type=${isTyre ? "wheel" : "tyre"}&rim=${crossRim}` : `/shop?type=${isTyre ? "wheel" : "tyre"}`}
+              href={shopHref(new URLSearchParams(crossRim ? { type: isTyre ? "wheel" : "tyre", rim: crossRim } : { type: isTyre ? "wheel" : "tyre" }))}
               className="btn btn-ghost shrink-0"
             >
               View all

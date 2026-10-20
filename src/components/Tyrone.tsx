@@ -498,7 +498,7 @@ export function Tyrone() {
     if (step === "awaitingSizeChoice" && record && make && model && year != null) {
       if (t === BROWSE_BOTH) { setVeh(null); router.push(`/shop?${new URLSearchParams({ type: "tyre", sizes: record.tyreOptions.join("|"), vehicle: `${year} ${make} ${model}` }).toString()}`); return true; }
       if (t === MAGS_FOR_CAR) {
-        const href = record.rimHrefs[0]?.href || "/shop?type=wheel";
+        const href = record.rimHrefs[0]?.href || "/product-category/mag-wheel";
         setVeh(null);
         botReply({ from: "bot", text: `Here are mags that fit your ${year} ${make} ${model}${record.pcd ? ` (PCD ${record.pcd.replace(/\*/g, "×")})` : ""}:`, links: [{ label: "See matching mag wheels →", href }], buttons: [HUMAN] });
         return true;

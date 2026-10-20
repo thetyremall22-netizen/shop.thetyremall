@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { ShopListing } from "@/components/ShopListing";
 import { findCategory } from "@/lib/special-categories";
-import { categoryPath } from "@/lib/shop-url";
+import { categoryPath, brandPath } from "@/lib/shop-url";
+import { getBrandDirectory } from "@/lib/brand-registry";
+
+/** A brand with products, by its page slug (e.g. "bridgestone"). */
+async function findBrand(slug: string) {
+  return (await getBrandDirectory()).find((b) => b.slug === slug && b.count > 0);
+}
 
 // Category pages at the old WooCommerce addresses, served directly (no
 // redirect) so existing Google Ads / search links keep working:
@@ -24,8 +30,16 @@ function parse(segments: string[]): { slug: string; page?: string } {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string[] }> }): Promise<Metadata> {
   const { slug } = parse((await params).slug);
   const c = await findCategory(slug);
-  // Unknown/retired category: a search page, kept out of Google's index.
-  if (!c) return { title: "Shop tyres & mag wheels", robots: { index: false, follow: true } };
+  if (!c) {
+    const b = await findBrand(slug);
+    if (b) return {
+      title: `${b.name} tyres`,
+      description: `Shop ${b.name} at The Tyre Mall — South Africa's largest online tyre range, free delivery on 2+ tyres, pay later with HappyPay.`,
+      alternates: { canonical: brandPath(b.name) },
+    };
+    // Unknown/retired category: a search page, kept out of Google's index.
+    return { title: "Shop tyres & mag wheels", robots: { index: false, follow: true } };
+  }
   return {
     title: c.name,
     description: `Shop ${c.name} at The Tyre Mall — South Africa's largest online tyre range, free delivery on 2+ tyres, pay later with HappyPay.`,
@@ -40,6 +54,11 @@ export default async function ProductCategoryPage({ params, searchParams }: { pa
   const pageSp = page && !sp.page ? { page } : {};
   // An old link to a category that no longer exists still lands somewhere
   // useful: a search for its words (e.g. "womens-month-specials").
-  if (!c) return <ShopListing sp={{ ...sp, q: (sp.q as string) || slug.replace(/[-_]+/g, " ").trim(), ...pageSp }} />;
+  if (!c) {
+    // A brand page, e.g. /product-category/bridgestone.
+    const b = await findBrand(slug);
+    if (b) return <ShopListing sp={{ ...sp, brand: b.name, ...pageSp }} />;
+    return <ShopListing sp={{ ...sp, q: (sp.q as string) || slug.replace(/[-_]+/g, " ").trim(), ...pageSp }} />;
+  }
   return <ShopListing sp={{ ...sp, category: c.slug, ...pageSp }} />;
 }

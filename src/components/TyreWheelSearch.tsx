@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { shopHref } from "@/lib/shop-url";
 import { useState } from "react";
 import { Search, ChevronDown } from "./icons";
 import { VehiclePicker } from "./VehiclePicker";
@@ -184,7 +185,7 @@ export function TyreWheelSearch({
             if (tr) p.set("rim", tr);
             if (brand) p.set("brand", brand);
           }
-          router.push(`/shop?${p.toString()}`);
+          router.push(shopHref(p));
         }}
       />
 
@@ -213,7 +214,7 @@ export function TyreWheelSearch({
             if (ww) p.set("width", ww);
             if (brand) p.set("brand", brand);
           }
-          router.push(`/shop?${p.toString()}`);
+          router.push(shopHref(p));
         }}
       />
     </div>

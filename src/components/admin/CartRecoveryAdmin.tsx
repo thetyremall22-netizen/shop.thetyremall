@@ -86,12 +86,12 @@ export function CartsTable({ rows, canAct, canDelete }: { rows: CartRow[]; canAc
       {msg && <p className={`mb-3 text-sm font-semibold ${msg.ok ? "text-pay" : "text-sale"}`}>{msg.text}</p>}
       {rows.length === 0 ? <p className="text-sm text-muted">No carts here yet.</p> : (
         <div className="overflow-x-auto rounded-xl border border-line">
-          <table className="w-full min-w-[980px] text-sm">
+          <table className="w-full min-w-[880px] text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
-                <th className="px-3 py-2.5">Cart</th><th className="px-3 py-2.5">Customer</th><th className="px-3 py-2.5">Source</th>
+                <th className="px-3 py-2.5">Cart</th><th className="px-3 py-2.5">Customer</th>
                 <th className="px-3 py-2.5">Items</th><th className="px-3 py-2.5 text-right">Value</th><th className="px-3 py-2.5">Status</th>
-                <th className="px-3 py-2.5">Emails</th><th className="px-3 py-2.5">Last activity</th><th className="px-3 py-2.5" />
+                <th className="px-3 py-2.5">Emails</th><th className="px-3 py-2.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -102,7 +102,8 @@ export function CartsTable({ rows, canAct, canDelete }: { rows: CartRow[]; canAc
                 return (
                   <tr key={r.id} className={`border-b border-line last:border-0 align-top ${sameCustomer ? "bg-surface/40" : ""}`}>
                     <td className="px-3 py-2.5"><Link href={`/admin/cart-recovery/${r.id}`} className="font-semibold text-volt hover:underline">#{r.id}</Link><TestBadge test={r.test} />
-                      {r.orderRef && <div className="text-xs text-muted">{r.orderRef}</div>}</td>
+                      {r.orderRef && <div className="text-xs text-muted">{r.orderRef}</div>}
+                      <div className="mt-0.5 text-[11px] leading-tight text-muted">{SOURCE[r.source] ?? r.source}</div></td>
                     <td className="px-3 py-2.5">
                       {sameCustomer ? <span className="text-xs text-muted">↳ same customer</span> : (
                         <>
@@ -112,8 +113,7 @@ export function CartsTable({ rows, canAct, canDelete }: { rows: CartRow[]; canAc
                         </>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-xs text-muted">{SOURCE[r.source] ?? r.source}</td>
-                    <td className="px-3 py-2.5 text-xs">{r.items.map((i, k) => <div key={k}>{i.qty}× {i.name}</div>)}</td>
+                    <td className="min-w-[170px] px-3 py-2.5 text-xs">{r.items.map((i, k) => <div key={k}>{i.qty}× {i.name}</div>)}</td>
                     <td className="px-3 py-2.5 text-right font-semibold whitespace-nowrap">{zar(r.total)}</td>
                     <td className="px-3 py-2.5">
                       {canAct ? (
@@ -124,9 +124,12 @@ export function CartsTable({ rows, canAct, canDelete }: { rows: CartRow[]; canAc
                       ) : <span className={`badge ${badge}`}>{label(r.status)}</span>}
                       {r.recoveredOrderRef && <div className="mt-1 text-xs text-muted">Order {r.recoveredOrderRef}</div>}
                     </td>
-                    <td className="px-3 py-2.5 text-xs text-muted whitespace-nowrap">{r.emailsSent}/3{r.lastEmailAt ? <div>{when(r.lastEmailAt)}</div> : null}</td>
-                    <td className="px-3 py-2.5 text-xs text-muted whitespace-nowrap">{when(r.updatedAt)}</td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-3 py-2.5 text-xs text-muted whitespace-nowrap">
+                      <b className="text-fg">{r.emailsSent}/3 sent</b>
+                      {r.lastEmailAt ? <div>Last: {when(r.lastEmailAt)}</div> : null}
+                      <div>Activity: {when(r.updatedAt)}</div>
+                    </td>
+                    <td className="w-[104px] px-3 py-2.5 whitespace-nowrap">
                       <div className="flex flex-col items-end gap-1 text-xs font-semibold">
                         <Link href={`/admin/cart-recovery/${r.id}`} className="text-volt hover:underline">Open →</Link>
                         {canAct && <button onClick={() => setPending({ kind: "resend", row: r })} className="text-muted hover:text-volt">Resend</button>}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ListFilter, matchesFilter } from "./ListFilter";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog, ChangeList, UndoBar } from "./ConfirmDialog";
 
@@ -44,6 +45,8 @@ export function UsersManager({ users, currentUserId }: { users: UserRow[]; curre
   const [resetPw, setResetPw] = useState("");
   const [pending, setPending] = useState<Pending | null>(null);
   const [busy, setBusy] = useState(false);
+  const [find, setFind] = useState("");
+  const shown = users.filter((u) => matchesFilter({ name: u.name, email: u.email, role: roleLabel(u.role), active: u.active ? "active" : "disabled" }, find));
   const [undo, setUndo] = useState<{ id: number; body: Record<string, unknown>; message: string } | null>(null);
 
   async function patch(id: number, body: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
@@ -129,6 +132,8 @@ export function UsersManager({ users, currentUserId }: { users: UserRow[]; curre
         <p className="mt-2 text-xs text-muted">Staff can only be added here by a Super Admin. Nobody can request access from the login page. Anyone can use “Forgot password?” on the login page to reset their own password by email.</p>
       </div>
 
+      <div>
+      <ListFilter value={find} onChange={setFind} placeholder="Search staff by name, email or role…" count={shown.length} />
       <div className="overflow-x-auto rounded-xl border border-line">
         <table className="w-full min-w-[680px] text-sm">
           <thead>
@@ -142,7 +147,7 @@ export function UsersManager({ users, currentUserId }: { users: UserRow[]; curre
           </thead>
           <tbody>
             {users.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-sm text-muted">No staff accounts yet. Add your first above.</td></tr>}
-            {users.map((u) => (
+            {shown.map((u) => (
               <tr key={u.id} className="border-b border-line last:border-0 align-top">
                 <td className="px-4 py-3">
                   <div className="font-semibold text-fg">{u.name || "—"}{u.id === currentUserId && <span className="ml-1.5 badge badge-muted">you</span>}</div>
@@ -187,6 +192,7 @@ export function UsersManager({ users, currentUserId }: { users: UserRow[]; curre
             ))}
           </tbody>
         </table>
+      </div>
       </div>
 
       <ConfirmDialog open={!!pending} busy={busy} title={confirmTitle} onNo={() => setPending(null)} onYes={confirmYes}

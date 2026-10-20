@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { UndoBar } from "./ConfirmDialog";
 
 export interface AdminProductRow {
   slug: string;
@@ -21,13 +22,14 @@ const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFrac
 
 type ActionKind = "price" | "stock" | "status" | "sale";
 
-export function ProductsTable({ rows, q, filter, total }: { rows: AdminProductRow[]; q: string; filter: string; total: number }) {
+export function ProductsTable({ rows, q, filter, type, total }: { rows: AdminProductRow[]; q: string; filter: string; type?: string; total: number }) {
   const router = useRouter();
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [applyAll, setApplyAll] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [undo, setUndo] = useState<{ id: number; message: string } | null>(null);
 
   // action builder
   const [kind, setKind] = useState<ActionKind>("price");
@@ -79,10 +81,14 @@ export function ProductsTable({ rows, q, filter, total }: { rows: AdminProductRo
       const res = await fetch("/api/admin/products/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(applyAll ? { scope: "filter", q, filter, op: buildOp() } : { scope: "selected", slugs: [...sel], op: buildOp() }),
+        body: JSON.stringify(applyAll ? { scope: "filter", q, filter, type, op: buildOp(), label: opLabel } : { scope: "selected", slugs: [...sel], op: buildOp(), label: opLabel }),
       });
       const d = await res.json().catch(() => ({}));
-      if (res.ok) { setMsg(`✓ Updated ${d.updated} product${d.updated === 1 ? "" : "s"} — live within ~1 min.`); setSel(new Set()); setApplyAll(false); router.refresh(); }
+      if (res.ok) {
+        setMsg(`✓ Updated ${d.updated} product${d.updated === 1 ? "" : "s"} — live within ~1 min.`);
+        if (d.auditId) setUndo({ id: d.auditId, message: `${opLabel} on ${d.updated} product${d.updated === 1 ? "" : "s"}` });
+        setSel(new Set()); setApplyAll(false); router.refresh();
+      }
       else setMsg(d.error ?? "Bulk update failed.");
     } catch (e) { setMsg((e as Error).message); }
     setBusy(false);
@@ -205,6 +211,15 @@ export function ProductsTable({ rows, q, filter, total }: { rows: AdminProductRo
           </tbody>
         </table>
       </div>
+      {undo && (
+        <UndoBar message={undo.message} seconds={60} onClose={() => setUndo(null)}
+          onUndo={async () => {
+            const res = await fetch("/api/admin/products/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scope: "undo", auditId: undo.id }) });
+            const d = await res.json().catch(() => ({}));
+            setMsg(res.ok ? `↩ Undone — ${d.restored} product${d.restored === 1 ? "" : "s"} put back.` : d.error ?? "Couldn't undo.");
+            router.refresh();
+          }} />
+      )}
     </div>
   );
 }

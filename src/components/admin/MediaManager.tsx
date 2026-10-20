@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ListFilter, matchesFilter } from "./ListFilter";
 import { useRouter } from "next/navigation";
 
 export interface MediaItem {
@@ -35,6 +36,8 @@ export function MediaManager({ items, total, totalBytes, page, pages, limits }: 
   const [msg, setMsg] = useState<{ t: "ok" | "err"; m: string } | null>(null);
   const [ytUrl, setYtUrl] = useState("");
   const [ytTitle, setYtTitle] = useState("");
+  const [find, setFind] = useState("");
+  const shown = items.filter((it) => matchesFilter({ title: it.title, kind: it.kind, id: it.id, size: `${it.width}x${it.height}` }, find));
 
   async function onPickFiles(files: FileList | null) {
     if (!files?.length) return;
@@ -113,12 +116,13 @@ export function MediaManager({ items, total, totalBytes, page, pages, limits }: 
         <span>{total.toLocaleString()} item{total === 1 ? "" : "s"} · {fmtBytes(totalBytes)} stored</span>
       </div>
 
+      <ListFilter value={find} onChange={setFind} placeholder="Search media by name or type (image / video)…" count={shown.length} />
       {/* gallery */}
       {items.length === 0 ? (
         <p className="text-sm text-muted">No media yet. Upload an image or add a video above.</p>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {items.map((it) => (
+          {shown.map((it) => (
             <div key={it.id} className="overflow-hidden rounded-xl border border-line bg-surface">
               <div className="relative aspect-video bg-surface-2">
                 {it.kind === "image" ? (

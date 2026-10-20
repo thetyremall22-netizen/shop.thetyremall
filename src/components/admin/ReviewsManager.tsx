@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ListFilter, matchesFilter } from "./ListFilter";
 import { useRouter } from "next/navigation";
 
 export interface ReviewRow { id: number; name: string; location: string; rating: number; quote: string; source: string; verified: boolean; featured: boolean; sortOrder: number }
@@ -22,6 +23,8 @@ export function ReviewsManager({ summary, reviews }: { summary: Summary; reviews
   const [editingId, setEditingId] = useState<number | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [find, setFind] = useState("");
+  const shown = reviews.filter((r) => matchesFilter(r, find));
 
   async function saveSummary() {
     setSumMsg(null);
@@ -89,12 +92,13 @@ export function ReviewsManager({ summary, reviews }: { summary: Summary; reviews
         </div>
       </div>
 
+      <ListFilter value={find} onChange={setFind} placeholder="Search reviews by name, location or text…" count={shown.length} />
       <div className="overflow-x-auto rounded-xl border border-line">
         <table className="w-full min-w-[640px] text-sm">
           <thead><tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted"><th className="px-4 py-2.5">Customer</th><th className="px-4 py-2.5">Quote</th><th className="px-4 py-2.5">Rating</th><th className="px-4 py-2.5">On homepage</th><th className="px-4 py-2.5"></th></tr></thead>
           <tbody>
             {reviews.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-sm text-muted">No reviews yet.</td></tr>}
-            {reviews.map((r) => (
+            {shown.map((r) => (
               <tr key={r.id} className="border-b border-line last:border-0 align-top">
                 <td className="px-4 py-3"><div className="font-semibold text-fg">{r.name}</div><div className="text-xs text-muted">{r.location || r.source}</div></td>
                 <td className="px-4 py-3 max-w-[320px] text-muted">“{r.quote.length > 90 ? r.quote.slice(0, 90) + "…" : r.quote}”</td>

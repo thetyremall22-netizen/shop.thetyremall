@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     slug: String(b.slug ?? "").trim() || slugify(name),
     name,
     brand: String(b.brand ?? "").trim(),
-    type: b.type === "wheel" ? "wheel" : "tyre",
+    type: b.type === "wheel" ? "wheel" : b.type === "other" || b.type === "accessory" ? "other" : "tyre",
     sku: String(b.sku ?? "").trim(),
     regularPrice,
     salePrice: b.salePrice ? Math.round(Number(b.salePrice)) : undefined,

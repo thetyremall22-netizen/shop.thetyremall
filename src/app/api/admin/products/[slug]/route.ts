@@ -1,16 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/admin-auth";
 import { updateProductFields, getProductRow, deleteProduct, type ProductPatch } from "@/lib/db/queries";
+import { addAudit, actorName, diffFields, describeChanges } from "@/lib/audit";
+
+const AUDIT_LABELS: Record<string, string> = {
+  name: "Name", brand: "Brand", type: "Type", sku: "SKU", categories: "Categories", regularPrice: "Regular price (c)",
+  salePrice: "Sale price (c)", onSale: "On sale", stockQty: "Stock", lowStockThreshold: "Low-stock alert", visible: "Visible",
+  shortDescription: "Short description", description: "Description", image: "Image", specs: "Specs",
+};
+const auditView = (r: Record<string, unknown>) => Object.fromEntries(Object.keys(AUDIT_LABELS).map((k) => [k, r[k] ?? null]));
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
-  if (!(await authorize("products.delete"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await authorize("products.delete");
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { slug } = await params;
+  const row = await getProductRow(slug);
   await deleteProduct(slug);
+  if (row) await addAudit({ entity: "product", entityId: slug, action: "delete", actor: actorName(actor), summary: `Deleted ${row.name} (${row.sku})`, before: row as unknown as Record<string, unknown> });
   return NextResponse.json({ ok: true });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
-  if (!(await authorize("products.edit"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await authorize("products.edit");
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { slug } = await params;
   let body: Record<string, unknown>;
   try {
@@ -29,7 +41,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ sl
   // content / basics
   if (str(body.name) !== undefined) patch.name = (body.name as string).trim();
   if (str(body.brand) !== undefined) patch.brand = (body.brand as string).trim();
-  if (body.type === "tyre" || body.type === "wheel" || body.type === "accessory") patch.type = body.type;
+  if (body.type === "tyre" || body.type === "wheel") patch.type = body.type;
+  else if (body.type === "other" || body.type === "accessory") patch.type = "other";
   if (str(body.sku) !== undefined) patch.sku = (body.sku as string).trim();
   if (str(body.shortDescription) !== undefined) patch.shortDescription = body.shortDescription as string;
   if (str(body.description) !== undefined) patch.description = body.description as string;
@@ -67,5 +80,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ sl
 
   await updateProductFields(slug, patch);
   const updated = await getProductRow(slug);
+  if (updated) {
+    const changes = diffFields(auditView(row as unknown as Record<string, unknown>), auditView(updated as unknown as Record<string, unknown>));
+    if (Object.keys(changes).length) {
+      // Long text fields: just note that they changed.
+      for (const k of ["description", "shortDescription"]) if (changes[k]) changes[k] = ["(old text)", "(new text)"];
+      await addAudit({
+        entity: "product", entityId: slug, action: body.undo ? "undo" : "edit", actor: actorName(actor),
+        summary: (body.undo ? "Undid: " : "") + describeChanges(changes, AUDIT_LABELS),
+      });
+    }
+  }
   return NextResponse.json({ ok: true, product: updated });
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ListFilter, matchesFilter } from "./ListFilter";
 import { useRouter } from "next/navigation";
 import { msToLocalInput, localInputToMs, DEFAULT_TZ } from "@/lib/tz";
 
@@ -34,6 +35,8 @@ export function CouponsManager({ coupons, timezone = DEFAULT_TZ }: { coupons: Co
   const [slugText, setSlugText] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [find, setFind] = useState("");
+  const shown = coupons.filter((c) => matchesFilter(c, find));
 
   function reset() { setF({ ...EMPTY }); setEditingId(null); setSlugText(""); setMsg(null); }
   function edit(c: CouponRow) {
@@ -132,6 +135,7 @@ export function CouponsManager({ coupons, timezone = DEFAULT_TZ }: { coupons: Co
         <p className="mt-2 text-xs text-muted">1 coupon per order. &quot;1 per customer&quot; is enforced by email once the order is paid. &quot;Fixed amount&quot; and the discount are capped at the value of the eligible items.</p>
       </div>
 
+      <ListFilter value={find} onChange={setFind} placeholder="Search coupons by code, type or product…" count={shown.length} />
       <div className="overflow-x-auto rounded-xl border border-line">
         <table className="w-full min-w-[720px] text-sm">
           <thead>
@@ -141,7 +145,8 @@ export function CouponsManager({ coupons, timezone = DEFAULT_TZ }: { coupons: Co
           </thead>
           <tbody>
             {coupons.length === 0 && <tr><td colSpan={7} className="px-4 py-6 text-center text-sm text-muted">No coupons yet — create your first above.</td></tr>}
-            {coupons.map((c) => (
+            {coupons.length > 0 && shown.length === 0 && <tr><td colSpan={7} className="px-4 py-6 text-center text-sm text-muted">No coupons match “{find}”.</td></tr>}
+            {shown.map((c) => (
               <tr key={c.id} className="border-b border-line last:border-0">
                 <td className="px-4 py-3 font-semibold text-fg">{c.code}{c.description && <div className="text-xs font-normal text-muted">{c.description}</div>}</td>
                 <td className="px-4 py-3">{c.discountType === "percentage" ? `${c.discountValue}% off` : `${zar(c.discountValue)} off`}{c.minSpend > 0 && <div className="text-xs text-muted">min {zar(c.minSpend)}</div>}</td>

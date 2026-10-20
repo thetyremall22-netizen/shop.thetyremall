@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/admin-auth";
-import { bulkUpdateProducts, type BulkOp, type AdminFilter } from "@/lib/db/queries";
+import { bulkUpdateProducts, restoreProducts, type BulkOp, type AdminFilter, type BulkTarget } from "@/lib/db/queries";
+import { addAudit, getAudit, actorName } from "@/lib/audit";
 
 const FILTERS: AdminFilter[] = ["all", "low", "out", "sale"];
 
@@ -36,13 +37,25 @@ function parseOp(raw: unknown): BulkOp | null {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await authorize("products.bulk"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await authorize("products.bulk");
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   let body: Record<string, unknown>;
   try {
     body = (await req.json()) as Record<string, unknown>;
   } catch {
     return NextResponse.json({ error: "bad request" }, { status: 400 });
+  }
+
+  // Undo a previous bulk edit: restore the values saved in its history entry.
+  if (body.scope === "undo") {
+    const entry = await getAudit(Number(body.auditId));
+    if (!entry || entry.entity !== "products" || entry.action !== "bulk" || !Array.isArray(entry.before?.items)) {
+      return NextResponse.json({ error: "That change can't be undone." }, { status: 400 });
+    }
+    const n = await restoreProducts(entry.before.items as BulkTarget[]);
+    await addAudit({ entity: "products", entityId: "bulk", action: "undo", actor: actorName(actor), summary: `Undid bulk edit #${entry.id} (${entry.summary}) — ${n} products restored` });
+    return NextResponse.json({ ok: true, restored: n });
   }
 
   const op = parseOp(body.op);
@@ -54,13 +67,21 @@ export async function POST(req: NextRequest) {
     if (scope === "filter") {
       const q = typeof body.q === "string" ? body.q : undefined;
       const filter = FILTERS.includes(body.filter as AdminFilter) ? (body.filter as AdminFilter) : undefined;
-      res = await bulkUpdateProducts({ q, filter, op });
+      const type = body.type === "tyre" || body.type === "wheel" || body.type === "other" ? body.type : undefined;
+      res = await bulkUpdateProducts({ q, filter, type, op });
     } else {
       const slugs = Array.isArray(body.slugs) ? (body.slugs as unknown[]).map(String).filter(Boolean) : [];
       if (!slugs.length) return NextResponse.json({ error: "No products selected." }, { status: 400 });
       res = await bulkUpdateProducts({ slugs, op });
     }
-    return NextResponse.json({ ok: true, updated: res.updated });
+    const auditId = res.updated
+      ? await addAudit({
+          entity: "products", entityId: "bulk", action: "bulk", actor: actorName(actor),
+          summary: `${typeof body.label === "string" ? body.label.slice(0, 120) : op.kind} on ${res.updated} product${res.updated === 1 ? "" : "s"}`,
+          before: { items: res.before },
+        })
+      : null;
+    return NextResponse.json({ ok: true, updated: res.updated, auditId });
   } catch (e) {
     return NextResponse.json({ error: `Bulk update failed: ${(e as Error).message}` }, { status: 500 });
   }

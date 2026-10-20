@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { listProducts, type AdminFilter } from "@/lib/db/queries";
+import { listProducts, productTypeCounts, type AdminFilter } from "@/lib/db/queries";
+import { AdminSearch } from "@/components/admin/AdminSearch";
 import { ProductsToolbar } from "@/components/admin/ProductsToolbar";
 import { ProductsTable } from "@/components/admin/ProductsTable";
 
@@ -13,7 +14,17 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
   const q = sp.q ?? "";
   const filter = (sp.filter as AdminFilter) ?? "all";
   const page = Math.max(1, Number(sp.page) || 1);
-  const { rows, total, perPage } = await listProducts({ q, filter, page, perPage: 25 });
+  const type = sp.type === "tyre" || sp.type === "wheel" || sp.type === "other" ? sp.type : undefined;
+  const [{ rows, total, perPage }, counts] = await Promise.all([
+    listProducts({ q, filter, page, perPage: 25, type }),
+    productTypeCounts(),
+  ]);
+  const TYPE_TABS = [
+    { v: "", label: "All products", n: counts.all },
+    { v: "tyre", label: "Tyres", n: counts.tyre },
+    { v: "wheel", label: "Wheels / Rims", n: counts.wheel },
+    { v: "other", label: "Other products", n: counts.other },
+  ];
   const pages = Math.max(1, Math.ceil(total / perPage));
 
   const filters: { k: AdminFilter; label: string }[] = [
@@ -24,6 +35,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
     const u = new URLSearchParams();
     if (q) u.set("q", q);
     if (filter !== "all") u.set("filter", filter);
+    if (type) u.set("type", type);
     for (const [k, v] of Object.entries(patch)) u.set(k, String(v));
     return `/admin/products?${u.toString()}`;
   };
@@ -32,12 +44,28 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
     <AdminShell>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-3xl">Products <span className="text-base text-muted">({total.toLocaleString()})</span></h1>
-        <form className="flex gap-2" action="/admin/products">
-          {filter !== "all" && <input type="hidden" name="filter" value={filter} />}
-          <input name="q" defaultValue={q} placeholder="Search name, SKU, brand…" className="h-9 w-56 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" />
-          <button className="btn btn-volt h-9 px-4 text-sm">Search</button>
-        </form>
       </div>
+      <AdminSearch className="mt-3 max-w-xl" placeholder="Search name, SKU, brand, category or size (e.g. 265/65R17)…" />
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {TYPE_TABS.map((t) => {
+          const active = (type ?? "") === t.v;
+          const u = new URLSearchParams();
+          if (q) u.set("q", q);
+          if (filter !== "all") u.set("filter", filter);
+          if (t.v) u.set("type", t.v);
+          const href = u.toString() ? `/admin/products?${u}` : "/admin/products";
+          return (
+            <Link key={t.label} href={href}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${active ? "bg-volt text-volt-ink" : "border border-line text-muted hover:text-fg"}`}>
+              {t.label} <span className="opacity-70">({t.n.toLocaleString()})</span>
+            </Link>
+          );
+        })}
+      </div>
+      {type === "other" && counts.other === 0 && (
+        <p className="mt-3 text-sm text-muted">No other products yet. When you add a product that isn&apos;t a tyre or wheel (e.g. valves, nuts, accessories), set its type to “Other” and it will appear here.</p>
+      )}
       <div className="mt-3"><ProductsToolbar /></div>
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -50,7 +78,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
       </div>
 
       <div className="mt-4">
-        <ProductsTable rows={rows} q={q} filter={filter} total={total} />
+        <ProductsTable rows={rows} q={q} filter={filter} type={type} total={total} />
       </div>
 
       {pages > 1 && (

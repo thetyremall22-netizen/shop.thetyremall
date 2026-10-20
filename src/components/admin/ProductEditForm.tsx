@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ConfirmDialog, ChangeList, UndoBar } from "./ConfirmDialog";
 
 interface Props {
   slug: string;
@@ -31,7 +32,7 @@ export function ProductEditForm({ slug, initial }: Props) {
   const router = useRouter();
   const [name, setName] = useState(initial.name);
   const [brand, setBrand] = useState(initial.brand);
-  const [type, setType] = useState(initial.type || "tyre");
+  const [type, setType] = useState(initial.type === "accessory" ? "other" : initial.type || "tyre");
   const [sku, setSku] = useState(initial.sku);
   const [categories, setCategories] = useState(initial.categories.join(", "));
   const [regular, setRegular] = useState(toR(initial.regularPrice));
@@ -50,9 +51,7 @@ export function ProductEditForm({ slug, initial }: Props) {
 
   const touch = () => setSaved(false);
 
-  async function save() {
-    setSaving(true); setSaved(false); setError(null);
-    const body = {
+  const buildBody = () => ({
       name, brand, type, sku,
       categories: categories.split(/[|,]/).map((s) => s.trim()).filter(Boolean),
       regularPrice: Math.round(parseFloat(regular || "0") * 100),
@@ -65,11 +64,57 @@ export function ProductEditForm({ slug, initial }: Props) {
       description: desc,
       image,
       specs,
-    };
-    const res = await fetch(`/api/admin/products/${slug}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (res.ok) { setSaved(true); router.refresh(); }
-    else { const d = await res.json().catch(() => ({})); setError(d.error ?? "Couldn't save."); }
-    setSaving(false);
+  });
+  type Body = ReturnType<typeof buildBody>;
+  const [savedBody, setSavedBody] = useState<Body>(() => buildBody());
+  const [confirm, setConfirm] = useState(false);
+  const [undo, setUndo] = useState<Body | null>(null);
+
+  const LABELS: Record<string, string> = {
+    name: "Name", brand: "Brand", type: "Type", sku: "SKU", categories: "Categories", regularPrice: "Regular price",
+    salePrice: "Sale price", onSale: "On sale", stockQty: "Stock", lowStockThreshold: "Low-stock alert", visible: "Visible in shop",
+    shortDescription: "Short description", description: "Description", image: "Image", specs: "Specifications",
+  };
+  const show = (k: string, v: unknown) =>
+    k === "regularPrice" || k === "salePrice" ? `R${(Number(v) / 100).toFixed(2)}`
+      : typeof v === "boolean" ? (v ? "Yes" : "No")
+      : Array.isArray(v) ? v.join(", ")
+      : v && typeof v === "object" ? Object.entries(v as Record<string, string>).filter(([, x]) => x).map(([a, x]) => `${a}: ${x}`).join(", ")
+      : String(v ?? "");
+  const body = buildBody();
+  const changes = Object.keys(LABELS)
+    .filter((k) => JSON.stringify((body as Record<string, unknown>)[k]) !== JSON.stringify((savedBody as Record<string, unknown>)[k]))
+    .map((k) => ({
+      label: LABELS[k],
+      from: k === "description" || k === "shortDescription" ? "(previous text)" : show(k, (savedBody as Record<string, unknown>)[k]),
+      to: k === "description" || k === "shortDescription" ? "(edited text)" : show(k, (body as Record<string, unknown>)[k]),
+    }));
+
+  function applyBody(b: Body) {
+    setName(b.name); setBrand(b.brand); setType(b.type); setSku(b.sku); setCategories(b.categories.join(", "));
+    setRegular(toR(b.regularPrice)); setSale(toR(b.salePrice)); setOnSale(b.onSale); setStock(String(b.stockQty));
+    setLow(String(b.lowStockThreshold)); setVisible(b.visible); setShortDesc(b.shortDescription); setDesc(b.description);
+    setImage(b.image); setSpecs(b.specs);
+  }
+
+  async function patch(b: Body, isUndo = false): Promise<boolean> {
+    const res = await fetch(`/api/admin/products/${slug}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...b, undo: isUndo }) });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error ?? "Couldn't save."); return false; }
+    return true;
+  }
+
+  function save() {
+    setError(null);
+    if (!changes.length) { setSaved(true); return; }
+    setConfirm(true);
+  }
+
+  async function doSave() {
+    setSaving(true); setSaved(false);
+    const prev = savedBody;
+    const ok = await patch(body);
+    setSaving(false); setConfirm(false);
+    if (ok) { setSaved(true); setSavedBody(body); setUndo(prev); router.refresh(); }
   }
 
   return (
@@ -80,7 +125,7 @@ export function ProductEditForm({ slug, initial }: Props) {
           <Field label="Brand"><input value={brand} onChange={(e) => { setBrand(e.target.value); touch(); }} className="num" /></Field>
           <Field label="Type">
             <select value={type} onChange={(e) => { setType(e.target.value); touch(); }} className="num">
-              <option value="tyre">Tyre</option><option value="wheel">Wheel / Mag</option><option value="accessory">Accessory</option>
+              <option value="tyre">Tyre</option><option value="wheel">Wheel / Rim / Mag</option><option value="other">Other (not a tyre or wheel)</option>
             </select>
           </Field>
           <Field label="SKU"><input value={sku} onChange={(e) => { setSku(e.target.value); touch(); }} className="num" /></Field>
@@ -120,7 +165,16 @@ export function ProductEditForm({ slug, initial }: Props) {
       <div className="sticky bottom-0 -mx-1 flex items-center gap-3 border-t border-line bg-ink/80 px-1 py-3 backdrop-blur">
         <button onClick={save} disabled={saving} className="btn btn-volt px-6 disabled:opacity-60">{saving ? "Saving…" : "Save changes"}</button>
         {saved && <span className="text-sm font-semibold text-pay">✓ Saved — live on the store within ~1 min</span>}
+        {!saved && changes.length > 0 && <span className="text-xs text-muted">{changes.length} unsaved change{changes.length === 1 ? "" : "s"}</span>}
       </div>
+
+      <ConfirmDialog open={confirm} busy={saving} yesLabel="Yes, change it" onYes={doSave} onNo={() => setConfirm(false)}>
+        <ChangeList changes={changes} />
+      </ConfirmDialog>
+      {undo && (
+        <UndoBar message="Product updated" onClose={() => setUndo(null)}
+          onUndo={async () => { if (await patch(undo, true)) { applyBody(undo); setSavedBody(undo); setSaved(true); router.refresh(); } }} />
+      )}
 
       <style>{`.num{height:2.75rem;width:100%;border-radius:0.5rem;border:1px solid var(--color-line);background:var(--color-surface-2);padding:0 0.75rem;color:var(--color-fg);outline:none}.num:focus{border-color:var(--color-volt)}`}</style>
     </div>

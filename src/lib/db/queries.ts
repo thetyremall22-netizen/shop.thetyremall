@@ -141,21 +141,35 @@ export async function incrementStock(slug: string, qty: number): Promise<void> {
 // ---- admin ------------------------------------------------------------------
 export type AdminFilter = "all" | "low" | "out" | "sale";
 
+/** The admin product filter, shared by the list and "apply to all matching"
+ *  bulk edits so both always act on exactly the same products. Search covers
+ *  name, SKU, brand, category, size/specs and slug — and "265/65R17"-style
+ *  sizes typed with or without the slash / R. */
+function productWhere(opts: { q?: string; filter?: AdminFilter; type?: string }) {
+  const conds = [];
+  if (opts.q?.trim()) {
+    const t = `%${opts.q.trim()}%`;
+    const compact = `%${opts.q.replace(/[\s/r-]/gi, "")}%`;
+    conds.push(or(
+      like(schema.products.name, t), like(schema.products.sku, t), like(schema.products.brand, t),
+      like(schema.products.categories, t), like(schema.products.specs, t), like(schema.products.slug, t),
+      sql`REPLACE(REPLACE(REPLACE(UPPER(${schema.products.name}), '/', ''), ' ', ''), 'R', '') LIKE UPPER(${compact})`,
+    ));
+  }
+  if (opts.type === "other") conds.push(sql`${schema.products.type} NOT IN ('tyre', 'wheel')`);
+  else if (opts.type) conds.push(eq(schema.products.type, opts.type));
+  if (opts.filter === "low") conds.push(sql`stock_qty > 0 AND stock_qty <= low_stock_threshold`);
+  if (opts.filter === "out") conds.push(sql`stock_qty = 0`);
+  if (opts.filter === "sale") conds.push(eq(schema.products.onSale, true));
+  return conds.length ? and(...conds) : undefined;
+}
+
 export async function listProducts(opts: { q?: string; page?: number; perPage?: number; filter?: AdminFilter; type?: string }) {
   await ensureProducts();
   const page = Math.max(1, opts.page ?? 1);
   const perPage = opts.perPage ?? 30;
   try {
-    const conds = [];
-    if (opts.q) {
-      const t = `%${opts.q}%`;
-      conds.push(or(like(schema.products.name, t), like(schema.products.sku, t), like(schema.products.brand, t)));
-    }
-    if (opts.type) conds.push(eq(schema.products.type, opts.type));
-    if (opts.filter === "low") conds.push(sql`stock_qty > 0 AND stock_qty <= low_stock_threshold`);
-    if (opts.filter === "out") conds.push(sql`stock_qty = 0`);
-    if (opts.filter === "sale") conds.push(eq(schema.products.onSale, true));
-    const where = conds.length ? and(...conds) : undefined;
+    const where = productWhere(opts);
 
     const rows = await db.select().from(schema.products).where(where)
       .orderBy(schema.products.name).limit(perPage).offset((page - 1) * perPage);
@@ -166,8 +180,9 @@ export async function listProducts(opts: { q?: string; page?: number; perPage?: 
     // Snapshot fallback so the admin still lists the catalogue if the DB is unavailable.
     const q = (opts.q || "").toLowerCase();
     let rows = snapRows();
-    if (opts.type) rows = rows.filter((r) => r.type === opts.type);
-    if (q) rows = rows.filter((r) => `${r.name} ${r.sku} ${r.brand}`.toLowerCase().includes(q));
+    if (opts.type === "other") rows = rows.filter((r) => r.type !== "tyre" && r.type !== "wheel");
+    else if (opts.type) rows = rows.filter((r) => r.type === opts.type);
+    if (q) rows = rows.filter((r) => `${r.name} ${r.sku} ${r.brand} ${r.categories} ${r.specs} ${r.slug}`.toLowerCase().includes(q));
     if (opts.filter === "low") rows = rows.filter((r) => r.stockQty > 0 && r.stockQty <= r.lowStockThreshold);
     if (opts.filter === "out") rows = rows.filter((r) => r.stockQty === 0);
     if (opts.filter === "sale") rows = rows.filter((r) => r.onSale);
@@ -175,6 +190,26 @@ export async function listProducts(opts: { q?: string; page?: number; perPage?: 
     const total = rows.length;
     const paged = rows.slice((page - 1) * perPage, (page - 1) * perPage + perPage);
     return { rows: paged, total, page, perPage };
+  }
+}
+
+/** Product counts for the admin type tabs (Tyres / Wheels & rims / Other). */
+export async function productTypeCounts(): Promise<{ tyre: number; wheel: number; other: number; all: number }> {
+  await ensureProducts();
+  try {
+    const r = await libsql.execute("SELECT type, COUNT(*) n FROM products GROUP BY type");
+    const out = { tyre: 0, wheel: 0, other: 0, all: 0 };
+    for (const row of r.rows) {
+      const n = Number(row.n);
+      const t = String(row.type);
+      if (t === "tyre") out.tyre += n; else if (t === "wheel") out.wheel += n; else out.other += n;
+      out.all += n;
+    }
+    return out;
+  } catch {
+    const rows = snapRows();
+    const tyre = rows.filter((r) => r.type === "tyre").length, wheel = rows.filter((r) => r.type === "wheel").length;
+    return { tyre, wheel, other: rows.length - tyre - wheel, all: rows.length };
   }
 }
 
@@ -323,15 +358,17 @@ function roundCents(cents: number, rule: "none" | "r99" | "r10" | "r50" = "none"
   return (hundreds * 100 - 1) * 100;
 }
 
-interface BulkTarget { slug: string; regularPrice: number; salePrice: number; onSale: boolean; stockQty: number }
+export interface BulkTarget { slug: string; regularPrice: number; salePrice: number; onSale: boolean; stockQty: number; price: number; visible: boolean }
 
-async function bulkTargets(opts: { slugs?: string[]; q?: string; filter?: AdminFilter }): Promise<BulkTarget[]> {
+async function bulkTargets(opts: { slugs?: string[]; q?: string; filter?: AdminFilter; type?: string }): Promise<BulkTarget[]> {
   const cols = {
     slug: schema.products.slug,
     regularPrice: schema.products.regularPrice,
     salePrice: schema.products.salePrice,
     onSale: schema.products.onSale,
     stockQty: schema.products.stockQty,
+    price: schema.products.price,
+    visible: schema.products.visible,
   };
   if (opts.slugs?.length) {
     const out: BulkTarget[] = [];
@@ -341,12 +378,7 @@ async function bulkTargets(opts: { slugs?: string[]; q?: string; filter?: AdminF
     }
     return out;
   }
-  const conds = [];
-  if (opts.q) { const t = `%${opts.q}%`; conds.push(or(like(schema.products.name, t), like(schema.products.sku, t), like(schema.products.brand, t))); }
-  if (opts.filter === "low") conds.push(sql`stock_qty > 0 AND stock_qty <= low_stock_threshold`);
-  if (opts.filter === "out") conds.push(sql`stock_qty = 0`);
-  if (opts.filter === "sale") conds.push(eq(schema.products.onSale, true));
-  const where = conds.length ? and(...conds) : undefined;
+  const where = productWhere(opts);
   return db.select(cols).from(schema.products).where(where);
 }
 
@@ -375,10 +407,10 @@ function computePatch(t: BulkTarget, op: BulkOp) {
 
 /** Apply a bulk operation to selected slugs OR to every product matching a
  *  search/filter. Returns how many rows were updated. */
-export async function bulkUpdateProducts(opts: { slugs?: string[]; q?: string; filter?: AdminFilter; op: BulkOp }): Promise<{ updated: number }> {
+export async function bulkUpdateProducts(opts: { slugs?: string[]; q?: string; filter?: AdminFilter; type?: string; op: BulkOp }): Promise<{ updated: number; before: BulkTarget[] }> {
   await ensureProducts();
   const targets = await bulkTargets(opts);
-  if (!targets.length) return { updated: 0 };
+  if (!targets.length) return { updated: 0, before: [] };
   const now = Date.now();
   const stmts = targets.map((t) => {
     const p = computePatch(t, opts.op) as unknown as Record<string, number | boolean>;
@@ -396,7 +428,23 @@ export async function bulkUpdateProducts(opts: { slugs?: string[]; q?: string; f
     await libsql.batch(stmts.slice(i, i + 200));
   }
   revalidateProducts();
-  return { updated: targets.length };
+  return { updated: targets.length, before: targets };
+}
+
+/** Put products back to earlier values (Undo for bulk edits). */
+export async function restoreProducts(items: BulkTarget[]): Promise<number> {
+  await ensureProducts();
+  const now = Date.now();
+  const stmts = items.filter((t) => t && typeof t.slug === "string").map((t) => ({
+    sql: `UPDATE products SET regular_price = ?, sale_price = ?, on_sale = ?, price = ?, stock_qty = ?, visible = ?, updated_at = ? WHERE slug = ?`,
+    args: [
+      Math.round(Number(t.regularPrice) || 0), Math.round(Number(t.salePrice) || 0), t.onSale ? 1 : 0,
+      Math.round(Number(t.price) || 0), Math.max(0, Math.round(Number(t.stockQty) || 0)), t.visible ? 1 : 0, now, t.slug,
+    ],
+  }));
+  for (let i = 0; i < stmts.length; i += 200) await libsql.batch(stmts.slice(i, i + 200));
+  revalidateProducts();
+  return stmts.length;
 }
 
 export async function dashboardStats() {

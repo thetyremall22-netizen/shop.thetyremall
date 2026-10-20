@@ -35,14 +35,15 @@ async function ensureTable() {
   ensured = true;
 }
 
-/** Record a change. Never throws — the history must not block the edit. */
+/** Record a change and return its id. Never throws — the history must not
+ *  block the edit. */
 export async function addAudit(e: {
   entity: string; entityId: string | number; action: string; summary?: string;
   before?: Record<string, unknown> | null; after?: Record<string, unknown> | null; actor?: string;
-}): Promise<void> {
+}): Promise<number | null> {
   try {
     await ensureTable();
-    await libsql.execute({
+    const r = await libsql.execute({
       sql: `INSERT INTO audit_log (entity, entity_id, action, summary, before, after, actor, created_at) VALUES (?,?,?,?,?,?,?,?)`,
       args: [
         e.entity, String(e.entityId), e.action, e.summary ?? "",
@@ -50,9 +51,25 @@ export async function addAudit(e: {
         e.actor ?? "", Date.now(),
       ],
     });
+    return Number(r.lastInsertRowid) || null;
   } catch (err) {
     console.error("[audit] add failed:", (err as Error).message);
+    return null;
   }
+}
+
+export async function getAudit(id: number): Promise<AuditEntry | null> {
+  try {
+    await ensureTable();
+    const r = await libsql.execute({ sql: "SELECT * FROM audit_log WHERE id = ?", args: [id] });
+    if (!r.rows.length) return null;
+    const row = r.rows[0] as unknown as Record<string, unknown>;
+    return {
+      id: Number(row.id), entity: String(row.entity), entityId: String(row.entity_id), action: String(row.action),
+      summary: String(row.summary ?? ""), before: row.before ? JSON.parse(String(row.before)) : null,
+      after: row.after ? JSON.parse(String(row.after)) : null, actor: String(row.actor ?? ""), createdAt: Number(row.created_at),
+    };
+  } catch { return null; }
 }
 
 export async function listAudit(entity: string, entityId: string | number, limit = 200): Promise<AuditEntry[]> {

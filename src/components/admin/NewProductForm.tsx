@@ -44,7 +44,8 @@ export function NewProductForm() {
           <span className="mb-1.5 block text-xs font-semibold text-muted">Type</span>
           <select name="type" className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt">
             <option value="tyre">Tyre</option>
-            <option value="wheel">Mag wheel</option>
+            <option value="wheel">Wheel / Rim / Mag</option>
+            <option value="other">Other (not a tyre or wheel)</option>
           </select>
         </label>
         <F label="SKU" name="sku" />

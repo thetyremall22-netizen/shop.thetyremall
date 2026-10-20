@@ -79,7 +79,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <Link href="/" className="rounded-lg px-3 py-2 text-left text-xs text-faint hover:text-fg">← View store</Link>
           </nav>
         </aside>
-        <main className="min-w-0">{children}</main>
+        <main className="min-w-0">
+          <form role="search" action="/admin/search" className="mb-5 flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" aria-hidden>⌕</span>
+              <input name="q" type="search" placeholder="Search everything: order no., customer name, email, phone, product, SKU, lead…"
+                aria-label="Search the whole admin"
+                className="h-10 w-full rounded-lg border border-line bg-surface-2 pl-8 pr-3 text-sm text-fg outline-none placeholder:text-faint focus:border-volt" />
+            </div>
+            <button className="btn btn-dark h-10 px-4 text-sm">Search all</button>
+          </form>
+          {children}
+        </main>
       </div>
     </div>
   );

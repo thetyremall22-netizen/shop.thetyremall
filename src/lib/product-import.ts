@@ -84,7 +84,7 @@ function parseRow(r: Record<string, string>): Parsed {
   const sku = g("sku"); if (sku) p.sku = sku;
   const name = g("name", "title"); if (name) { p.name = name; p.provided.add("name"); }
   const brand = g("brand"); if (brand) { p.brand = brand; p.provided.add("brand"); }
-  const type = g("type"); if (type) { const t = type.toLowerCase(); p.type = t === "wheel" ? "wheel" : t === "accessory" ? "accessory" : "tyre"; p.provided.add("type"); }
+  const type = g("type"); if (type) { const t = type.toLowerCase(); p.type = t === "wheel" || t === "rim" || t === "mag" ? "wheel" : t === "accessory" || t === "other" ? "other" : "tyre"; p.provided.add("type"); }
 
   // prices: *_price columns are cents (export round-trip); price_retail/price/price_sale are Rand
   if (g("regular_price") !== undefined) num("regularPrice", cents(g("regular_price"), false), "regular_price");

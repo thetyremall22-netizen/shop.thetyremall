@@ -1,13 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { compressImage, MEDIA_LIMITS } from "./image-compress";
+import { compressImage, fitImageToCanvas, MEDIA_LIMITS } from "./image-compress";
 
 interface MediaItem { id: number; kind: string; title: string; width: number; height: number; bytes: number }
 
 /** Pick an image for the website: from the Media library, or upload a new one
  *  (auto-compressed to ≤300 KB / 2000px and saved to the library). */
-export function ImagePicker({ value, onChange, label = "Image", hint }: { value: string; onChange: (src: string) => void; label?: string; hint?: string }) {
+export function ImagePicker({ value, onChange, label = "Image", hint, fit, previewClass = "h-16 w-28" }: {
+  value: string; onChange: (src: string) => void; label?: string; hint?: string;
+  /** Fit uploads into this exact canvas (e.g. brand logos) instead of just compressing. */
+  fit?: { width: number; height: number; padding: number; maxBytes: number };
+  previewClass?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<MediaItem[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -23,7 +28,7 @@ export function ImagePicker({ value, onChange, label = "Image", hint }: { value:
   async function upload(file: File | undefined) {
     if (!file) return;
     setBusy(true); setErr(null);
-    const c = await compressImage(file, MEDIA_LIMITS);
+    const c = fit ? await fitImageToCanvas(file, fit) : await compressImage(file, MEDIA_LIMITS);
     if ("error" in c) { setErr(c.error); setBusy(false); return; }
     const res = await fetch("/api/admin/media", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -42,12 +47,12 @@ export function ImagePicker({ value, onChange, label = "Image", hint }: { value:
     <div>
       <span className="mb-1 block text-xs font-semibold text-muted">{label}</span>
       <div className="flex items-start gap-3">
-        <div className="grid h-16 w-28 shrink-0 place-items-center overflow-hidden rounded-lg border border-line bg-surface-2">
+        <div className={`grid ${previewClass} shrink-0 place-items-center overflow-hidden rounded-lg border border-line ${fit ? "bg-white p-1" : "bg-surface-2"}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {value ? <img src={value} alt="" className="size-full object-cover" /> : <span className="text-xs text-faint">none</span>}
+          {value ? <img src={value} alt="" className={`size-full ${fit ? "object-contain" : "object-cover"}`} /> : <span className="text-xs text-faint">none</span>}
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setOpen(!open)} className="btn btn-dark h-9 px-3 text-xs">{open ? "Close library" : "Choose from Media"}</button>
+          {!fit && <button type="button" onClick={() => setOpen(!open)} className="btn btn-dark h-9 px-3 text-xs">{open ? "Close library" : "Choose from Media"}</button>}
           <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className="btn btn-volt-outline h-9 px-3 text-xs">{busy ? "Uploading…" : "Upload new"}</button>
           <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => upload(e.target.files?.[0])} />
         </div>

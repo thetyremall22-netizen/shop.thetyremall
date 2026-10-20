@@ -48,3 +48,41 @@ export async function compressImage(file: File, L: Limits): Promise<{ dataUrl: s
     URL.revokeObjectURL(url);
   }
 }
+
+/** Brand logos: every logo uses the same shape as the built-in ones (320 × 208,
+ *  stored at 2× = 640 × 416 for sharp screens). */
+export const LOGO_CANVAS = { width: 640, height: 416, padding: 0.08, maxBytes: 80_000 };
+
+/** Fit any image (any size or shape) centred inside a fixed canvas with even
+ *  padding and a transparent background, so uploads all come out uniform. */
+export async function fitImageToCanvas(
+  file: File,
+  c: { width: number; height: number; padding: number; maxBytes: number },
+): Promise<{ dataUrl: string; width: number; height: number } | { error: string }> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = () => rej(new Error("Could not read that image."));
+      i.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = c.width; canvas.height = c.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return { error: "Your browser couldn't process that image." };
+    const boxW = c.width * (1 - 2 * c.padding), boxH = c.height * (1 - 2 * c.padding);
+    const scale = Math.min(boxW / img.naturalWidth, boxH / img.naturalHeight);
+    const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, Math.round((c.width - w) / 2), Math.round((c.height - h) / 2), w, h);
+    let q = 0.9;
+    let dataUrl = canvas.toDataURL("image/webp", q);
+    const bytesOf = (d: string) => Math.floor(((d.split(",")[1] || "").length * 3) / 4);
+    while (bytesOf(dataUrl) > c.maxBytes && q > 0.4) { q -= 0.1; dataUrl = canvas.toDataURL("image/webp", q); }
+    if (bytesOf(dataUrl) > c.maxBytes) return { error: "That logo is too detailed to compress. Try a simpler PNG or SVG export." };
+    return { dataUrl, width: c.width, height: c.height };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

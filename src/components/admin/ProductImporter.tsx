@@ -97,7 +97,7 @@ export function ProductImporter() {
           {error && <span className="text-sm font-semibold text-sale">{error}</span>}
         </div>
         <p className="mt-2 text-xs text-muted">Prices in <code>regular_price</code>/<code>sale_price</code> are in cents (matches Export CSV); <code>price_retail</code>/<code>price_sale</code> are in Rand. Nothing is written until you review the preview and click Import.</p>
-        <p className="mt-1 text-xs text-muted">New brand? Just type it in the <code>brand</code> column and it appears on the site automatically. Optionally add a <code>brand_logo</code> column with a link to the logo image (https://…); or upload the logo afterwards in Products → Brands.</p>
+        <p className="mt-1 text-xs text-muted">New brand? Just type it in the <code>brand</code> column and it appears on the site automatically. Optionally add a <code>brand_logo</code> column with a link to the logo image (https://…). For a perfectly sized logo, upload it in Products → Brands &amp; logos instead: uploads are fitted to the standard 640 × 416 px tile automatically.</p>
       </div>
 
       {report && (

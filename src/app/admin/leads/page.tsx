@@ -3,8 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { listLeads, leadCounts } from "@/lib/contacts";
 import { listEnquiries } from "@/lib/enquiries";
-import { listAbandoned } from "@/lib/abandoned";
-import { formatPrice } from "@/lib/format";
+import { listCarts } from "@/lib/cart-recovery";
 import { AdminSearch } from "@/components/admin/AdminSearch";
 
 export const instant = false;
@@ -47,13 +46,13 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
   const tab: TabV = valid.includes(sp.tab ?? "") ? (sp.tab as TabV) : "contact";
   const q = (sp.q ?? "").trim();
 
-  const [counts, cartsAll, enquiries] = await Promise.all([leadCounts(), listAbandoned(500), listEnquiries(1000)]);
+  const [counts, cartsAll, enquiries] = await Promise.all([leadCounts(), listCarts({ q, limit: 1000 }), listEnquiries(1000)]);
   const byType = (t: string) => enquiries.filter((e) => str(e.type) === t);
   // Each kind of activity on its own tab.
   const questionRows = byType("tyrone").filter((r) => rowMatches(r, q));
   const waTapRows = byType("whatsapp").filter((r) => rowMatches(r, q));
   const callRows = byType("call").filter((r) => rowMatches(r, q));
-  const carts = cartsAll.filter((r) => rowMatches(r, q));
+  const carts = cartsAll;
   const leadRows = isSourceTab(tab) ? await listLeads({ source: tab, limit: 500, q }) : [];
   // While searching, show how many matches each tab has.
   const leadMatchCounts: Record<string, number> = {};
@@ -109,20 +108,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
       )}
 
       {tab === "carts" && (
-        <Table
-          empty="No abandoned carts."
-          head={["Updated", "Email", "Items", "Total", "Status"]}
-          rows={carts.map((c) => ({
-            href: `/admin/leads/cart/${encodeURIComponent(str(c.email))}`,
-            cells: [
-              when(c.updated_at),
-              str(c.email),
-              String(JSON.parse(String(c.items || "[]")).length) + " item(s)",
-              formatPrice(Number(c.total) || 0),
-              Number(c.recovered) ? "Recovered" : Number(c.emailed_at) ? "Reminder sent" : "Pending",
-            ],
-          }))}
-        />
+        <p className="mt-5 text-sm text-muted">Abandoned carts now have their own tab with the recovery emails and settings: <Link href="/admin/cart-recovery" className="font-semibold text-volt hover:underline">Admin → Abandoned Cart</Link>.</p>
       )}
 
       {tab === "tyrone-questions" && (

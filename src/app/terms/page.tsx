@@ -1,26 +1,32 @@
 import type { Metadata } from "next";
+import { PageHeader, PageExtras } from "@/components/PageContent";
+import { pageMetadata } from "@/lib/page-content";
 import Link from "next/link";
 import { LEGAL } from "@/data/legal";
 
-export const metadata: Metadata = {
+const BASE_META: Metadata = {
   title: "Terms & Conditions",
   description:
     "The Tyre Mall Terms & Conditions — website use, product availability, pricing, orders & payment, delivery, fitment, returns, warranty, Radar Protect, privacy (POPIA) and governing law.",
   alternates: { canonical: "/terms" },
 };
 
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("terms", BASE_META);
+}
+
 export default function TermsPage() {
   return (
     <div className="container-x py-10 lg:py-14">
       <div className="max-w-2xl">
         <span className="eyebrow">Effective date: {LEGAL.effectiveDate}</span>
-        <h1 className="skew-italic mt-1 font-display text-4xl leading-[0.95] sm:text-6xl">
-          <span className="text-chrome">TERMS &amp;</span> <span className="text-volt-grad">CONDITIONS</span>
-        </h1>
+        <PageHeader page="terms" className="" silver="TERMS &" green="CONDITIONS"
+          h1Class="skew-italic mt-1 font-display text-4xl leading-[0.95] sm:text-6xl" introClass="mt-4 text-sm leading-relaxed text-muted" />
         {LEGAL.intro.map((p, i) => (
           <p key={i} className="mt-4 text-sm leading-relaxed text-muted">{p}</p>
         ))}
       </div>
+      <PageExtras page="terms" position="top" />
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[240px_1fr]">
         {/* contents */}
@@ -55,6 +61,7 @@ export default function TermsPage() {
           </div>
         </div>
       </div>
+      <PageExtras page="terms" position="bottom" className="mt-10" />
     </div>
   );
 }

@@ -1,13 +1,19 @@
 import type { Metadata } from "next";
+import { PageHeader, PageExtras } from "@/components/PageContent";
+import { pageMetadata } from "@/lib/page-content";
 import Link from "next/link";
 import { Shield, Bolt, Truck } from "@/components/icons";
 
-export const metadata: Metadata = {
+const BASE_META: Metadata = {
   title: "Radar Protect — 12-Month Road Hazard Protection",
   description:
     "Selected Radar tyres from The Tyre Mall include Radar Protect: 12-month road hazard cover against nails, glass, potholes, cuts and impact breaks. See what's covered, eligible ranges and how to claim.",
   alternates: { canonical: "/radar-protect" },
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("radar-protect", BASE_META);
+}
 
 const COVERED = ["Nails or screws", "Glass & sharp debris", "Potholes", "Cuts, snags, bruises & impact breaks"];
 const RANGES = ["Dimax Sport", "Dimax R8 / R8+", "Dimax Sprint", "Dimax Touring", "RPX 800 / 800+", "Rivera Pro-2", "Renegade A/T-5", "Renegade A/T Sport", "Renegade R/T+"];
@@ -37,20 +43,17 @@ export default function RadarProtectPage() {
     <div className="container-x py-10 lg:py-14">
       {/* hero */}
       <div className="rounded-3xl border border-volt/30 bg-gradient-to-br from-volt/10 via-ink-2 to-ink-2 p-8 sm:p-12">
-        <div className="max-w-2xl">
-          <span className="inline-flex items-center gap-2 rounded-full bg-volt/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-volt ring-1 ring-volt/30">
+        <PageHeader page="radar-protect" silver="RADAR" green="PROTECT"
+          h1Class="skew-italic mt-4 font-display text-4xl leading-[0.95] sm:text-6xl"
+          eyebrowNode={<span className="inline-flex items-center gap-2 rounded-full bg-volt/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-volt ring-1 ring-volt/30">
             <Shield width={14} height={14} /> 12-month road hazard cover
-          </span>
-          <h1 className="skew-italic mt-4 font-display text-4xl leading-[0.95] sm:text-6xl">
-            <span className="text-chrome">RADAR</span> <span className="text-volt-grad">PROTECT</span>
-          </h1>
-          <p className="mt-4 text-base text-muted sm:text-lg">
-            Selected Radar tyres from The Tyre Mall include Radar Protect — extra peace of mind if your eligible
-            Radar tyre is damaged by everyday road hazards. Offered by Radar Tyres and their authorised distributors.
-          </p>
+          </span>}
+          intro={<>Selected Radar tyres from The Tyre Mall include Radar Protect — extra peace of mind if your eligible
+            Radar tyre is damaged by everyday road hazards. Offered by Radar Tyres and their authorised distributors.</>}>
           <Link href="/shop?q=radar" className="btn btn-volt mt-6 h-12 px-6">Shop Radar tyres</Link>
-        </div>
+        </PageHeader>
       </div>
+      <PageExtras page="radar-protect" position="top" />
 
       {/* three pillars */}
       <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -167,6 +170,7 @@ export default function RadarProtectPage() {
           <Link href="/terms#s14" className="btn btn-ghost h-12 px-6">Full Radar Protect terms</Link>
         </div>
       </div>
+      <PageExtras page="radar-protect" position="bottom" className="mt-10" />
     </div>
   );
 }

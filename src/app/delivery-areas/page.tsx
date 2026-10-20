@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
+import { PageHeader, PageExtras } from "@/components/PageContent";
+import { pageMetadata } from "@/lib/page-content";
 import Link from "next/link";
 import { Truck, Pin, Bolt } from "@/components/icons";
 
-export const metadata: Metadata = {
+const BASE_META: Metadata = {
   title: "Free Delivery Areas — Nationwide Across South Africa",
   description:
     "The Tyre Mall delivers tyres and mag wheels free on 2+ tyres to every province in South Africa — Gauteng, Western Cape, KwaZulu-Natal, Eastern Cape and more. See the towns and cities we cover.",
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("delivery-areas", BASE_META);
+}
 
 const REGIONS: { province: string; hubs: string[] }[] = [
   {
@@ -50,17 +56,11 @@ const REGIONS: { province: string; hubs: string[] }[] = [
 export default function DeliveryAreasPage() {
   return (
     <div className="container-x py-10 lg:py-14">
-      <div className="max-w-2xl">
-        <span className="eyebrow">Nationwide — every province</span>
-        <h1 className="skew-italic mt-1 font-display text-5xl leading-[0.9] sm:text-7xl">
-          <span className="text-chrome">FREE DELIVERY</span> <span className="text-volt-grad">AREAS</span>
-        </h1>
-        <p className="mt-4 text-base text-muted sm:text-lg">
-          We deliver tyres and mag wheels to <strong className="text-fg">every corner of South Africa</strong>.
+      <PageHeader page="delivery-areas" eyebrow="Nationwide — every province" silver="FREE DELIVERY" green="AREAS"
+        intro={<>We deliver tyres and mag wheels to <strong className="text-fg">every corner of South Africa</strong>.
           Order 2 or more tyres and delivery is <strong className="text-fg">free</strong> — straight to your
-          door or to a partner fitment centre near you.
-        </p>
-      </div>
+          door or to a partner fitment centre near you.</>} />
+      <PageExtras page="delivery-areas" position="top" />
 
       {/* highlights */}
       <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -110,6 +110,7 @@ export default function DeliveryAreasPage() {
         <Link href="/shop" className="btn btn-volt h-12 px-6">Shop tyres now</Link>
         <Link href="/contact" className="btn btn-ghost h-12 px-6">Ask about your area</Link>
       </div>
+      <PageExtras page="delivery-areas" position="bottom" className="mt-10" />
     </div>
   );
 }

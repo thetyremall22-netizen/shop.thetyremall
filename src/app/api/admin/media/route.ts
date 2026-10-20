@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/admin-auth";
-import { createImage, createVideo, MAX_IMAGE_BYTES, ALLOWED_IMAGE_MIME } from "@/lib/media";
+import { createImage, createVideo, listMedia, MAX_IMAGE_BYTES, ALLOWED_IMAGE_MIME } from "@/lib/media";
+
+/** Media list for pickers (banners, page content). */
+export async function GET(req: NextRequest) {
+  if (!(await authorize("content.view"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const kind = req.nextUrl.searchParams.get("kind") || undefined;
+  const { rows } = await listMedia({ page: 1, perPage: 200, kind });
+  return NextResponse.json({ items: rows });
+}
 
 export async function POST(req: NextRequest) {
   if (!(await authorize("content.edit"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });

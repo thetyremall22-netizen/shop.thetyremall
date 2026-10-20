@@ -15,7 +15,7 @@ export interface MediaItem {
   createdAt: number;
 }
 
-interface Limits { maxBytes: number; targetBytes: number; maxDim: number }
+import { compressImage as compress, type Limits } from "./image-compress";
 
 const card = "rounded-xl border border-line bg-surface p-4";
 const btnSm = "rounded-lg border border-line px-2.5 py-1 text-xs font-semibold text-muted hover:text-fg";
@@ -24,50 +24,6 @@ function fmtBytes(n: number) {
   if (!n) return "—";
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/** Downscale + re-encode an image file to WebP under the byte target. */
-async function compress(file: File, L: Limits): Promise<{ dataUrl: string; width: number; height: number } | { error: string }> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((res, rej) => {
-      const i = new Image();
-      i.onload = () => res(i);
-      i.onerror = () => rej(new Error("Could not read that image."));
-      i.src = url;
-    });
-    let w = img.naturalWidth, h = img.naturalHeight;
-    const scale = Math.min(1, L.maxDim / Math.max(w, h));
-    w = Math.max(1, Math.round(w * scale));
-    h = Math.max(1, Math.round(h * scale));
-
-    const draw = (dw: number, dh: number, q: number) => {
-      const c = document.createElement("canvas");
-      c.width = dw; c.height = dh;
-      const ctx = c.getContext("2d");
-      if (!ctx) return null;
-      ctx.drawImage(img, 0, 0, dw, dh);
-      return c.toDataURL("image/webp", q);
-    };
-    const bytesOf = (d: string) => Math.floor(((d.split(",")[1] || "").length * 3) / 4);
-
-    let dw = w, dh = h, q = 0.85;
-    let dataUrl = draw(dw, dh, q);
-    if (!dataUrl) return { error: "Your browser couldn't process that image." };
-    // lower quality first, then shrink dimensions, until under target (or floor)
-    let guard = 0;
-    while (bytesOf(dataUrl) > L.targetBytes && guard++ < 12) {
-      if (q > 0.5) q -= 0.1;
-      else { dw = Math.round(dw * 0.85); dh = Math.round(dh * 0.85); }
-      const next = draw(dw, dh, q);
-      if (!next) break;
-      dataUrl = next;
-    }
-    if (bytesOf(dataUrl) > L.maxBytes) return { error: `Still ${Math.round(bytesOf(dataUrl) / 1024)}KB after compression — try a simpler image.` };
-    return { dataUrl, width: dw, height: dh };
-  } finally {
-    URL.revokeObjectURL(url);
-  }
 }
 
 export function MediaManager({ items, total, totalBytes, page, pages, limits }: {

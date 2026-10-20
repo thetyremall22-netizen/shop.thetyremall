@@ -16,6 +16,12 @@ export default async function AdminMedia({ searchParams }: { searchParams: Promi
     <AdminShell>
       <h1 className="font-display text-3xl">Media</h1>
       <p className="mt-1 text-sm text-muted">Images and videos for the site. Images are auto-compressed on upload so the store stays fast; videos embed from YouTube. Every item is listed here to download or delete.</p>
+      <div className="mt-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm text-muted">
+        <b className="text-fg">Where do these show on the website?</b> Images appear wherever you choose them:
+        home page marketing banners, the hero background and the Tyres/Wheels tiles (<a href="/admin/content" className="font-semibold text-volt hover:underline">Content → Home page</a>),
+        and banners on landing pages (<a href="/admin/content?tab=pages" className="font-semibold text-volt hover:underline">Content → Landing pages</a>).
+        For a YouTube video on the home page, paste its link in Content → Home page → Featured video. Uploading here on its own doesn&apos;t change the website.
+      </div>
       <div className="mt-6">
         <MediaManager
           items={rows}

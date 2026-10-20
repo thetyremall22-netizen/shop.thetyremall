@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Truck, Arrow, Flame } from "./icons";
 
-export function Hero() {
+export function Hero({ image = "/brand/hero-bg.webp" }: { image?: string }) {
   // Scene 1 = big "CHEAPEST TYRES" (image 1). Scene 2 = title shrinks and the
   // Biggest Brands / Widest Range / Best Prices line flies in beneath it
   // (image 2). SOUTH AFRICA'S and WITH FREE DELIVERY are shared — they enter
@@ -24,10 +24,12 @@ export function Hero() {
     <section className="relative flex min-h-[560px] items-center overflow-hidden bg-ink lg:min-h-[660px]">
       {/* full-bleed cinematic background */}
       <Image
-        src="/brand/hero-bg.webp"
+        src={image}
         alt=""
         fill
         priority
+        // Library uploads are already compressed; skip the optimiser for them.
+        unoptimized={!image.startsWith("/brand/")}
         sizes="100vw"
         className="z-0 object-cover object-center"
         aria-hidden

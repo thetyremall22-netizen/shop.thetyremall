@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
+import { PageHeader, PageExtras } from "@/components/PageContent";
+import { pageMetadata } from "@/lib/page-content";
 import Link from "next/link";
 import { Truck, Shield, Bolt, Phone, Pin } from "@/components/icons";
 
-export const metadata: Metadata = {
+const BASE_META: Metadata = {
   title: "About Us — The Tyre Mall",
   description:
     "The Tyre Mall is one of South Africa's largest online tyre suppliers, backed by the Trump Tyre Group (B-BBEE Level 1). Quality tyres & mag wheels, expert advice and nationwide delivery.",
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("about", BASE_META);
+}
 
 const VALUES = [
   { icon: Shield, t: "Quality you can trust", s: "We source from reputable brands and ensure every product meets performance standards." },
@@ -26,16 +32,10 @@ export default function AboutPage() {
   return (
     <div className="container-x py-10 lg:py-14">
       {/* hero */}
-      <div className="max-w-3xl">
-        <span className="eyebrow">Backed by the Trump Tyre Group · B-BBEE Level 1</span>
-        <h1 className="skew-italic mt-1 font-display text-5xl leading-[0.9] sm:text-7xl">
-          <span className="text-chrome">ABOUT</span> <span className="text-volt-grad">THE TYRE MALL</span>
-        </h1>
-        <p className="mt-4 text-base text-muted sm:text-lg">
-          Your premier online destination for tyres and wheels in South Africa. Backed by the heritage of the
-          Trump Tyre Group, we&apos;ve built our reputation on quality, value and service.
-        </p>
-      </div>
+      <PageHeader page="about" className="max-w-3xl" eyebrow="Backed by the Trump Tyre Group · B-BBEE Level 1" silver="ABOUT" green="THE TYRE MALL"
+        intro={<>Your premier online destination for tyres and wheels in South Africa. Backed by the heritage of the
+          Trump Tyre Group, we&apos;ve built our reputation on quality, value and service.</>} />
+      <PageExtras page="about" position="top" />
 
       {/* who we are */}
       <div className="mt-10 grid gap-6 lg:grid-cols-2">
@@ -127,6 +127,7 @@ export default function AboutPage() {
           </a>
         </div>
       </div>
+      <PageExtras page="about" position="bottom" className="mt-10" />
     </div>
   );
 }

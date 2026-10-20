@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
+import { PageHeader, PageExtras } from "@/components/PageContent";
+import { pageMetadata } from "@/lib/page-content";
 import Link from "next/link";
 import { LEGAL } from "@/data/legal";
 import { Truck, Shield, Bolt } from "@/components/icons";
 
-export const metadata: Metadata = {
+const BASE_META: Metadata = {
   title: "Returns & Refunds Policy",
   description:
     "The Tyre Mall returns & refunds policy — 7 business day cooling-off period on unfitted tyres in original packaging, defective-goods process under the CPA, delivery and warranty terms.",
   alternates: { canonical: "/returns" },
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("returns", BASE_META);
+}
 
 // Pull the relevant clauses from the single source-of-truth legal document.
 const pick = (prefix: string) => LEGAL.sections.find((s) => s.heading.startsWith(prefix));
@@ -25,17 +31,12 @@ const HIGHLIGHTS = [
 export default function ReturnsPage() {
   return (
     <div className="container-x py-10 lg:py-14">
-      <div className="max-w-2xl">
-        <span className="eyebrow">Your rights under the CPA</span>
-        <h1 className="skew-italic mt-1 font-display text-4xl leading-[0.95] sm:text-6xl">
-          <span className="text-chrome">RETURNS &amp;</span> <span className="text-volt-grad">REFUNDS</span>
-        </h1>
-        <p className="mt-4 text-base text-muted sm:text-lg">
-          Changed your mind or received a faulty tyre? Here&apos;s exactly how returns, cancellations and
+      <PageHeader page="returns" eyebrow="Your rights under the CPA" silver="RETURNS &" green="REFUNDS"
+        h1Class="skew-italic mt-1 font-display text-4xl leading-[0.95] sm:text-6xl"
+        intro={<>Changed your mind or received a faulty tyre? Here&apos;s exactly how returns, cancellations and
           refunds work — always <Link href="/contact" className="font-semibold text-volt hover:underline">contact us first</Link> so
-          we can guide you through it.
-        </p>
-      </div>
+          we can guide you through it.</>} />
+      <PageExtras page="returns" position="top" />
 
       <div className="mt-8 grid gap-3 sm:grid-cols-3">
         {HIGHLIGHTS.map((h) => (
@@ -72,6 +73,7 @@ export default function ReturnsPage() {
           <Link href="/radar-protect" className="font-semibold text-volt hover:underline">Radar Protect</Link> for cover.
         </div>
       </div>
+      <PageExtras page="returns" position="bottom" className="mt-10" />
     </div>
   );
 }

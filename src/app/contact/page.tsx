@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
+import { PageHeader, PageExtras } from "@/components/PageContent";
+import { pageMetadata } from "@/lib/page-content";
 import { ContactForm } from "@/components/ContactForm";
 import { Pin, Truck } from "@/components/icons";
 
-export const metadata: Metadata = {
+const BASE_META: Metadata = {
   title: "Contact us",
   description: "Get in touch with The Tyre Mall — call, WhatsApp or email. Nationwide delivery and Johannesburg fitment.",
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("contact", BASE_META);
+}
 
 const SOCIALS = [
   { label: "Facebook", href: "https://facebook.com/theetyremall" },
@@ -19,16 +25,10 @@ export default function ContactPage() {
   return (
     <div className="container-x py-10 lg:py-14">
       {/* header */}
-      <div className="max-w-2xl">
-        <span className="eyebrow">We&apos;re here to help</span>
-        <h1 className="skew-italic mt-1 font-display text-5xl leading-[0.9] sm:text-7xl">
-          <span className="text-chrome">GET IN</span> <span className="text-volt-grad">TOUCH</span>
-        </h1>
-        <p className="mt-4 text-base text-muted sm:text-lg">
-          Questions about tyres, fitment, delivery or an existing order? Our team answers fast —
-          call, WhatsApp, email or drop us a message below.
-        </p>
-      </div>
+      <PageHeader page="contact" eyebrow="We're here to help" silver="GET IN" green="TOUCH"
+        intro={<>Questions about tyres, fitment, delivery or an existing order? Our team answers fast —
+          call, WhatsApp, email or drop us a message below.</>} />
+      <PageExtras page="contact" position="top" />
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_1.1fr]">
         {/* left: details */}
@@ -73,6 +73,7 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
+      <PageExtras page="contact" position="bottom" className="mt-10" />
     </div>
   );
 }

@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
+import { PageHeader, PageExtras } from "@/components/PageContent";
+import { pageMetadata } from "@/lib/page-content";
 import Link from "next/link";
 import Image from "next/image";
 import { Arrow, Truck, Bolt } from "@/components/icons";
 
-export const metadata: Metadata = {
+const BASE_META: Metadata = {
   title: "The Wheel Shop — Mag Wheels",
   description: "Shop mag wheels at The Tyre Mall — 15\" to 20\", bakkie & replica designs, nationwide delivery and fitment.",
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("mag-wheels", BASE_META);
+}
 
 const SIZES = ["15\"", "16\"", "17\"", "18\"", "20\""];
 const STYLES = [
@@ -25,13 +31,9 @@ export default function WheelShopPage() {
         <Image src="/brand/tile-wheels.webp" alt="" fill priority sizes="100vw" className="object-cover object-center opacity-70" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,#0a0b0d_0%,rgba(10,11,13,0.8)_38%,rgba(10,11,13,0.25)_72%,transparent_100%)]" />
         <div className="container-x relative z-10 py-14">
-          <span className="eyebrow">The Wheel Shop</span>
-          <h1 className="skew-italic mt-1 font-display text-6xl leading-[0.85] sm:text-8xl">
-            <span className="text-chrome">MAG</span> <span className="text-volt-grad">WHEELS</span>
-          </h1>
-          <p className="mt-4 max-w-md text-base font-semibold text-fg drop-shadow sm:text-lg">
-            15&quot; to 20&quot; · bakkie, 4×4 &amp; replica designs. Turn heads on every street.
-          </p>
+          <PageHeader page="mag-wheels" className="" eyebrow="The Wheel Shop" silver="MAG" green="WHEELS"
+            h1Class="skew-italic mt-1 font-display text-6xl leading-[0.85] sm:text-8xl" introClass="mt-4 max-w-md text-base font-semibold text-fg drop-shadow sm:text-lg"
+            intro={<>15&quot; to 20&quot; · bakkie, 4×4 &amp; replica designs. Turn heads on every street.</>} />
           <Link href="/contact?reason=wheels" className="btn btn-volt mt-6 px-7 py-3.5 text-base">
             Request a wheel quote <Arrow width={18} height={18} />
           </Link>
@@ -39,6 +41,7 @@ export default function WheelShopPage() {
       </section>
 
       <div className="container-x space-y-12 py-12">
+        <PageExtras page="mag-wheels" position="top" className="" />
         {/* by size */}
         <section>
           <h2 className="skew-italic font-display text-3xl sm:text-4xl"><span className="text-chrome">SHOP BY</span> <span className="text-volt-grad">SIZE</span></h2>
@@ -88,6 +91,7 @@ export default function WheelShopPage() {
           <div className="mt-5 inline-flex items-center gap-2 text-sm text-muted"><Truck width={15} height={15} className="text-volt" /> Free nationwide delivery on qualifying orders</div>
         </section>
       </div>
+        <PageExtras page="mag-wheels" position="bottom" className="mt-10" />
     </div>
   );
 }

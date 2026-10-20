@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { PageHeader, PageExtras } from "@/components/PageContent";
+import { pageMetadata } from "@/lib/page-content";
 import Link from "next/link";
 import Image from "next/image";
 import { BLOG_POSTS } from "@/data/blog";
@@ -15,12 +17,16 @@ function CoverFallback({ title }: { title: string }) {
   );
 }
 
-export const metadata: Metadata = {
+const BASE_META: Metadata = {
   title: "Blog — Tyre Tips, Guides & News",
   description:
     "The Tyre Mall blog — expert tyre guides, buying advice, safety tips and news for South African drivers, fleets and enthusiasts.",
   alternates: { canonical: "/blog" },
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("blog", BASE_META);
+}
 
 export default function BlogPage() {
   const posts = BLOG_POSTS;
@@ -29,15 +35,11 @@ export default function BlogPage() {
   return (
     <div className="container-x py-10 lg:py-14">
       <div className="max-w-2xl">
-        <span className="eyebrow">Tips, guides & news</span>
-        <h1 className="skew-italic mt-1 font-display text-5xl leading-[0.9] sm:text-7xl">
-          <span className="text-chrome">THE</span> <span className="text-volt-grad">BLOG</span>
-        </h1>
-        <p className="mt-4 text-base text-muted sm:text-lg">
-          Expert tyre advice for South African drivers — choosing, fitting, caring for and getting the most out
-          of your tyres and wheels.
-        </p>
+        <PageHeader page="blog" className="" eyebrow="Tips, guides & news" silver="THE" green="BLOG"
+          intro={<>Expert tyre advice for South African drivers — choosing, fitting, caring for and getting the most out
+          of your tyres and wheels.</>} />
       </div>
+      <PageExtras page="blog" position="top" />
 
       {posts.length === 0 ? (
         <p className="mt-10 text-muted">New articles are on the way. Check back soon.</p>
@@ -83,6 +85,7 @@ export default function BlogPage() {
           </div>
         </>
       )}
+      <PageExtras page="blog" position="bottom" className="mt-10" />
     </div>
   );
 }

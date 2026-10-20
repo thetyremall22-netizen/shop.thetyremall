@@ -1,29 +1,29 @@
 import type { Metadata } from "next";
+import { PageHeader, PageExtras } from "@/components/PageContent";
+import { pageMetadata } from "@/lib/page-content";
 import Link from "next/link";
 import { FITMENT_STORES, WHATSAPP_LINK, SHOP_PHONE_DISPLAY } from "@/lib/shop-config";
 import { StoreCallLink } from "@/components/StoreCallLink";
 import { Pin, Truck, Bolt } from "@/components/icons";
 
-export const metadata: Metadata = {
+const BASE_META: Metadata = {
   title: "Our Stores & Fitment Centres",
   description:
     "The Tyre Mall partner fitment centres across Johannesburg — Supa Quick, Dunlop Zone and Hi-Q. Addresses and phone numbers for Randburg, Selby, Boksburg, Midrand, Booysens and the CBD.",
   alternates: { canonical: "/stores" },
 };
 
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("stores", BASE_META);
+}
+
 export default function StoresPage() {
   return (
     <div className="container-x py-10 lg:py-14">
-      <div className="max-w-2xl">
-        <span className="eyebrow">Buy online · fit in Joburg</span>
-        <h1 className="skew-italic mt-1 font-display text-5xl leading-[0.9] sm:text-7xl">
-          <span className="text-chrome">OUR</span> <span className="text-volt-grad">STORES</span>
-        </h1>
-        <p className="mt-4 text-base text-muted sm:text-lg">
-          Order online and have your tyres fitted at one of our trusted partner centres across Johannesburg.
-          Each centre sets and charges its own fitment price. Phone ahead to book.
-        </p>
-      </div>
+      <PageHeader page="stores" eyebrow="Buy online · fit in Joburg" silver="OUR" green="STORES"
+        intro={<>Order online and have your tyres fitted at one of our trusted partner centres across Johannesburg.
+          Each centre sets and charges its own fitment price. Phone ahead to book.</>} />
+      <PageExtras page="stores" position="top" />
 
       <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {FITMENT_STORES.map((s) => (
@@ -81,6 +81,7 @@ export default function StoresPage() {
           <Link href="/shop" className="btn btn-volt h-12 px-6">Shop tyres</Link>
         </div>
       </div>
+      <PageExtras page="stores" position="bottom" className="mt-10" />
     </div>
   );
 }

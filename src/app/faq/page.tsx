@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
+import { PageHeader, PageExtras } from "@/components/PageContent";
+import { pageMetadata } from "@/lib/page-content";
 import Link from "next/link";
 import { FaqAccordion } from "@/components/FaqAccordion";
 import { FAQ_SECTIONS } from "@/data/faq";
 
-export const metadata: Metadata = {
+const BASE_META: Metadata = {
   title: "Tyre FAQ — Buying, Fitting & Caring for Tyres",
   description:
     "Answers to the most common tyre questions — how to read a tyre size, when to replace tyres, tread depth law in South Africa, delivery, payment, returns and warranty.",
   alternates: { canonical: "/faq" },
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("faq", BASE_META);
+}
 
 const SITE = "https://shop.thetyremall.co.za";
 
@@ -47,16 +53,10 @@ export default function FaqPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
 
-      <div className="max-w-2xl">
-        <span className="eyebrow">{total} answers · tyres, fitment & orders</span>
-        <h1 className="skew-italic mt-1 font-display text-5xl leading-[0.9] sm:text-7xl">
-          <span className="text-chrome">TYRE</span> <span className="text-volt-grad">FAQ</span>
-        </h1>
-        <p className="mt-4 text-base text-muted sm:text-lg">
-          Everything you need to know about buying, fitting and caring for your tyres. Can&apos;t find your
-          answer? <Link href="/contact" className="font-semibold text-volt hover:underline">Ask our team</Link>.
-        </p>
-      </div>
+      <PageHeader page="faq" eyebrow={`${total} answers · tyres, fitment & orders`} silver="TYRE" green="FAQ"
+        intro={<>Everything you need to know about buying, fitting and caring for your tyres. Can&apos;t find your
+          answer? <Link href="/contact" className="font-semibold text-volt hover:underline">Ask our team</Link>.</>} />
+      <PageExtras page="faq" position="top" />
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[220px_1fr]">
         {/* jump nav */}
@@ -88,6 +88,7 @@ export default function FaqPage() {
           <Link href="/shop" className="btn btn-ghost h-12 px-6">Shop tyres</Link>
         </div>
       </div>
+      <PageExtras page="faq" position="bottom" className="mt-10" />
     </div>
   );
 }

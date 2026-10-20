@@ -9,7 +9,6 @@ import { cleanVoiceQuery, correctBrands, detectTyreSize } from "@/lib/voice-sear
 import { parseSize, sizeToShopHref } from "@/lib/tyre-size";
 import { MicButton } from "./MicButton";
 import { WhatsAppPanel } from "./WhatsAppPanel";
-import { TyroneDetails } from "./TyroneDetails";
 import { loadSavedContact, type SavedContact } from "@/lib/saved-contact";
 import { validateContact } from "@/lib/validate";
 import { useCart } from "@/lib/cart";
@@ -286,8 +285,8 @@ export function Tyrone() {
   const [mode, setMode] = useState<"wheels" | null>(null); // wheel-context after tapping "Mag wheels"
   const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", text: GREETING, buttons: MAIN_MENU }]);
   const [typing, setTyping] = useState(false);
-  // Name, email and mobile are required before chatting (TyroneDetails). A
-  // returning visitor's details are remembered on their device.
+  // Tyrone opens straight away (no details step). If the visitor already gave
+  // their details (e.g. in the WhatsApp step), questions are logged with them.
   const [contact, setContact] = useState<SavedContact | null>(null);
   useEffect(() => {
     const s = loadSavedContact();
@@ -325,7 +324,7 @@ export function Tyrone() {
   // When a new bot message arrives (and the panel is open), type it out. The
   // greeting types on first open too. Honours reduced-motion by skipping it.
   useEffect(() => {
-    if (!open || !contact) return;
+    if (!open) return;
     const idx = msgs.length - 1;
     if (idx < 0 || idx <= streamedRef.current) return;
     const m = msgs[idx];
@@ -333,7 +332,7 @@ export function Tyrone() {
     streamedRef.current = idx;
     const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (m.text && !reduce) setStream({ idx, n: 0 });
-  }, [msgs, open, contact]);
+  }, [msgs, open]);
 
   // Advance the typewriter a few characters at a time.
   useEffect(() => {
@@ -699,10 +698,7 @@ export function Tyrone() {
             </button>
           </div>
 
-          {!contact && <TyroneDetails onDone={setContact} />}
-
           {/* messages */}
-          {contact && <>
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             {msgs.map((m, i) => (
               <div
@@ -811,7 +807,6 @@ export function Tyrone() {
           <div className="border-t border-line bg-ink px-3 pb-2 pt-1 text-center text-[10px] text-faint">
             Tyrone gives general help · for orders call 078 0088 788
           </div>
-          </>}
         </div>
       )}
 

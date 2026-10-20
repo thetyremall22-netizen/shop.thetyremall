@@ -14,29 +14,30 @@ export interface WhatsAppLead {
   productUrl?: string;
 }
 
-/** Every WhatsApp hand-off goes through this: it requires a valid name, email
- *  and mobile, saves the lead (Admin → Leads + email to the shop), and only then
- *  opens WhatsApp, so the team can always reach the customer. */
-export function WhatsAppGate({
-  open, onClose, message, lead,
+/** The details step itself: a valid name, email and mobile are required; the
+ *  lead is saved (Admin → Leads + email to the shop) and only then does
+ *  WhatsApp open, so the team can always reach the customer if the chat drops. */
+export function WhatsAppDetailsForm({
+  message, lead, onDone, onCancel, intro, submitLabel = "Open WhatsApp",
 }: {
-  open: boolean;
-  onClose: () => void;
   message: string;
   lead: WhatsAppLead;
+  onDone?: () => void;
+  onCancel?: () => void;
+  intro?: ReactNode;
+  submitLabel?: string;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [errors, setErrors] = useState<ContactErrors>({});
 
+  // A returning visitor's details are remembered on their device.
   useEffect(() => {
-    if (!open) return;
     const s = loadSavedContact();
-    setName(s.name); setEmail(s.email); setPhone(s.phone); setErrors({});
-  }, [open]);
-
-  if (!open) return null;
+    const t = setTimeout(() => { setName(s.name); setEmail(s.email); setPhone(s.phone); }, 0);
+    return () => clearTimeout(t);
+  }, []);
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -59,27 +60,45 @@ export function WhatsAppGate({
     const url = whatsappHref(fullMessage);
     const w = window.open(url, "_blank", "noopener,noreferrer");
     if (!w) window.location.href = url;
-    onClose();
+    onDone?.();
   }
 
   return (
+    <form onSubmit={submit} noValidate className="text-left">
+      {intro ?? (
+        <p className="text-sm text-muted">We need your name, email and mobile in case we lose signal on WhatsApp and need to contact you.</p>
+      )}
+      <GateField label="Your name" value={name} onChange={setName} error={errors.name} autoComplete="name" placeholder="Your name" />
+      <GateField label="Email" value={email} onChange={setEmail} error={errors.email} autoComplete="email" type="email" inputMode="email" placeholder="you@gmail.com" />
+      <GateField label="Mobile number" value={phone} onChange={setPhone} error={errors.phone} autoComplete="tel" type="tel" inputMode="tel" placeholder="082 123 4567" />
+      <div className="mt-5 flex gap-2">
+        {onCancel && <button type="button" onClick={onCancel} className="btn btn-dark flex-1">Cancel</button>}
+        <button type="submit" className="btn flex flex-1 items-center justify-center gap-2 bg-[#25D366] text-black hover:bg-[#1fb757]">
+          <WhatsApp width={16} height={16} /> {submitLabel}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** The same step as a pop-up, for WhatsApp buttons elsewhere on the site. */
+export function WhatsAppGate({
+  open, onClose, message, lead,
+}: {
+  open: boolean;
+  onClose: () => void;
+  message: string;
+  lead: WhatsAppLead;
+}) {
+  if (!open) return null;
+  return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="wa-gate-title">
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <form onSubmit={submit} noValidate className="relative w-full max-w-sm rounded-2xl border border-line bg-ink-2 p-5 text-left shadow-2xl">
+      <div className="relative w-full max-w-sm rounded-2xl border border-line bg-ink-2 p-5 shadow-2xl">
         <h3 id="wa-gate-title" className="font-display text-lg text-fg">Before we chat</h3>
-        <p className="mt-1 text-sm text-muted">
-          We need your name, email and mobile in case we lose signal on WhatsApp and need to contact you.
-        </p>
-        <GateField label="Your name" value={name} onChange={setName} error={errors.name} autoComplete="name" placeholder="Your name" autoFocus />
-        <GateField label="Email" value={email} onChange={setEmail} error={errors.email} autoComplete="email" type="email" inputMode="email" placeholder="you@gmail.com" />
-        <GateField label="Mobile number" value={phone} onChange={setPhone} error={errors.phone} autoComplete="tel" type="tel" inputMode="tel" placeholder="082 123 4567" />
-        <div className="mt-5 flex gap-2">
-          <button type="button" onClick={onClose} className="btn btn-dark flex-1">Cancel</button>
-          <button type="submit" className="btn flex flex-1 items-center justify-center gap-2 bg-[#25D366] text-black hover:bg-[#1fb757]">
-            <WhatsApp width={16} height={16} /> Open WhatsApp
-          </button>
-        </div>
-      </form>
+        <WhatsAppDetailsForm message={message} lead={lead} onDone={onClose} onCancel={onClose}
+          intro={<p className="mt-1 text-sm text-muted">We need your name, email and mobile in case we lose signal on WhatsApp and need to contact you.</p>} />
+      </div>
     </div>
   );
 }

@@ -4,13 +4,14 @@ import { useState } from "react";
 import { whatsappHref, SHOP_EMAIL, SHOP_PHONE_DISPLAY } from "@/lib/shop-config";
 import { Close, WhatsApp, Check } from "./icons";
 import { validateContact, type ContactErrors } from "@/lib/validate";
-import { WhatsAppGateButton } from "./WhatsAppGate";
+import { WhatsAppDetailsForm } from "./WhatsAppGate";
 
 type Tab = "quote" | "chat";
 const VEHICLE_TYPES = ["Car / Hatch / Sedan", "SUV", "Bakkie / 4x4", "Commercial / LDV", "Truck / Bus", "Motorbike", "Other"];
 
 export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [tab, setTab] = useState<Tab>("quote");
+  // Opens on the chat tab, with the details step right there.
+  const [tab, setTab] = useState<Tab>("chat");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -93,7 +94,7 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
 
       {/* tabs */}
       <div className="grid grid-cols-2 gap-1 border-b border-line bg-ink p-1.5">
-        {([["quote", "Request a quote"], ["chat", "Chat on WhatsApp"]] as [Tab, string][]).map(([t, label]) => (
+        {([["chat", "Chat on WhatsApp"], ["quote", "Request a quote"]] as [Tab, string][]).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)} className={`rounded-lg py-2 text-xs font-bold transition-colors ${tab === t ? "bg-[#25D366] text-black" : "text-muted hover:text-fg"}`}>
             {label}
           </button>
@@ -142,14 +143,15 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
             </form>
           )
         ) : (
-          <div className="grid h-full place-items-center text-center">
-            <div>
-              <div className="mx-auto grid size-16 place-items-center rounded-full bg-[#25D366]/15 text-[#25D366]"><WhatsApp width={32} height={32} /></div>
-              <p className="mt-4 font-display text-xl text-fg">Chat to sales on WhatsApp</p>
-              <p className="mx-auto mt-2 max-w-xs text-sm text-muted">Pop in your details, then WhatsApp opens with your message ready. Just press send.</p>
-              <WhatsAppGateButton message={waText} lead={{ source: "whatsapp-chat" }} className="btn mt-5 h-12 bg-[#25D366] px-6 text-black hover:bg-[#1fb757]"><WhatsApp width={18} height={18} /> Open WhatsApp</WhatsAppGateButton>
-              <p className="mt-4 text-xs text-muted">or email <a href={`mailto:${SHOP_EMAIL}`} className="font-semibold text-fg hover:text-volt">{SHOP_EMAIL}</a><br />call {SHOP_PHONE_DISPLAY}</p>
+          <div>
+            <div className="flex items-start gap-3">
+              <div className="grid size-10 shrink-0 place-items-center rounded-full bg-[#25D366]/15 text-[#25D366]"><WhatsApp width={20} height={20} /></div>
+              <div className="rounded-2xl rounded-tl-sm bg-surface-2 px-3.5 py-2.5 text-sm text-fg">
+                Hi 👋 Before we chat on WhatsApp, please share your name, email and mobile, in case we lose signal and need to contact you.
+              </div>
             </div>
+            <WhatsAppDetailsForm message={waText} lead={{ source: "whatsapp-chat" }} submitLabel="Start chatting on WhatsApp" intro={<></>} />
+            <p className="mt-4 text-center text-xs text-muted">or email <a href={`mailto:${SHOP_EMAIL}`} className="font-semibold text-fg hover:text-volt">{SHOP_EMAIL}</a> · call {SHOP_PHONE_DISPLAY}</p>
           </div>
         )}
       </div>

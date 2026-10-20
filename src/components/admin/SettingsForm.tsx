@@ -83,7 +83,7 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
           <input value={v.site.tagline} onChange={(e) => up("site", "tagline", e.target.value)} className={field} /></label>
         <div className="sm:col-span-2 rounded-lg bg-surface px-3 py-2 text-xs text-muted">
           Footer preview: <b className="text-fg">© {new Date().getFullYear()} {v.site.copyrightUrl ? <u>{v.site.copyrightName}</u> : v.site.copyrightName}{v.site.copyrightText ? <>. <LinkedText text={v.site.copyrightText} linkClassName="underline" /></> : "."}</b>
-          {v.site.footerNote && <> &nbsp;·&nbsp; <b className="text-fg"><LinkedText text={v.site.footerNote} linkClassName="underline" /></b></>}
+          {v.site.footerNote && <> &nbsp;·&nbsp; <span className="text-fg"><LinkedText text={v.site.footerNote} linkClassName="font-bold text-volt" /></span></>}
           <br />The © and the year are added for you, and the year changes automatically every 1 January (2026, 2027, 2028…). Underlined words are links.
           <br />To make words a link in the two text boxes below, type them like this: <code className="text-fg">[iHeart Digital](https://iheartdigital.co.za)</code>
         </div>

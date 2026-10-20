@@ -116,7 +116,7 @@ export async function Footer() {
               : s.site.copyrightName}
             {s.site.copyrightText ? <>. <LinkedText text={s.site.copyrightText} /></> : "."}
           </p>
-          {s.site.footerNote && <p><LinkedText text={s.site.footerNote} /></p>}
+          {s.site.footerNote && <p className="text-sm text-muted"><LinkedText text={s.site.footerNote} linkClassName="font-bold text-volt hover:underline" /></p>}
         </div>
       </div>
     </footer>

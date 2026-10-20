@@ -5,6 +5,7 @@ import { Logo } from "./Logo";
 import { Truck, Shield, Bolt, Phone, Pin } from "./icons";
 import { NAV_PRIMARY } from "@/lib/nav";
 import { getSettings, currentYear } from "@/lib/settings";
+import { LinkedText } from "./LinkedText";
 import { SocialLinks } from "./SocialLinks";
 
 export async function Footer() {
@@ -113,9 +114,9 @@ export async function Footer() {
             {s.site.copyrightUrl
               ? <a href={s.site.copyrightUrl} className="hover:text-volt" {...(/^https?:/i.test(s.site.copyrightUrl) ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{s.site.copyrightName}</a>
               : s.site.copyrightName}
-            {s.site.copyrightText ? `. ${s.site.copyrightText}` : "."}
+            {s.site.copyrightText ? <>. <LinkedText text={s.site.copyrightText} /></> : "."}
           </p>
-          {s.site.footerNote && <p>{s.site.footerNote}</p>}
+          {s.site.footerNote && <p><LinkedText text={s.site.footerNote} /></p>}
         </div>
       </div>
     </footer>

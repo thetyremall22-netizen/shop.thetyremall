@@ -39,7 +39,8 @@ const UNIT_POLYFILL = `/* TTM-UNIT-PATCH: load app/.env + appendHeader/setHeader
   // Memory logger + self-recycle watchdog. Every 60s it records rss/heap/external
   // to error.log (so we can SEE if memory climbs, how fast, and which kind), AND
   // if rss crosses TTM_MEM_LIMIT_MB (default 2000, safely under the ~3 GB cgroup)
-  // it exits the worker CLEANLY. Unit then starts a fresh worker in ~1-2s, so a
+  // it exits the worker (code 1, so both Unit and systemd Restart=on-failure
+  // start a fresh one) in ~1-2s instead of hard-crashing. So a
   // slow leak becomes a sub-second blip instead of a hard OOM-kill that stalls the
   // site, 500s, and leaves stuck (D-state) processes. Tune the limit in app/.env
   // (TTM_MEM_LIMIT_MB=…) with no host access needed. Unref'd so it never keeps the
@@ -50,7 +51,7 @@ const UNIT_POLYFILL = `/* TTM-UNIT-PATCH: load app/.env + appendHeader/setHeader
     setInterval(function(){try{
       var m=process.memoryUsage(),rss=_MB(m.rss);
       w('[mem] up='+Math.round(process.uptime())+'s rss='+rss+' heapUsed='+_MB(m.heapUsed)+' heapTotal='+_MB(m.heapTotal)+' external='+_MB(m.external)+' arrayBuffers='+_MB(m.arrayBuffers||0)+' (MB)');
-      if(rss>=_LIM){w('[mem] rss '+rss+'MB >= limit '+_LIM+'MB — recycling worker cleanly to avoid an OOM kill/stall');setTimeout(function(){try{process.exit(0);}catch(e){}},500).unref();}
+      if(rss>=_LIM){w('[mem] rss '+rss+'MB >= limit '+_LIM+'MB — recycling worker cleanly to avoid an OOM kill/stall');setTimeout(function(){try{process.exit(1);}catch(e){}},500).unref();}
     }catch(e){}},60000).unref();
   }catch(e){}
 })();

@@ -96,16 +96,20 @@ export interface WishlistChange { slug: string; name: string; brand: string; ima
  *  product that goes out of stock and comes back later alerts again. */
 export async function collectWishlistChanges(): Promise<{ customerId: number; email: string; firstName: string; changes: WishlistChange[] }[]> {
   await ensureTable();
-  const r = await libsql.execute(`
+  // (The database helper can throw straight away rather than reject, so use try/catch.)
+  let r: { rows: Row[] };
+  try {
+    r = await libsql.execute(`
     SELECT w.customer_id, w.product_slug, w.seen_price, w.seen_on_sale, w.seen_in_stock,
            p.name, p.brand, p.image, p.price, p.regular_price, p.on_sale, p.stock_qty, p.visible,
            c.email, c.first_name, c.verified, c.wishlist_emails
     FROM wishlist w
     JOIN products p ON p.slug = w.product_slug
-    JOIN customers c ON c.id = w.customer_id`).catch((e: Error) => {
-    if (/no such table/i.test(e.message)) return { rows: [] as Row[] }; // nobody has registered yet
+    JOIN customers c ON c.id = w.customer_id`) as { rows: Row[] };
+  } catch (e) {
+    if (/no such table/i.test((e as Error).message)) return []; // nobody has registered yet
     throw e;
-  });
+  }
   const byCustomer = new Map<number, { customerId: number; email: string; firstName: string; changes: WishlistChange[] }>();
   const updates: { cid: number; slug: string; price: number; sale: number; stock: number }[] = [];
   for (const x of r.rows as Row[]) {

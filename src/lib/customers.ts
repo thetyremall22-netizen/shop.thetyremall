@@ -50,6 +50,17 @@ async function ensureTables() {
     updated_at INTEGER NOT NULL DEFAULT 0,
     last_login_at INTEGER
   )`);
+  // The wishlist table too (same definition as lib/wishlist), so client lists
+  // can count wishlist items before anyone has saved one.
+  await libsql.execute(`CREATE TABLE IF NOT EXISTS wishlist (
+    customer_id INTEGER NOT NULL,
+    product_slug TEXT NOT NULL,
+    added_at INTEGER NOT NULL DEFAULT 0,
+    seen_price INTEGER NOT NULL DEFAULT 0,
+    seen_on_sale INTEGER NOT NULL DEFAULT 0,
+    seen_in_stock INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (customer_id, product_slug)
+  )`);
   await libsql.execute(`CREATE TABLE IF NOT EXISTS customer_tokens (
     token_hash TEXT PRIMARY KEY,
     customer_id INTEGER NOT NULL,
@@ -272,12 +283,7 @@ export async function listCustomers(opts: { q?: string; limit?: number } = {}): 
             ${q ? "WHERE LOWER(c.email || ' ' || c.first_name || ' ' || c.last_name || ' ' || c.phone) LIKE ?" : ""}
             ORDER BY c.id DESC LIMIT ?`,
       args: q ? [like, opts.limit ?? 200] : [opts.limit ?? 200],
-    }).catch(async () => libsql.execute({
-      // wishlist table may not exist yet
-      sql: `SELECT c.*, (SELECT COUNT(*) FROM orders o WHERE LOWER(json_extract(o.customer, '$.email')) = c.email) AS n_orders, 0 AS n_wish
-            FROM customers c ${q ? "WHERE LOWER(c.email || ' ' || c.first_name || ' ' || c.last_name || ' ' || c.phone) LIKE ?" : ""} ORDER BY c.id DESC LIMIT ?`,
-      args: q ? [like, opts.limit ?? 200] : [opts.limit ?? 200],
-    }));
+    });
     return r.rows.map((row) => ({ ...toCustomer(row as Row), orders: Number(row.n_orders) || 0, wishlist: Number(row.n_wish) || 0 }));
   } catch (e) {
     console.error("[customers] list failed:", (e as Error).message);

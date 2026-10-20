@@ -28,7 +28,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
   const pages = Math.max(1, Math.ceil(total / perPage));
 
   const filters: { k: AdminFilter; label: string }[] = [
-    { k: "all", label: "All" }, { k: "low", label: "Low stock" },
+    { k: "all", label: "All" }, { k: "instock", label: "In stock" }, { k: "low", label: "Low stock" },
     { k: "out", label: "Out of stock" }, { k: "sale", label: "On sale" },
   ];
   const qs = (patch: Record<string, string | number>) => {

@@ -4,7 +4,6 @@ import { getOrder, updateOrder } from "@/lib/orders";
 import { sendOrderPaid, sendOrderFailed } from "@/lib/email";
 import { markRecovered } from "@/lib/abandoned";
 import { decrementStock } from "@/lib/db/queries";
-import { createWooOrder, wooWriteConfigured } from "@/lib/woo";
 import { recordRedemption } from "@/lib/coupons";
 
 export async function POST(req: NextRequest) {
@@ -47,22 +46,9 @@ export async function POST(req: NextRequest) {
     if (order.status !== "processing" && order.status !== "completed") {
       const updated = await updateOrder(id, { status: "processing", pfPaymentId: data.pf_payment_id });
       if (updated) {
-        // Headless WooCommerce: push the paid order into Woo so it records the
-        // order, decrements ITS OWN stock, and sends its confirmation emails
-        // (via the WordPress SMTP plugin — i.e. FluentSMTP → Microsoft 365,
-        // which works because it sends from the WP server, not this one).
-        let wooId: number | null = null;
-        if (wooWriteConfigured()) {
-          wooId = await createWooOrder(updated);
-          if (wooId) console.log(`[woo] order ${updated.reference} created in Woo as #${wooId}`);
-          else console.warn(`[woo] order ${updated.reference} NOT created in Woo — using local stock/email fallback`);
-        }
-        // When Woo owns the order it handles stock + emails. Otherwise fall
-        // back to our own stock decrement + emailed confirmation (Resend/SMTP).
-        if (!wooId) {
-          for (const it of updated.items) await decrementStock(it.slug, it.qty);
-          await sendOrderPaid(updated);
-        }
+        // Take the items out of stock and email the customer + shop.
+        for (const it of updated.items) await decrementStock(it.slug, it.qty);
+        await sendOrderPaid(updated);
         // Record a coupon redemption (bumps usage + enforces per-customer limits).
         if (updated.totals.couponCode && updated.totals.couponDiscount > 0) {
           await recordRedemption(updated.totals.couponCode, updated.reference, updated.customer.email, updated.totals.couponDiscount).catch(() => {});

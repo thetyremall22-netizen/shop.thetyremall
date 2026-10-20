@@ -139,7 +139,7 @@ export async function incrementStock(slug: string, qty: number): Promise<void> {
 }
 
 // ---- admin ------------------------------------------------------------------
-export type AdminFilter = "all" | "low" | "out" | "sale";
+export type AdminFilter = "all" | "instock" | "low" | "out" | "sale";
 
 /** The admin product filter, shared by the list and "apply to all matching"
  *  bulk edits so both always act on exactly the same products. Search covers
@@ -158,6 +158,7 @@ function productWhere(opts: { q?: string; filter?: AdminFilter; type?: string })
   }
   if (opts.type === "other") conds.push(sql`${schema.products.type} NOT IN ('tyre', 'wheel')`);
   else if (opts.type) conds.push(eq(schema.products.type, opts.type));
+  if (opts.filter === "instock") conds.push(sql`stock_qty > 0`);
   if (opts.filter === "low") conds.push(sql`stock_qty > 0 AND stock_qty <= low_stock_threshold`);
   if (opts.filter === "out") conds.push(sql`stock_qty = 0`);
   if (opts.filter === "sale") conds.push(eq(schema.products.onSale, true));
@@ -183,6 +184,7 @@ export async function listProducts(opts: { q?: string; page?: number; perPage?: 
     if (opts.type === "other") rows = rows.filter((r) => r.type !== "tyre" && r.type !== "wheel");
     else if (opts.type) rows = rows.filter((r) => r.type === opts.type);
     if (q) rows = rows.filter((r) => `${r.name} ${r.sku} ${r.brand} ${r.categories} ${r.specs} ${r.slug}`.toLowerCase().includes(q));
+    if (opts.filter === "instock") rows = rows.filter((r) => r.stockQty > 0);
     if (opts.filter === "low") rows = rows.filter((r) => r.stockQty > 0 && r.stockQty <= r.lowStockThreshold);
     if (opts.filter === "out") rows = rows.filter((r) => r.stockQty === 0);
     if (opts.filter === "sale") rows = rows.filter((r) => r.onSale);

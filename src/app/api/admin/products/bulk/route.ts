@@ -3,7 +3,7 @@ import { authorize } from "@/lib/admin-auth";
 import { bulkUpdateProducts, restoreProducts, type BulkOp, type AdminFilter, type BulkTarget } from "@/lib/db/queries";
 import { addAudit, getAudit, actorName } from "@/lib/audit";
 
-const FILTERS: AdminFilter[] = ["all", "low", "out", "sale"];
+const FILTERS: AdminFilter[] = ["all", "instock", "low", "out", "sale"];
 
 function parseOp(raw: unknown): BulkOp | null {
   if (!raw || typeof raw !== "object") return null;

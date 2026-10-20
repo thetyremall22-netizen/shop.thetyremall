@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ShopListing } from "@/components/ShopListing";
-import { getCategory } from "@/lib/catalogue";
+import { findCategory } from "@/lib/special-categories";
 import { categoryPath } from "@/lib/shop-url";
 
 // Category pages at the old WooCommerce addresses, served directly (no
@@ -23,7 +23,7 @@ function parse(segments: string[]): { slug: string; page?: string } {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string[] }> }): Promise<Metadata> {
   const { slug } = parse((await params).slug);
-  const c = getCategory(slug);
+  const c = await findCategory(slug);
   // Unknown/retired category: a search page, kept out of Google's index.
   if (!c) return { title: "Shop tyres & mag wheels", robots: { index: false, follow: true } };
   return {
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function ProductCategoryPage({ params, searchParams }: { params: Promise<{ slug: string[] }>; searchParams: Promise<SP> }) {
   const { slug, page } = parse((await params).slug);
-  const c = getCategory(slug);
+  const c = await findCategory(slug);
   const sp = await searchParams;
   const pageSp = page && !sp.page ? { page } : {};
   // An old link to a category that no longer exists still lands somewhere

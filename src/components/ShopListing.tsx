@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { queryProducts, categories, meta, getCategory } from "@/lib/catalogue";
+import { queryProducts, meta } from "@/lib/catalogue";
+import { findCategory, shopCategories } from "@/lib/special-categories";
 import { detectTyreSize } from "@/lib/voice-search";
 import { findVehicle, factorySizes } from "@/lib/vehicles";
 import { canonicalSize } from "@/lib/tyre-size";
@@ -67,7 +68,7 @@ export async function ShopListing({ sp }: { sp: SP }) {
     perPage: 24,
   });
 
-  const cat = category ? getCategory(category) : undefined;
+  const [cat, categories] = await Promise.all([category ? findCategory(category) : undefined, shopCategories()]);
   const heading = vehicle
     ? `Tyres for your ${vehicle.make} ${vehicle.model}`
     : vehicleCtx

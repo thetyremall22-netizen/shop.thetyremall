@@ -165,6 +165,13 @@ function productWhere(opts: { q?: string; filter?: AdminFilter; type?: string })
   return conds.length ? and(...conds) : undefined;
 }
 
+/** Slugs of every product matching the admin filter (for "add all matching"). */
+export async function matchingProductSlugs(opts: { q?: string; filter?: AdminFilter; type?: string }): Promise<string[]> {
+  await ensureProducts();
+  const rows = await db.select({ slug: schema.products.slug }).from(schema.products).where(productWhere(opts));
+  return rows.map((r) => r.slug);
+}
+
 export type ProductSort = "name" | "name_desc" | "stock_desc" | "stock_asc" | "price_desc" | "price_asc";
 
 export async function listProducts(opts: { q?: string; page?: number; perPage?: number; filter?: AdminFilter; type?: string; sort?: ProductSort }) {

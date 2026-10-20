@@ -16,6 +16,8 @@ export interface AdminProductRow {
   onSale: boolean;
   stockQty: number;
   lowStockThreshold: number;
+  /** Category names, for the Category column. */
+  categoryNames?: string[];
 }
 
 const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2 });
@@ -177,11 +179,13 @@ export function ProductsTable({ rows, q, filter, type, total, sort = "stock_desc
       {!active && msg && <div className="mb-3 text-xs font-semibold text-pay">{msg}</div>}
 
       <div className="overflow-x-auto rounded-xl border border-line">
-        <table className="w-full min-w-[680px] text-sm">
+        <table className="w-full min-w-[960px] text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
               <th className="w-10 px-3 py-2.5"><input type="checkbox" checked={allOnPage} onChange={toggleAllPage} className="size-4 accent-volt" aria-label="Select all on page" /></th>
               <th className="px-4 py-2.5"><SortHeader label="Product" asc="name" desc="name_desc" first="asc" sort={sort} links={sortLinks} /></th>
+              <th className="px-4 py-2.5">SKU</th>
+              <th className="px-4 py-2.5">Category</th>
               <th className="px-4 py-2.5"><SortHeader label="Price" asc="price_asc" desc="price_desc" sort={sort} links={sortLinks} /></th>
               <th className="px-4 py-2.5"><SortHeader label="Stock" asc="stock_asc" desc="stock_desc" sort={sort} links={sortLinks} /></th>
               <th className="px-4 py-2.5"></th>
@@ -196,7 +200,11 @@ export function ProductsTable({ rows, q, filter, type, total, sort = "stock_desc
                   <td className="px-3 py-2.5"><input type="checkbox" checked={checked} disabled={applyAll} onChange={() => toggle(p.slug)} className="size-4 accent-volt" aria-label={`Select ${p.name}`} /></td>
                   <td className="px-4 py-2.5">
                     <div className="font-semibold text-fg">{p.name}</div>
-                    <div className="text-xs text-muted">{p.brand} · {p.sku || "—"}</div>
+                    <div className="text-xs text-muted">{p.brand}</div>
+                  </td>
+                  <td className="px-4 py-2.5 whitespace-nowrap font-mono text-xs text-fg">{p.sku || "—"}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted">
+                    {p.categoryNames?.length ? p.categoryNames.map((c) => <span key={c} className="mr-1 mb-1 inline-block rounded-full border border-line px-2 py-0.5">{c}</span>) : "—"}
                   </td>
                   <td className="px-4 py-2.5 whitespace-nowrap">
                     {p.onSale ? <><span className="text-faint line-through">{zar(p.regularPrice)}</span> <span className="font-semibold text-fg">{zar(p.salePrice)}</span></> : <span className="font-semibold text-fg">{zar(p.price)}</span>}

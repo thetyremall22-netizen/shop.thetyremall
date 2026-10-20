@@ -2,6 +2,8 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { listProducts, productTypeCounts, type AdminFilter, type ProductSort } from "@/lib/db/queries";
+import { categories as BUILT_IN_CATEGORIES } from "@/lib/catalogue";
+import { listSpecials } from "@/lib/special-categories";
 
 const SORTS: ProductSort[] = ["stock_desc", "stock_asc", "price_desc", "price_asc", "name", "name_desc"];
 import { AdminSearch } from "@/components/admin/AdminSearch";
@@ -19,10 +21,17 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
   const sort: ProductSort = SORTS.includes(sp.sort as ProductSort) ? (sp.sort as ProductSort) : "stock_desc";
   const page = Math.max(1, Number(sp.page) || 1);
   const type = sp.type === "tyre" || sp.type === "wheel" || sp.type === "other" ? sp.type : undefined;
-  const [{ rows, total, perPage }, counts] = await Promise.all([
+  const [{ rows, total, perPage }, counts, specials] = await Promise.all([
     listProducts({ q, filter, page, perPage: 25, type, sort }),
     productTypeCounts(),
+    listSpecials(),
   ]);
+  const catName = new Map<string, string>([...BUILT_IN_CATEGORIES.map((c) => [c.slug, c.name] as [string, string]), ...specials.map((s) => [s.slug, `★ ${s.name}`] as [string, string])]);
+  const tableRows = rows.map((r) => {
+    let cats: string[] = [];
+    try { cats = JSON.parse(r.categories || "[]"); } catch { /* none */ }
+    return { ...r, categoryNames: cats.map((c) => catName.get(c) ?? c) };
+  });
   const TYPE_TABS = [
     { v: "", label: "All products", n: counts.all },
     { v: "tyre", label: "Tyres", n: counts.tyre },
@@ -69,6 +78,9 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
           );
         })}
       </div>
+      <div className="mt-2">
+        <Link href="/admin/products/specials" className="inline-flex rounded-full border border-volt/50 px-3.5 py-1.5 text-sm font-semibold text-volt hover:bg-volt/10">★ Special categories (Father&apos;s Day, Christmas…) →</Link>
+      </div>
       {type === "other" && counts.other === 0 && (
         <p className="mt-3 text-sm text-muted">No other products yet. When you add a product that isn&apos;t a tyre or wheel (e.g. valves, nuts, accessories), set its type to “Other” and it will appear here.</p>
       )}
@@ -84,7 +96,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
       </div>
 
       <div className="mt-4">
-        <ProductsTable rows={rows} q={q} filter={filter} type={type} total={total} sort={sort}
+        <ProductsTable rows={tableRows} q={q} filter={filter} type={type} total={total} sort={sort}
           sortLinks={Object.fromEntries(SORTS.map((s) => [s, qs({ sort: s, page: 1 }).replace(/sort=stock_desc&?/, "").replace(/[?&]$/, "")]))} />
       </div>
 

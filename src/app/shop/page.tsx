@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ShopListing } from "@/components/ShopListing";
-import { getCategory } from "@/lib/catalogue";
+import { findCategory } from "@/lib/special-categories";
 import { categoryPath } from "@/lib/shop-url";
 
 export const instant = false;
@@ -10,7 +10,7 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SP> }): Promise<Metadata> {
   const cat = one((await searchParams).category);
-  const c = cat ? getCategory(cat) : undefined;
+  const c = cat ? await findCategory(cat) : undefined;
   // A category is the same listing as its /product-category/<slug> page.
   return c
     ? { title: c.name, alternates: { canonical: categoryPath(c.slug) } }

@@ -9,6 +9,7 @@ import { AuditHistory } from "@/components/admin/AuditHistory";
 import { OrderCustomerEditor, OrderItemsEditor, OrderStatusEditor, OrderEmailActions, OrderNoteForm } from "@/components/admin/OrderEditors";
 import { getOrder, STATUS_LABEL, STATUS_BADGE } from "@/lib/orders";
 import { listAudit } from "@/lib/audit";
+import { getInvoice } from "@/lib/invoices";
 import { listEmailsForOrder, EMAIL_TYPE_LABELS } from "@/lib/email-log";
 import { getProduct } from "@/lib/catalogue";
 import { Close } from "@/components/icons";
@@ -23,7 +24,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   const { id } = await params;
   const o = await getOrder(id);
   if (!o) notFound();
-  const [orderEmails, history] = await Promise.all([listEmailsForOrder(o.reference), listAudit("order", o.id)]);
+  const [orderEmails, history, invoice] = await Promise.all([listEmailsForOrder(o.reference), listAudit("order", o.id), getInvoice(o.id)]);
   // Show part numbers for orders placed before SKUs were saved on the order.
   const items = await Promise.all(o.items.map(async (i) => (i.sku ? i : { ...i, sku: (await getProduct(i.slug).catch(() => undefined))?.sku || undefined })));
   const canEdit = can(me.role, "orders.edit");
@@ -40,7 +41,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
             {o.test && <span className="badge badge-warn">test order</span>}
             {o.totals.total === 0 && <span className="badge badge-muted">free</span>}
           </div>
-          <div className="mt-1 text-sm text-muted">Placed {when(o.createdAt)} · {o.paymentMethod}{o.pfPaymentId ? ` (PF ${o.pfPaymentId})` : ""} · Last updated {when(o.updatedAt)}</div>
+          <div className="mt-1 text-sm text-muted">{invoice ? <>Tax invoice <b className="text-fg">{invoice.number}</b> ({when(invoice.issuedAt)}) · </> : "No tax invoice issued yet · "}Placed {when(o.createdAt)} · {o.paymentMethod}{o.pfPaymentId ? ` (PF ${o.pfPaymentId})` : ""} · Last updated {when(o.updatedAt)}</div>
         </div>
         <Link href="/admin/orders" aria-label="Close" title="Close" className="grid size-10 shrink-0 place-items-center rounded-full border border-line text-muted transition hover:border-sale hover:text-sale">
           <Close width={16} height={16} />

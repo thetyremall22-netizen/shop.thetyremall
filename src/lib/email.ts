@@ -6,6 +6,7 @@ import { libsql } from "./db";
 import type { SiteSettings } from "./settings";
 import { getProduct } from "./catalogue";
 import { getSettings } from "./settings";
+import { getOrIssueInvoice, type InvoiceInfo } from "./invoices";
 
 export const SHOP_EMAIL = process.env.SHOP_EMAIL ?? "shop@thetyremall.co.za";
 
@@ -446,7 +447,7 @@ function tOnHoldCustomer(o: Order): Tmpl {
 }
 
 /** Tax invoice for an order (sent from Admin → Orders). */
-async function tInvoice(o: Order): Promise<Tmpl> {
+async function tInvoice(o: Order, inv0: InvoiceInfo): Promise<Tmpl> {
   const st = await getSettings();
   const inv = st.invoice;
   const vatRate = st.commerce.vatRate || 0;
@@ -455,7 +456,7 @@ async function tInvoice(o: Order): Promise<Tmpl> {
     ? (st.commerce.vatIncluded ? Math.round((t.total * vatRate) / (100 + vatRate)) : Math.round((t.total * vatRate) / 100))
     : 0;
   const paid = ["processing", "completed", "partially_refunded"].includes(o.status);
-  const date = new Date(o.createdAt).toLocaleDateString("en-ZA", { year: "numeric", month: "long", day: "numeric", timeZone: "Africa/Johannesburg" });
+  const dateOf = (d: string | number) => new Date(d).toLocaleDateString("en-ZA", { year: "numeric", month: "long", day: "numeric", timeZone: "Africa/Johannesburg" });
   const c = o.customer;
   const a = o.delivery.address;
   const lines = o.items.map((i) => `<tr>
@@ -475,7 +476,8 @@ async function tInvoice(o: Order): Promise<Tmpl> {
         ${inv.regNumber ? `<br>Reg no: ${escapeHtml(inv.regNumber)}` : ""}
       </td>
       <td style="vertical-align:top;text-align:right">
-        Invoice no: <b>${escapeHtml(o.reference)}</b><br>Date: ${date}<br>
+        Invoice no: <b>${escapeHtml(inv0.number)}</b><br>Invoice date: ${dateOf(inv0.issuedAt)}<br>
+        Order no: ${escapeHtml(o.reference)} (${dateOf(o.createdAt)})<br>
         Status: <b style="color:${paid ? "#0f9d63" : "#b45309"}">${paid ? "PAID" : "UNPAID"}</b>
       </td>
     </tr></table>
@@ -502,15 +504,18 @@ async function tInvoice(o: Order): Promise<Tmpl> {
       ${o.refundedAmount ? `<tr><td colspan="3" style="padding:2px 6px;text-align:right;color:#6b7280">Refunded</td><td style="padding:2px 6px;text-align:right;color:#6b7280">&minus;${zar(o.refundedAmount)}</td></tr>` : ""}
     </table>
     ${inv.footer ? `<p style="margin:18px 0 0;font-size:12px;color:#6b7280;white-space:pre-line">${escapeHtml(inv.footer)}</p>` : ""}`;
-  return { subject: `Tax invoice ${o.reference} — The Tyre Mall`, html: layout("Tax invoice", body) };
+  return { subject: `Tax invoice ${inv0.number} (order ${o.reference}) — The Tyre Mall`, html: layout("Tax invoice", body) };
 }
 
 /** Admin actions on an order: (re)send the invoice, the order confirmation, or
  *  the email for its current status. Logged against the order. */
-export async function sendOrderInvoice(order: Order): Promise<void> {
+export async function sendOrderInvoice(order: Order): Promise<string> {
   const o = await withSkus(order);
-  const t = await tInvoice(o);
+  // One invoice number per order, issued the first time and kept on resends.
+  const inv = await getOrIssueInvoice(o.id);
+  const t = await tInvoice(o, inv);
   await sendMail(o.customer.email, t.subject, t.html, { type: "order_invoice", orderRef: o.reference, ccShop: true });
+  return inv.number;
 }
 export async function resendOrderConfirmation(order: Order): Promise<void> {
   const o = await withSkus(order);

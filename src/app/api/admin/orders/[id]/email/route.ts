@@ -24,8 +24,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const order = await getOrder(id);
   if (!order) return NextResponse.json({ error: "Order not found." }, { status: 404 });
 
+  let detail = "";
   try {
-    if (kind === "invoice") await sendOrderInvoice(order);
+    if (kind === "invoice") detail = ` — invoice ${await sendOrderInvoice(order)}`;
     else if (kind === "confirmation") await resendOrderConfirmation(order);
     else if (kind === "shop") await sendShopOrderCopy(order);
     else if (!(await resendStatusEmail(order))) {
@@ -35,6 +36,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await addAudit({ entity: "order", entityId: id, action: "email", actor: actorName(actor), summary: `${KINDS[kind]} — FAILED: ${(e as Error).message}` });
     return NextResponse.json({ error: `Couldn't send: ${(e as Error).message}` }, { status: 502 });
   }
-  await addAudit({ entity: "order", entityId: id, action: "email", actor: actorName(actor), summary: `${KINDS[kind]} (${kind === "shop" ? "shop" : order.customer.email})` });
+  await addAudit({ entity: "order", entityId: id, action: "email", actor: actorName(actor), summary: `${KINDS[kind]}${detail} (${kind === "shop" ? "shop" : order.customer.email})` });
   return NextResponse.json({ ok: true });
 }

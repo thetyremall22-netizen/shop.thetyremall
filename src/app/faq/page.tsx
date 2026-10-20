@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return pageMetadata("faq", BASE_META);
 }
 
-const SITE = "https://shop.thetyremall.co.za";
+const SITE = "https://thetyremall.co.za";
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");

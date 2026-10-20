@@ -4,7 +4,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { BLOG_POSTS } from "@/data/blog";
 
-const SITE = "https://shop.thetyremall.co.za";
+const SITE = "https://thetyremall.co.za";
 
 export const instant = false;
 

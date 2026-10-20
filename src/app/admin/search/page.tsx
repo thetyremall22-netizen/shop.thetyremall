@@ -6,7 +6,7 @@ import { AdminSearch } from "@/components/admin/AdminSearch";
 import { listOrders, STATUS_LABEL } from "@/lib/orders";
 import { listLeads } from "@/lib/contacts";
 import { listEnquiries } from "@/lib/enquiries";
-import { listAbandoned } from "@/lib/abandoned";
+import { listCarts, STATUS_LABEL as CART_STATUS } from "@/lib/cart-recovery";
 import { listProducts } from "@/lib/db/queries";
 import { listEmails, EMAIL_TYPE_LABELS } from "@/lib/email-log";
 
@@ -35,7 +35,7 @@ export default async function AdminSearchPage({ searchParams }: { searchParams: 
     can(me.role, "orders.view") ? listOrders({ q, perPage: 20 }) : null,
     can(me.role, "leads.view") ? listLeads({ q, limit: 20 }) : null,
     can(me.role, "leads.view") ? listEnquiries(1000).then((r) => r.filter((x) => matches(x, q)).slice(0, 20)) : null,
-    can(me.role, "leads.view") ? listAbandoned(500).then((r) => r.filter((x) => matches(x, q)).slice(0, 20)) : null,
+    can(me.role, "leads.view") ? listCarts({ q, limit: 20 }) : null,
     can(me.role, "products.view") ? listProducts({ q, perPage: 20 }) : null,
     can(me.role, "emails.view") ? listEmails({ q, perPage: 20 }) : null,
     can(me.role, "users.manage") ? listUsers().then((u) => u.filter((x) => matches(x as unknown as Record<string, unknown>, q))) : null,
@@ -78,9 +78,10 @@ export default async function AdminSearchPage({ searchParams }: { searchParams: 
         </Group>
       )}
       {carts && carts.length > 0 && (
-        <Group title="Abandoned carts" count={carts.length}>
+        <Group title="Abandoned carts" count={carts.length} more={`/admin/cart-recovery?q=${encodeURIComponent(q)}`}>
           {carts.map((c) => (
-            <Row key={str(c.email)} href={`/admin/leads/cart/${encodeURIComponent(str(c.email))}`} title={str(c.email)} sub={when(c.updated_at)} right={zar(Number(c.total) || 0)} />
+            <Row key={c.id} href={`/admin/cart-recovery/${c.id}`} title={`Cart #${c.id} — ${`${c.firstName} ${c.lastName}`.trim() || c.email}`}
+              sub={`${c.email} · ${CART_STATUS[c.status]} · ${c.items.map((i) => i.name).join(", ").slice(0, 80)}`} right={zar(c.total)} />
           ))}
         </Group>
       )}

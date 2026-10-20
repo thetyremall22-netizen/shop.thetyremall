@@ -45,7 +45,7 @@ async function handle(req: NextRequest) {
       if (updated.totals.couponCode && updated.totals.couponDiscount > 0) {
         await recordRedemption(updated.totals.couponCode, updated.reference, updated.customer.email, updated.totals.couponDiscount).catch(() => {});
       }
-      await markRecovered(updated.customer.email).catch(() => {});
+      await markRecovered(updated.customer.email, updated.reference, updated.totals.total).catch(() => {});
     }
   }
   return new NextResponse("ok", { status: 200 });

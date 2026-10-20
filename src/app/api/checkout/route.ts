@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     if (paidOrder.totals.couponCode && paidOrder.totals.couponDiscount > 0) {
       await recordRedemption(paidOrder.totals.couponCode, paidOrder.reference, paidOrder.customer.email, paidOrder.totals.couponDiscount).catch(() => {});
     }
-    await markRecovered(paidOrder.customer.email).catch(() => {});
+    await markRecovered(paidOrder.customer.email, paidOrder.reference, paidOrder.totals.total).catch(() => {});
     return NextResponse.json({ gateway: "free", reference, redirectUrl: `${origin}/checkout/return?ref=${encodeURIComponent(reference)}` });
   }
 

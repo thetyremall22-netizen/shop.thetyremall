@@ -1,5 +1,6 @@
 import "server-only";
 import { libsql } from "./db";
+import { onOrderPaid, captureCheckout } from "./cart-recovery";
 
 export interface AbandonedItem { name: string; qty: number; price: number; slug?: string; image?: string | null }
 
@@ -19,9 +20,14 @@ async function ensureTable() {
   ensured = true;
 }
 
-/** Capture (or refresh) a cart against an email the shopper entered at checkout. */
+/** Capture (or refresh) a cart against an email the shopper entered at checkout.
+ *  Also feeds Cart Recovery (the multi-email flow). */
 export async function captureAbandoned(email: string, items: AbandonedItem[], total: number, phone?: string): Promise<void> {
   if (!email || !items.length) return;
+  await captureCheckout({
+    email, phone, total,
+    items: items.filter((i) => i.slug).map((i) => ({ slug: i.slug as string, name: i.name, qty: i.qty, price: i.price, image: i.image ?? null })),
+  }).catch(() => {});
   try {
     await ensureTable();
     const now = Date.now();
@@ -39,9 +45,11 @@ export async function captureAbandoned(email: string, items: AbandonedItem[], to
   }
 }
 
-/** Mark a cart recovered once that email completes an order. */
-export async function markRecovered(email: string): Promise<void> {
+/** An order was paid: close the old cart record and let Cart Recovery credit a
+ *  recovery if the customer came back via a recovery email. */
+export async function markRecovered(email: string, orderRef?: string, value?: number): Promise<void> {
   if (!email) return;
+  await onOrderPaid(email, orderRef, value);
   try {
     await ensureTable();
     await libsql.execute({ sql: `UPDATE abandoned_carts SET recovered=1, updated_at=? WHERE email=?`, args: [Date.now(), email] });

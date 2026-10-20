@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
           await recordRedemption(updated.totals.couponCode, updated.reference, updated.customer.email, updated.totals.couponDiscount).catch(() => {});
         }
         // Cart was recovered — don't chase it.
-        await markRecovered(updated.customer.email).catch(() => {});
+        await markRecovered(updated.customer.email, updated.reference, updated.totals.total).catch(() => {});
       }
     }
   } else if (status === "FAILED") {

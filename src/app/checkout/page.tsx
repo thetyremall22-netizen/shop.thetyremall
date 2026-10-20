@@ -46,6 +46,28 @@ export default function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length]);
 
+  // Cart Recovery: as the shopper fills in checkout, save their cart + details
+  // (once a valid email is entered) so a recovery email can go out if they
+  // don't finish. Sent at most every few seconds, and only when something changed.
+  const lastCapture = useRef("");
+  function captureForRecovery() {
+    const form = formRef.current;
+    if (!form || items.length === 0) return;
+    const v = (n: string) => ((form.elements.namedItem(n) as HTMLInputElement | null)?.value ?? "").trim();
+    const email = v("email");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return;
+    const payload = {
+      email, firstName: v("firstName"), lastName: v("lastName"), phone: v("phone"),
+      address: { street: v("street"), suburb: v("suburb"), city: v("city"), province: v("province"), postalCode: v("postalCode") },
+      total: totals.total,
+      items: items.map((i) => ({ name: i.name, qty: i.qty, price: i.price, slug: i.slug, image: i.image, roadHazard: i.roadHazard, alignment: i.alignment, balanceQty: i.balanceQty })),
+    };
+    const key = JSON.stringify(payload);
+    if (key === lastCapture.current) return;
+    lastCapture.current = key;
+    fetch("/api/cart-recovery/capture", { method: "POST", headers: { "Content-Type": "application/json" }, body: key, keepalive: true }).catch(() => {});
+  }
+
   async function applyCoupon() {
     const code = couponInput.trim();
     if (!code || couponBusy) return;
@@ -160,7 +182,7 @@ export default function CheckoutPage() {
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)]">
         {/* form */}
-        <form ref={formRef} className="min-w-0 space-y-8" onSubmit={handleSubmit}>
+        <form ref={formRef} className="min-w-0 space-y-8" onSubmit={handleSubmit} onBlur={captureForRecovery}>
           <Section n={1} title="Your details">
             <div className="grid gap-3 sm:grid-cols-2">
               <Field name="firstName" label="First name" required />
@@ -170,22 +192,6 @@ export default function CheckoutPage() {
                 label="Email"
                 type="email"
                 required
-                onBlur={(e) => {
-                  const email = e.target.value.trim();
-                  if (!email || items.length === 0) return;
-                  // Abandoned-cart capture (item 45) — save against this email so
-                  // a recovery email can go out if checkout isn't completed.
-                  fetch("/api/abandoned-cart", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      email,
-                      total: totals.total,
-                      items: items.map((i) => ({ name: i.name, qty: i.qty, price: i.price, slug: i.slug, image: i.image })),
-                    }),
-                    keepalive: true,
-                  }).catch(() => {});
-                }}
               />
               <Field name="phone" label="Mobile" type="tel" required />
             </div>

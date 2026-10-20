@@ -67,7 +67,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
     { v: "tyrone-questions", label: "Tyrone questions", count: questionRows.length },
     { v: "wa-taps", label: "WhatsApp taps (before details step)", count: waTapRows.length },
     { v: "calls", label: "Call taps", count: callRows.length },
-    { v: "carts", label: "Abandoned carts", count: carts.length },
+    { v: "carts", label: "Abandoned carts →", count: carts.length },
   ];
   const tabHref = (v: TabV) => {
     const p = new URLSearchParams();
@@ -89,7 +89,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
         {tabs.map((t) => {
           const active = tab === t.v;
           return (
-            <Link key={t.v} href={tabHref(t.v)}
+            <Link key={t.v} href={t.v === "carts" ? "/admin/cart-recovery" : tabHref(t.v)}
               className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${active ? "bg-volt text-volt-ink" : "border border-line text-muted hover:text-fg"}`}>
               {t.label} <span className={active ? "opacity-80" : "opacity-70"}>({t.count})</span>
             </Link>

@@ -22,7 +22,11 @@ const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFrac
 
 type ActionKind = "price" | "stock" | "status" | "sale";
 
-export function ProductsTable({ rows, q, filter, type, total }: { rows: AdminProductRow[]; q: string; filter: string; type?: string; total: number }) {
+export function ProductsTable({ rows, q, filter, type, total, sort = "stock_desc", sortLinks = {} }: {
+  rows: AdminProductRow[]; q: string; filter: string; type?: string; total: number;
+  /** Current sort, and a link for each sort option (built by the page). */
+  sort?: string; sortLinks?: Record<string, string>;
+}) {
   const router = useRouter();
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [applyAll, setApplyAll] = useState(false);
@@ -177,9 +181,9 @@ export function ProductsTable({ rows, q, filter, type, total }: { rows: AdminPro
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
               <th className="w-10 px-3 py-2.5"><input type="checkbox" checked={allOnPage} onChange={toggleAllPage} className="size-4 accent-volt" aria-label="Select all on page" /></th>
-              <th className="px-4 py-2.5">Product</th>
-              <th className="px-4 py-2.5">Price</th>
-              <th className="px-4 py-2.5">Stock</th>
+              <th className="px-4 py-2.5"><SortHeader label="Product" asc="name" desc="name_desc" first="asc" sort={sort} links={sortLinks} /></th>
+              <th className="px-4 py-2.5"><SortHeader label="Price" asc="price_asc" desc="price_desc" sort={sort} links={sortLinks} /></th>
+              <th className="px-4 py-2.5"><SortHeader label="Stock" asc="stock_asc" desc="stock_desc" sort={sort} links={sortLinks} /></th>
               <th className="px-4 py-2.5"></th>
             </tr>
           </thead>
@@ -221,5 +225,21 @@ export function ProductsTable({ rows, q, filter, type, total }: { rows: AdminPro
           }} />
       )}
     </div>
+  );
+}
+
+/** Clickable column header: first click sorts (highest first for numbers),
+ *  clicking again flips the direction. */
+function SortHeader({ label, asc, desc, first = "desc", sort, links }: { label: string; asc: string; desc: string; first?: "asc" | "desc"; sort: string; links: Record<string, string> }) {
+  const active = sort === asc || sort === desc;
+  const next = active ? (sort === desc ? asc : desc) : first === "asc" ? asc : desc;
+  const arrow = !active ? "↕" : sort === desc ? "↓" : "↑";
+  const href = links[next];
+  if (!href) return <>{label}</>;
+  return (
+    <Link href={href} className={`inline-flex items-center gap-1 uppercase hover:text-volt ${active ? "text-volt" : ""}`}
+      title={next === desc ? (label === "Product" ? "Sort Z–A" : "Sort highest first") : (label === "Product" ? "Sort A–Z" : "Sort lowest first")}>
+      {label} <span aria-hidden>{arrow}</span>
+    </Link>
   );
 }

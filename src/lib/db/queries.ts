@@ -1,5 +1,5 @@
 import "server-only";
-import { and, or, like, eq, sql, inArray } from "drizzle-orm";
+import { and, or, like, eq, sql, inArray, asc, desc } from "drizzle-orm";
 import { db, schema, libsql } from "./index";
 import productsData from "@/data/products.json";
 import { revalidateProducts } from "../catalogue-cache";
@@ -165,15 +165,23 @@ function productWhere(opts: { q?: string; filter?: AdminFilter; type?: string })
   return conds.length ? and(...conds) : undefined;
 }
 
-export async function listProducts(opts: { q?: string; page?: number; perPage?: number; filter?: AdminFilter; type?: string }) {
+export type ProductSort = "name" | "name_desc" | "stock_desc" | "stock_asc" | "price_desc" | "price_asc";
+
+export async function listProducts(opts: { q?: string; page?: number; perPage?: number; filter?: AdminFilter; type?: string; sort?: ProductSort }) {
   await ensureProducts();
   const page = Math.max(1, opts.page ?? 1);
   const perPage = opts.perPage ?? 30;
   try {
     const where = productWhere(opts);
 
+    const p = schema.products;
+    const order = {
+      name: [asc(p.name)], name_desc: [desc(p.name)],
+      stock_desc: [desc(p.stockQty), asc(p.name)], stock_asc: [asc(p.stockQty), asc(p.name)],
+      price_desc: [desc(p.price), asc(p.name)], price_asc: [asc(p.price), asc(p.name)],
+    }[opts.sort ?? "name"] ?? [asc(p.name)];
     const rows = await db.select().from(schema.products).where(where)
-      .orderBy(schema.products.name).limit(perPage).offset((page - 1) * perPage);
+      .orderBy(...order).limit(perPage).offset((page - 1) * perPage);
     const totalRow = await db.select({ c: sql<number>`count(*)` }).from(schema.products).where(where);
     return { rows, total: Number(totalRow[0].c), page, perPage };
   } catch (e) {
@@ -188,7 +196,14 @@ export async function listProducts(opts: { q?: string; page?: number; perPage?: 
     if (opts.filter === "low") rows = rows.filter((r) => r.stockQty > 0 && r.stockQty <= r.lowStockThreshold);
     if (opts.filter === "out") rows = rows.filter((r) => r.stockQty === 0);
     if (opts.filter === "sale") rows = rows.filter((r) => r.onSale);
-    rows.sort((a, b) => a.name.localeCompare(b.name));
+    const s = opts.sort ?? "name";
+    rows.sort((a, b) =>
+      s === "stock_desc" ? b.stockQty - a.stockQty || a.name.localeCompare(b.name)
+      : s === "stock_asc" ? a.stockQty - b.stockQty || a.name.localeCompare(b.name)
+      : s === "price_desc" ? b.price - a.price || a.name.localeCompare(b.name)
+      : s === "price_asc" ? a.price - b.price || a.name.localeCompare(b.name)
+      : s === "name_desc" ? b.name.localeCompare(a.name)
+      : a.name.localeCompare(b.name));
     const total = rows.length;
     const paged = rows.slice((page - 1) * perPage, (page - 1) * perPage + perPage);
     return { rows: paged, total, page, perPage };

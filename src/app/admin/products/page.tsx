@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { listProducts, productTypeCounts, type AdminFilter } from "@/lib/db/queries";
+import { listProducts, productTypeCounts, type AdminFilter, type ProductSort } from "@/lib/db/queries";
+
+const SORTS: ProductSort[] = ["stock_desc", "stock_asc", "price_desc", "price_asc", "name", "name_desc"];
 import { AdminSearch } from "@/components/admin/AdminSearch";
 import { ProductsToolbar } from "@/components/admin/ProductsToolbar";
 import { ProductsTable } from "@/components/admin/ProductsTable";
@@ -13,10 +15,12 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
   const sp = await searchParams;
   const q = sp.q ?? "";
   const filter = (sp.filter as AdminFilter) ?? "all";
+  // Default: most stock first.
+  const sort: ProductSort = SORTS.includes(sp.sort as ProductSort) ? (sp.sort as ProductSort) : "stock_desc";
   const page = Math.max(1, Number(sp.page) || 1);
   const type = sp.type === "tyre" || sp.type === "wheel" || sp.type === "other" ? sp.type : undefined;
   const [{ rows, total, perPage }, counts] = await Promise.all([
-    listProducts({ q, filter, page, perPage: 25, type }),
+    listProducts({ q, filter, page, perPage: 25, type, sort }),
     productTypeCounts(),
   ]);
   const TYPE_TABS = [
@@ -36,6 +40,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
     if (q) u.set("q", q);
     if (filter !== "all") u.set("filter", filter);
     if (type) u.set("type", type);
+    if (sort !== "stock_desc") u.set("sort", sort);
     for (const [k, v] of Object.entries(patch)) u.set(k, String(v));
     return `/admin/products?${u.toString()}`;
   };
@@ -54,6 +59,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
           if (q) u.set("q", q);
           if (filter !== "all") u.set("filter", filter);
           if (t.v) u.set("type", t.v);
+          if (sort !== "stock_desc") u.set("sort", sort);
           const href = u.toString() ? `/admin/products?${u}` : "/admin/products";
           return (
             <Link key={t.label} href={href}
@@ -78,7 +84,8 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
       </div>
 
       <div className="mt-4">
-        <ProductsTable rows={rows} q={q} filter={filter} type={type} total={total} />
+        <ProductsTable rows={rows} q={q} filter={filter} type={type} total={total} sort={sort}
+          sortLinks={Object.fromEntries(SORTS.map((s) => [s, qs({ sort: s, page: 1 }).replace(/sort=stock_desc&?/, "").replace(/[?&]$/, "")]))} />
       </div>
 
       {pages > 1 && (

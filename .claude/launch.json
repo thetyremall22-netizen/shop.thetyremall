@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "tyremall-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "start", "-p", "3107", "-H", "127.0.0.1"],
+      "port": 3107
     }
   ]
 }

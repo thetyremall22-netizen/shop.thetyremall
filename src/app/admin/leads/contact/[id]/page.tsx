@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TestBadge, TestToggle } from "@/components/admin/TestFlag";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -36,6 +37,8 @@ export default async function ContactLeadDetail({ params }: { params: Promise<{ 
           <h1 className="mt-2 font-display text-2xl leading-tight">{name || email || "Contact lead"}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
             <span className="badge badge-volt">{SOURCE_LABEL[str(l.source)] ?? (str(l.source) || "Lead")}</span>
+            <TestBadge test={Number(l.test)} />
+            {can(me.role, "leads.edit") && <TestToggle kind="lead" id={Number(id)} test={Number(l.test) === 1} />}
             <span>{when(l.created_at)}</span>
           </div>
         </div>

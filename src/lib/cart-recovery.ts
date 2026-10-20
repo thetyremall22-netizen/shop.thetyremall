@@ -47,6 +47,8 @@ export interface RecoveryCart {
   createdAt: number;
   updatedAt: number;
   lastActivityAt: number;
+  /** Created while a staff member was logged in, or from a test order. */
+  test: boolean;
 }
 
 // ---- settings -----------------------------------------------------------------
@@ -114,6 +116,7 @@ async function ensureTables() {
     updated_at INTEGER NOT NULL,
     last_activity_at INTEGER NOT NULL
   )`);
+  try { await libsql.execute("ALTER TABLE cart_recovery ADD COLUMN test INTEGER NOT NULL DEFAULT 0"); } catch { /* exists */ }
   await libsql.execute(`CREATE INDEX IF NOT EXISTS cart_recovery_email ON cart_recovery (email)`);
   await libsql.execute(`CREATE INDEX IF NOT EXISTS cart_recovery_status ON cart_recovery (status)`);
   await libsql.execute(`CREATE UNIQUE INDEX IF NOT EXISTS cart_recovery_token ON cart_recovery (token)`);
@@ -186,6 +189,7 @@ function toCart(r: Record<string, unknown>): RecoveryCart {
     token: String(r.token), emailsSent: Number(r.emails_sent) || 0, lastEmailAt: r.last_email_at == null ? null : Number(r.last_email_at),
     orderRef: r.order_ref == null ? null : String(r.order_ref), recoveredOrderRef: r.recovered_order_ref == null ? null : String(r.recovered_order_ref),
     recoveredValue: Number(r.recovered_value) || 0, createdAt: Number(r.created_at), updatedAt: Number(r.updated_at), lastActivityAt: Number(r.last_activity_at),
+    test: Number(r.test) === 1,
   };
 }
 
@@ -259,7 +263,7 @@ export async function recoveryStats(): Promise<{ tracked: number; open: number; 
 /** Save/refresh a cart from the checkout form. The same cart (same products)
  *  updates one row; a different cart for the same customer starts a new one. */
 export async function captureCheckout(c: {
-  email: string; firstName?: string; lastName?: string; phone?: string; address?: Address; items: RecoveryItem[]; total: number;
+  email: string; firstName?: string; lastName?: string; phone?: string; address?: Address; items: RecoveryItem[]; total: number; test?: boolean;
 }): Promise<void> {
   const settings = await getRecoverySettings();
   if (!settings.enabled || !settings.captureCheckout || !c.email || !c.items.length) return;
@@ -273,17 +277,17 @@ export async function captureCheckout(c: {
   if (existing.rows.length) {
     const row = toCart(existing.rows[0] as Record<string, unknown>);
     await libsql.execute({
-      sql: `UPDATE cart_recovery SET first_name = ?, last_name = ?, phone = ?, address = ?, items = ?, total = ?, updated_at = ?, last_activity_at = ? WHERE id = ?`,
+      sql: `UPDATE cart_recovery SET first_name = ?, last_name = ?, phone = ?, address = ?, items = ?, total = ?, updated_at = ?, last_activity_at = ?, test = MAX(test, ?) WHERE id = ?`,
       args: [c.firstName || row.firstName, c.lastName || row.lastName, c.phone || row.phone, JSON.stringify({ ...row.address, ...(c.address ?? {}) }),
-        JSON.stringify(c.items), c.total, now, now, row.id],
+        JSON.stringify(c.items), c.total, now, now, c.test ? 1 : 0, row.id],
     });
     return;
   }
   await libsql.execute({
-    sql: `INSERT INTO cart_recovery (email, first_name, last_name, phone, address, items, signature, total, source, status, token, created_at, updated_at, last_activity_at)
-          VALUES (?,?,?,?,?,?,?,?,'checkout','abandoned',?,?,?,?)`,
+    sql: `INSERT INTO cart_recovery (email, first_name, last_name, phone, address, items, signature, total, source, status, token, created_at, updated_at, last_activity_at, test)
+          VALUES (?,?,?,?,?,?,?,?,'checkout','abandoned',?,?,?,?,?)`,
     args: [c.email.trim().toLowerCase(), c.firstName ?? "", c.lastName ?? "", c.phone ?? "", JSON.stringify(c.address ?? {}),
-      JSON.stringify(c.items), sig, c.total, newToken(), now, now, now],
+      JSON.stringify(c.items), sig, c.total, newToken(), now, now, now, c.test ? 1 : 0],
   });
 }
 
@@ -328,10 +332,10 @@ async function syncOrders(s: RecoverySettings): Promise<void> {
       continue;
     }
     await libsql.execute({
-      sql: `INSERT INTO cart_recovery (email, first_name, last_name, phone, address, items, signature, total, source, status, token, order_ref, created_at, updated_at, last_activity_at)
-            VALUES (?,?,?,?,?,?,?,?,?,'pending',?,?,?,?,?)`,
+      sql: `INSERT INTO cart_recovery (email, first_name, last_name, phone, address, items, signature, total, source, status, token, order_ref, created_at, updated_at, last_activity_at, test)
+            VALUES (?,?,?,?,?,?,?,?,?,'pending',?,?,?,?,?,?)`,
       args: [cust.email.toLowerCase(), cust.firstName ?? "", cust.lastName ?? "", cust.phone ?? "", JSON.stringify(delivery.address ?? {}),
-        JSON.stringify(items), sig, Number(totals.total) || 0, source, newToken(), String(o.reference), now, now, Number(o.created_at)],
+        JSON.stringify(items), sig, Number(totals.total) || 0, source, newToken(), String(o.reference), now, now, Number(o.created_at), Number(o.test) ? 1 : 0],
     });
   }
 }

@@ -10,6 +10,8 @@ export interface Lead {
   productName?: string;
   sku?: string;
   productUrl?: string;
+  /** Submitted by a logged-in staff member (a test, not a real customer). */
+  test?: boolean;
 }
 
 const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
@@ -39,7 +41,7 @@ async function ensureTable() {
   )`);
   // Add the product-context columns to tables created before they existed.
   // SQLite has no "ADD COLUMN IF NOT EXISTS", so just ignore the duplicate error.
-  for (const col of ["product_name TEXT", "sku TEXT", "product_url TEXT", "notes TEXT", "updated_at INTEGER"]) {
+  for (const col of ["product_name TEXT", "sku TEXT", "product_url TEXT", "notes TEXT", "updated_at INTEGER", "test INTEGER NOT NULL DEFAULT 0"]) {
     try { await libsql.execute(`ALTER TABLE contacts ADD COLUMN ${col}`); } catch { /* column already exists */ }
   }
   ensured = true;
@@ -63,11 +65,11 @@ export async function saveLead(l: Lead): Promise<number | null> {
     });
     if (dup.rows.length) return null;
     const res = await libsql.execute({
-      sql: `INSERT INTO contacts (email, phone, name, source, message, product_name, sku, product_url, created_at)
-            VALUES (?,?,?,?,?,?,?,?,?)`,
+      sql: `INSERT INTO contacts (email, phone, name, source, message, product_name, sku, product_url, created_at, test)
+            VALUES (?,?,?,?,?,?,?,?,?,?)`,
       args: [
         l.email ?? null, l.phone ?? null, l.name ?? null, l.source, l.message ?? null,
-        l.productName ?? null, l.sku ?? null, l.productUrl ?? null, Date.now(),
+        l.productName ?? null, l.sku ?? null, l.productUrl ?? null, Date.now(), l.test ? 1 : 0,
       ],
     });
     return Number(res.lastInsertRowid) || null;

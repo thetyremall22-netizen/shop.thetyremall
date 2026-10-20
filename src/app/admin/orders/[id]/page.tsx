@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TestBadge, TestToggle } from "@/components/admin/TestFlag";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-auth";
 import { can } from "@/lib/admin-users";
@@ -38,7 +39,8 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <h1 className="font-display text-2xl">{o.reference}</h1>
             <span className={`badge ${STATUS_BADGE[o.status] ?? "badge-muted"}`}>{STATUS_LABEL[o.status] ?? o.status}</span>
-            {o.test && <span className="badge badge-warn">test order</span>}
+            <TestBadge test={o.test} />
+            {canEdit && <TestToggle kind="order" id={o.id} test={!!o.test} />}
             {o.totals.total === 0 && <span className="badge badge-muted">free</span>}
           </div>
           <div className="mt-1 text-sm text-muted">{invoice ? <>Tax invoice <b className="text-fg">{invoice.number}</b> ({when(invoice.issuedAt)}) · </> : "No tax invoice issued yet · "}Placed {when(o.createdAt)} · {o.paymentMethod}{o.pfPaymentId ? ` (PF ${o.pfPaymentId})` : ""} · Last updated {when(o.updatedAt)}</div>

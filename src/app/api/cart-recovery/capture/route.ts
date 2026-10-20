@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isAdmin } from "@/lib/admin-auth";
 import { captureCheckout, type RecoveryItem } from "@/lib/cart-recovery";
 import { checkEmail, cleanEmail, normalizePhone } from "@/lib/validate";
 
@@ -27,6 +28,7 @@ export async function POST(req: NextRequest) {
     address: { street: s(a.street, 200), suburb: s(a.suburb), city: s(a.city), province: s(a.province, 60), postalCode: s(a.postalCode, 12) },
     items,
     total: Math.max(0, Math.round(Number(b.total) || items.reduce((n, i) => n + i.price * i.qty, 0))),
+    test: await isAdmin(), // staff testing checkout
   });
   return NextResponse.json({ ok: true });
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TestBadge, TestToggle } from "@/components/admin/TestFlag";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -34,6 +35,8 @@ export default async function EnquiryDetail({ params }: { params: Promise<{ id: 
           <h1 className="mt-2 font-display text-2xl leading-tight">{product || `${str(e.type)} enquiry`}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
             <span className="badge badge-volt">{str(e.type)} enquiry</span>
+            <TestBadge test={Number(e.test)} />
+            <TestToggle kind="enquiry" id={Number(e.id)} test={Number(e.test) === 1} />
             <span>{when(e.created_at)}</span>
           </div>
         </div>

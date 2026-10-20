@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TestBadge } from "@/components/admin/TestFlag";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { listOrders, orderStatusCounts, STATUS_LABEL, STATUS_BADGE } from "@/lib/orders";
@@ -94,7 +95,7 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
                     <td className="px-4 py-2.5 font-semibold">
                       <Link href={`/admin/orders/${o.id}`} className="text-volt hover:underline">{o.reference}</Link>
                       <div className="mt-1 flex flex-wrap gap-1">
-                        {o.test && <span className="badge badge-warn">test</span>}
+                        <TestBadge test={o.test} className="!ml-0" />
                         {o.totals.total === 0 && <span className="badge badge-muted">free</span>}
                       </div>
                     </td>

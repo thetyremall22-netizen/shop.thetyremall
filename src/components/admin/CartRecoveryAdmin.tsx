@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { TestBadge } from "./TestFlag";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog, ChangeList, UndoBar } from "./ConfirmDialog";
@@ -27,7 +28,7 @@ const SOURCE: Record<string, string> = { checkout: "Abandoned at checkout", pend
 export interface CartRow {
   id: number; email: string; firstName: string; lastName: string; phone: string; source: string; status: string;
   items: { name: string; qty: number }[]; total: number; emailsSent: number; lastEmailAt: number | null;
-  orderRef: string | null; recoveredOrderRef: string | null; createdAt: number; updatedAt: number;
+  orderRef: string | null; recoveredOrderRef: string | null; createdAt: number; updatedAt: number; test?: boolean;
 }
 
 function waLink(phone: string, name: string) {
@@ -100,7 +101,7 @@ export function CartsTable({ rows, canAct, canDelete }: { rows: CartRow[]; canAc
                 const badge = STATUS_OPTS.find((s) => s.v === r.status)?.badge ?? "badge-muted";
                 return (
                   <tr key={r.id} className={`border-b border-line last:border-0 align-top ${sameCustomer ? "bg-surface/40" : ""}`}>
-                    <td className="px-3 py-2.5"><Link href={`/admin/cart-recovery/${r.id}`} className="font-semibold text-volt hover:underline">#{r.id}</Link>
+                    <td className="px-3 py-2.5"><Link href={`/admin/cart-recovery/${r.id}`} className="font-semibold text-volt hover:underline">#{r.id}</Link><TestBadge test={r.test} />
                       {r.orderRef && <div className="text-xs text-muted">{r.orderRef}</div>}</td>
                     <td className="px-3 py-2.5">
                       {sameCustomer ? <span className="text-xs text-muted">↳ same customer</span> : (

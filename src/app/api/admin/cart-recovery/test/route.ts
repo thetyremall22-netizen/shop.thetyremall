@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     id: 0, email: actor.email || SHOP_EMAIL, firstName: "Sipho", lastName: "Sample", phone: "", address: {},
     items: [{ slug: "radar-265-65r17-112t-rpx800", name: "RADAR 265/65R17 RENEGADE A/T (sample)", qty: 4, price: 189900 }],
     signature: "", total: 759600, source: "checkout", status: "abandoned", token: "sample-token-preview-only-xxxxxxxx",
-    emailsSent: 0, lastEmailAt: null, orderRef: null, recoveredOrderRef: null, recoveredValue: 0, createdAt: Date.now(), updatedAt: Date.now(), lastActivityAt: Date.now(),
+    emailsSent: 0, lastEmailAt: null, orderRef: null, recoveredOrderRef: null, recoveredValue: 0, createdAt: Date.now(), updatedAt: Date.now(), lastActivityAt: Date.now(), test: true,
   };
   const st = Math.max(1, Math.min(3, Math.round(step)));
   const { subject, html } = await renderRecoveryEmail(sample, st, s);

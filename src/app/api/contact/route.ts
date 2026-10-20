@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isAdmin } from "@/lib/admin-auth";
 import { saveLead } from "@/lib/contacts";
 import { sendLeadEmail } from "@/lib/email";
 import { validateContact } from "@/lib/validate";
@@ -22,7 +23,8 @@ export async function POST(req: NextRequest) {
   const fullMessage = reason ? `Reason: ${reason}\n\n${message}` : message;
 
   // Record in Admin → Leads (Contact form tab). Never blocks the notification.
-  const leadId = await saveLead({ email, phone, name, source: "contact", message: fullMessage });
+  const test = await isAdmin(); // staff testing the form
+  const leadId = await saveLead({ email, phone, name, source: "contact", message: fullMessage, test });
 
   try {
     await sendLeadEmail({ source: "contact", name, email, phone, message: fullMessage, leadId });

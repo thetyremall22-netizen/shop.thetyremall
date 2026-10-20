@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isAdmin } from "@/lib/admin-auth";
 import { saveLead, extractContact } from "@/lib/contacts";
 import { sendLeadEmail } from "@/lib/email";
 import { validateContact } from "@/lib/validate";
@@ -50,7 +51,9 @@ export async function POST(req: NextRequest) {
   const productUrl = str(body.productUrl);
   const price = typeof body.price === "number" ? body.price : undefined;
 
-  const leadId = await saveLead({ email, phone, name, source, message, productName, sku, productUrl });
+  // Sent while logged in to the admin = staff testing, not a real customer.
+  const test = await isAdmin();
+  const leadId = await saveLead({ email, phone, name, source, message, productName, sku, productUrl, test });
 
   if (leadId) {
     sendLeadEmail({ source, name, email, phone, productName, sku, price, productUrl, message, leadId })

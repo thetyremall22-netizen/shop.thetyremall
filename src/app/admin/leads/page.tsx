@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TestBadge } from "@/components/admin/TestFlag";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { listLeads, leadCounts } from "@/lib/contacts";
@@ -102,6 +103,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
           head={["When", "Name", "Phone", "Email", "Product", "Message"]}
           rows={leadRows.map((l) => ({
             href: `/admin/leads/contact/${l.id}`,
+            test: Number(l.test) === 1,
             cells: [when(l.created_at), str(l.name), str(l.phone), str(l.email), str(l.product_name), truncate(str(l.message), 70)],
           }))}
         />
@@ -117,6 +119,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
           head={["When", "Question", "Product shown"]}
           rows={questionRows.map((e) => ({
             href: `/admin/leads/enquiry/${e.id}`,
+            test: Number(e.test) === 1,
             cells: [when(e.created_at), truncate(str(e.message), 90), str(e.product_name) || "—"],
           }))}
         />
@@ -130,6 +133,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
             head={["When", "Product", "Message"]}
             rows={waTapRows.map((e) => ({
               href: `/admin/leads/enquiry/${e.id}`,
+            test: Number(e.test) === 1,
               cells: [when(e.created_at), str(e.product_name) || "—", truncate(str(e.message), 70)],
             }))}
           />
@@ -144,6 +148,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
           head={["When", "Store", "Product"]}
           rows={callRows.map((e) => ({
             href: `/admin/leads/enquiry/${e.id}`,
+            test: Number(e.test) === 1,
             cells: [when(e.created_at), str(e.store_name) || "—", str(e.product_name) || "—"],
           }))}
         />
@@ -153,7 +158,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
   );
 }
 
-function Table({ head, rows, empty }: { head: string[]; rows: { cells: string[]; href: string }[]; empty: string }) {
+function Table({ head, rows, empty }: { head: string[]; rows: { cells: string[]; href: string; test?: boolean }[]; empty: string }) {
   if (rows.length === 0) return <p className="mt-5 text-sm text-muted">{empty}</p>;
   return (
     <div className="mt-5 overflow-x-auto rounded-xl border border-line">
@@ -169,7 +174,7 @@ function Table({ head, rows, empty }: { head: string[]; rows: { cells: string[];
             <tr key={i} className="border-b border-line last:border-0 hover:bg-surface">
               {r.cells.map((c, j) => (
                 <td key={j} className="px-4 py-2.5 text-fg">
-                  {j === 0 ? <Link href={r.href} className="font-semibold text-volt hover:underline">{c || "—"}</Link> : (c || "—")}
+                  {j === 0 ? <><Link href={r.href} className="font-semibold text-volt hover:underline">{c || "—"}</Link><TestBadge test={r.test} /></> : (c || "—")}
                 </td>
               ))}
               <td className="px-4 py-2.5 text-right whitespace-nowrap"><Link href={r.href} className="text-sm font-semibold text-volt hover:underline">View →</Link></td>

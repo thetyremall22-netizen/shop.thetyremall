@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isAdmin } from "@/lib/admin-auth";
 import { getProduct } from "@/lib/catalogue";
 import { computeTotals, type LineItem } from "@/lib/totals";
 import { saveOrder, nextReference, updateOrder, type Order } from "@/lib/orders";
@@ -97,7 +98,8 @@ export async function POST(req: NextRequest) {
     id, reference, status: "pending",
     customer, delivery: { ...delivery, method }, items: lines, totals,
     // Sandbox PayFast => test order (labelled apart from real orders in admin).
-    paymentMethod, test: paymentMethod === "payfast" && (await isSandbox()), createdAt: now, updatedAt: now,
+    // Test order: PayFast sandbox, or placed while logged in to the admin.
+    paymentMethod, test: (paymentMethod === "payfast" && (await isSandbox())) || (await isAdmin()), createdAt: now, updatedAt: now,
   };
   try {
     await saveOrder(order);

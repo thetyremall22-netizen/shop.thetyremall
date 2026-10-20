@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TestBadge, TestToggle } from "@/components/admin/TestFlag";
 import { notFound } from "next/navigation";
 import { requirePermission } from "@/lib/admin-auth";
 import { can } from "@/lib/admin-users";
@@ -28,7 +29,7 @@ export default async function CartDetail({ params }: { params: Promise<{ id: str
   const row = {
     id: c.id, email: c.email, firstName: c.firstName, lastName: c.lastName, phone: c.phone, source: c.source, status: c.status,
     items: c.items.map((i) => ({ name: i.name, qty: i.qty })), total: c.total, emailsSent: c.emailsSent, lastEmailAt: c.lastEmailAt,
-    orderRef: c.orderRef, recoveredOrderRef: c.recoveredOrderRef, createdAt: c.createdAt, updatedAt: c.updatedAt,
+    orderRef: c.orderRef, recoveredOrderRef: c.recoveredOrderRef, createdAt: c.createdAt, updatedAt: c.updatedAt, test: c.test,
   };
 
   return (
@@ -37,6 +38,7 @@ export default async function CartDetail({ params }: { params: Promise<{ id: str
         <div>
           <Link href="/admin/cart-recovery" className="text-sm font-bold text-volt hover:underline">← Abandoned carts</Link>
           <h1 className="mt-2 font-display text-2xl">Cart #{c.id} — {`${c.firstName} ${c.lastName}`.trim() || c.email}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2"><TestBadge test={c.test} className="!ml-0" /><TestToggle kind="cart" id={c.id} test={c.test} /></div>
           <div className="mt-1 text-sm text-muted">{SOURCE_LABEL[c.source]} · {STATUS_LABEL[c.status]} · {c.emailsSent}/3 emails · started {when(c.createdAt)}</div>
         </div>
         <Link href="/admin/cart-recovery" aria-label="Close" className="grid size-10 shrink-0 place-items-center rounded-full border border-line text-muted hover:border-sale hover:text-sale"><Close width={16} height={16} /></Link>

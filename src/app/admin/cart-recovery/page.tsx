@@ -73,7 +73,7 @@ export default async function CartRecoveryPage({ searchParams }: { searchParams:
               rows={carts.map((c) => ({
                 id: c.id, email: c.email, firstName: c.firstName, lastName: c.lastName, phone: c.phone, source: c.source, status: c.status,
                 items: c.items.map((i) => ({ name: i.name, qty: i.qty })), total: c.total, emailsSent: c.emailsSent, lastEmailAt: c.lastEmailAt,
-                orderRef: c.orderRef, recoveredOrderRef: c.recoveredOrderRef, createdAt: c.createdAt, updatedAt: c.updatedAt,
+                orderRef: c.orderRef, recoveredOrderRef: c.recoveredOrderRef, createdAt: c.createdAt, updatedAt: c.updatedAt, test: c.test,
               }))} />
           </div>
         </>

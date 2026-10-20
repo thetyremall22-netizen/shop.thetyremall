@@ -17,6 +17,10 @@ function ReturnInner() {
     clear();
     try { sessionStorage.removeItem("ttm-checkout"); } catch { /* private mode */ }
   }, [clear]);
+  // Back from HappyPay: ask the site to confirm the approval now (no-op for other payments).
+  useEffect(() => {
+    if (ref) fetch("/api/checkout/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ref }) }).catch(() => {});
+  }, [ref]);
 
   return (
     <div className="container-x grid place-items-center py-24 text-center">

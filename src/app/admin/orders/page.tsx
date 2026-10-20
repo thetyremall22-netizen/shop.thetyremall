@@ -2,7 +2,9 @@ import Link from "next/link";
 import { TestBadge } from "@/components/admin/TestFlag";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { listOrders, orderStatusCounts, STATUS_LABEL, STATUS_BADGE } from "@/lib/orders";
+import { listOrders, orderStatusCounts, orderAttributions, STATUS_LABEL, STATUS_BADGE } from "@/lib/orders";
+import { classifyOrigin } from "@/lib/attribution";
+import { OriginBadge } from "@/components/admin/OriginBadge";
 import { AdminSearch } from "@/components/admin/AdminSearch";
 
 const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2 });
@@ -29,6 +31,7 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
     listOrders({ page, perPage: 25, status, test, q }),
     orderStatusCounts({ test }),
   ]);
+  const attr = await orderAttributions(orders.map((o) => o.id));
   const allCount = Object.values(counts).reduce((a, b) => a + b, 0);
   const pages = Math.max(1, Math.ceil(total / perPage));
   const qs = (next: Record<string, string | number | undefined>) => {
@@ -77,13 +80,14 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
       ) : (
         <>
           <div className="mt-5 overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[760px] text-sm">
               <thead>
                 <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-4 py-2.5">Order</th>
                   <th className="px-4 py-2.5">Customer</th>
                   <th className="px-4 py-2.5">Items</th>
                   <th className="px-4 py-2.5">Status</th>
+                  <th className="px-4 py-2.5">Origin</th>
                   <th className="px-4 py-2.5 text-right">Total</th>
                   <th className="px-4 py-2.5">Date</th>
                   <th className="px-4 py-2.5" />
@@ -106,6 +110,7 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
                     </td>
                     <td className="px-4 py-2.5 text-muted">{o.items.reduce((n, i) => n + i.qty, 0)}</td>
                     <td className="px-4 py-2.5"><span className={`badge ${STATUS_BADGE[o.status] ?? "badge-muted"}`}>{STATUS_LABEL[o.status] ?? o.status}</span></td>
+                    <td className="px-4 py-2.5">{attr[o.id] ? <OriginBadge origin={classifyOrigin(attr[o.id])} /> : <span className="text-xs text-faint">—</span>}</td>
                     <td className="px-4 py-2.5 text-right font-semibold">{zar(o.totals.total)}</td>
                     <td className="px-4 py-2.5 text-xs text-muted">{new Date(o.createdAt).toLocaleDateString("en-ZA")}</td>
                     <td className="px-4 py-2.5 text-right">

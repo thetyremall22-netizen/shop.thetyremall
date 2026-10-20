@@ -7,4 +7,8 @@ export async function register() {
   startCartRecovery();
   const { startWishlistAlerts } = await import("./lib/wishlist-scheduler");
   startWishlistAlerts();
+  const { startWeeklyDigest } = await import("./lib/weekly-digest-scheduler");
+  startWeeklyDigest();
+  const { startPaymentChecks } = await import("./lib/payment-check-scheduler");
+  startPaymentChecks();
 }

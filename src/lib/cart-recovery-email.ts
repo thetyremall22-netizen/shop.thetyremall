@@ -14,7 +14,7 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const abs = (u: string) => (/^https?:\/\//.test(u) ? u : `${SITE_URL}${u.startsWith("/") ? "" : "/"}${u}`);
 
-export const recoveryUrl = (c: RecoveryCart) => `${SITE_URL}/cart/recover?t=${encodeURIComponent(c.token)}`;
+export const recoveryUrl = (c: RecoveryCart) => `${SITE_URL}/cart/recover?t=${encodeURIComponent(c.token)}&utm_source=cart-recovery&utm_medium=email`;
 
 function lastEnabledStep(s: RecoverySettings): number {
   let last = 1;

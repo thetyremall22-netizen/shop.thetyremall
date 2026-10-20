@@ -9,6 +9,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
 import { FloatingWidgets } from "@/components/FloatingWidgets";
+import { AttributionTracker } from "@/components/AttributionTracker";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { GoogleTracking, GoogleTagManagerNoScript } from "@/components/GoogleTracking";
 import { CookieConsent } from "@/components/CookieConsent";
@@ -66,6 +67,7 @@ export default async function RootLayout({
             <Footer />
             <CartDrawer />
             <FloatingWidgets />
+            <AttributionTracker />
             <CookieConsent />
           </AccountProvider>
           </CompareProvider>

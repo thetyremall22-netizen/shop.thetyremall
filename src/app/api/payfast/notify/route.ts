@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyItnSignature, validateWithPayfast } from "@/lib/payfast";
-import { getOrder, updateOrder } from "@/lib/orders";
-import { sendOrderPaid, sendOrderFailed } from "@/lib/email";
-import { markRecovered } from "@/lib/abandoned";
-import { decrementStock } from "@/lib/db/queries";
-import { recordRedemption } from "@/lib/coupons";
+import { getOrder } from "@/lib/orders";
+import { completePaidOrder, failOrder, holdForReview } from "@/lib/order-payment";
 
 export async function POST(req: NextRequest) {
   const raw = await req.text();
@@ -35,33 +32,18 @@ export async function POST(req: NextRequest) {
   const gross = Number(data.amount_gross ?? 0).toFixed(2);
   if (expected !== gross) {
     console.warn(`[payfast] amount mismatch order ${id}: expected ${expected} got ${gross}`);
-    await updateOrder(id, { status: "on-hold", pfPaymentId: data.pf_payment_id });
+    await holdForReview(id, { actor: "PayFast", pfPaymentId: data.pf_payment_id, reason: `PayFast reported R${gross} paid, but the order total is R${expected}.` });
     return new NextResponse("ok", { status: 200 });
   }
 
   const status = data.payment_status;
   if (status === "COMPLETE") {
-    // The status guard makes this run exactly once per order (PayFast retries
-    // the ITN, and the order is already "processing" on the second hit).
-    if (order.status !== "processing" && order.status !== "completed") {
-      const updated = await updateOrder(id, { status: "processing", pfPaymentId: data.pf_payment_id });
-      if (updated) {
-        // Take the items out of stock and email the customer + shop.
-        for (const it of updated.items) await decrementStock(it.slug, it.qty);
-        await sendOrderPaid(updated);
-        // Record a coupon redemption (bumps usage + enforces per-customer limits).
-        if (updated.totals.couponCode && updated.totals.couponDiscount > 0) {
-          await recordRedemption(updated.totals.couponCode, updated.reference, updated.customer.email, updated.totals.couponDiscount).catch(() => {});
-        }
-        // Cart was recovered — don't chase it.
-        await markRecovered(updated.customer.email, updated.reference, updated.totals.total).catch(() => {});
-      }
-    }
-  } else if (status === "FAILED") {
-    const updated = await updateOrder(id, { status: "failed", pfPaymentId: data.pf_payment_id });
-    if (updated) await sendOrderFailed(updated);
+    // Runs once per order even though PayFast retries the notice.
+    await completePaidOrder(id, { paymentMethod: "payfast", pfPaymentId: data.pf_payment_id, actor: "PayFast", note: "Paid via PayFast" });
+  } else if (status === "FAILED" || status === "CANCELLED") {
+    await failOrder(id, { actor: "PayFast", pfPaymentId: data.pf_payment_id, note: `PayFast reported the payment ${status.toLowerCase()}` });
   } else {
-    await updateOrder(id, { status: "on-hold", pfPaymentId: data.pf_payment_id });
+    await holdForReview(id, { actor: "PayFast", pfPaymentId: data.pf_payment_id, reason: `PayFast reported the payment status as "${status}" (not yet complete).` });
   }
 
   return new NextResponse("ok", { status: 200 });

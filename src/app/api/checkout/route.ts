@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin-auth";
 import { getProduct } from "@/lib/catalogue";
 import { computeTotals, type LineItem } from "@/lib/totals";
-import { saveOrder, nextReference, updateOrder, type Order } from "@/lib/orders";
+import { saveOrder, nextReference, setOrderAttribution, type Order } from "@/lib/orders";
+import { sanitizeAttribution, deviceFromUA } from "@/lib/attribution";
 import { buildPaymentFields, payfastProcessUrl, isConfigured, isSandbox } from "@/lib/payfast";
 import { createHappyPayOrder, isEnabled as happyPayEnabled } from "@/lib/happypay";
-import { getLive, decrementStock } from "@/lib/db/queries";
-import { validateCoupon, recordRedemption } from "@/lib/coupons";
-import { sendOrderPaid } from "@/lib/email";
-import { markRecovered } from "@/lib/abandoned";
+import { getLive } from "@/lib/db/queries";
+import { validateCoupon } from "@/lib/coupons";
+import { completePaidOrder } from "@/lib/order-payment";
 import { getSettings } from "@/lib/settings";
 import { addAudit } from "@/lib/audit";
 import type { DeliveryMethod } from "@/lib/shop-config";
@@ -19,13 +19,15 @@ interface Body {
   items: { slug: string; qty: number; roadHazard?: boolean; alignment?: boolean; balanceQty?: number }[];
   paymentMethod: string;
   couponCode?: string;
+  attribution?: unknown;
 }
 
 export async function POST(req: NextRequest) {
   // Block all orders while the store is in maintenance / "coming soon" mode.
   try {
     const s = await getSettings();
-    if (s.maintenance.enabled) {
+    // Logged-in staff can still place (TEST) orders to check checkout.
+    if (s.maintenance.enabled && !(await isAdmin())) {
       return NextResponse.json({ error: "Our store is not taking orders just yet — please check back soon." }, { status: 503 });
     }
   } catch { /* fail open — don't block checkout on a settings read error */ }
@@ -94,18 +96,22 @@ export async function POST(req: NextRequest) {
   }
   const id = `${reference}-${Date.now().toString(36)}`;
   const now = new Date().toISOString();
+  const staff = await isAdmin();
   const order: Order = {
     id, reference, status: "pending",
     customer, delivery: { ...delivery, method }, items: lines, totals,
     // Sandbox PayFast => test order (labelled apart from real orders in admin).
     // Test order: PayFast sandbox, or placed while logged in to the admin.
-    paymentMethod, test: (paymentMethod === "payfast" && (await isSandbox())) || (await isAdmin()), createdAt: now, updatedAt: now,
+    paymentMethod, test: (paymentMethod === "payfast" && (await isSandbox())) || staff, createdAt: now, updatedAt: now,
   };
   try {
     await saveOrder(order);
+    // Where the sale came from (Google Ads, search, AI, social…), for Admin → Orders.
+    const attr = sanitizeAttribution(body.attribution) ?? { touch: { at: Date.now(), referrer: "", landing: "", utm: {}, clickIds: {} }, sessionPages: 0, visits: 0 };
+    await setOrderAttribution(id, { ...attr, device: deviceFromUA(req.headers.get("user-agent") ?? ""), ...(staff ? { staff: true } : {}) }).catch((e) => console.error("[checkout] attribution not saved:", (e as Error).message));
     await addAudit({
       entity: "order", entityId: id, action: "created", actor: "Customer (website)",
-      summary: `Order placed online — ${lines.reduce((n, l) => n + l.qty, 0)} item(s), R${(totals.total / 100).toFixed(2)}, paying by ${paymentMethod}`,
+      summary: `Order placed online — ${lines.reduce((n, l) => n + l.qty, 0)} item(s), R${(totals.total / 100).toFixed(2)}, paying by ${totals.total === 0 ? "coupon (nothing to pay)" : paymentMethod}`,
     });
   } catch (e) {
     console.error("[checkout] saveOrder failed — proceeding to PayFast without a saved order:", (e as Error).message);
@@ -127,14 +133,11 @@ export async function POST(req: NextRequest) {
 
   // --- Free order (e.g. a 100%-off coupon): no gateway, mark paid directly ---
   if (totals.total === 0) {
-    const updated = await updateOrder(id, { status: "processing", paymentMethod: "coupon" });
-    const paidOrder = updated ?? order;
-    for (const it of paidOrder.items) await decrementStock(it.slug, it.qty);
-    await sendOrderPaid(paidOrder).catch((e) => console.error("[checkout] free-order email failed", e));
-    if (paidOrder.totals.couponCode && paidOrder.totals.couponDiscount > 0) {
-      await recordRedemption(paidOrder.totals.couponCode, paidOrder.reference, paidOrder.customer.email, paidOrder.totals.couponDiscount).catch(() => {});
-    }
-    await markRecovered(paidOrder.customer.email, paidOrder.reference, paidOrder.totals.total).catch(() => {});
+    // Saved as a normal order, set to Processing, with the usual client + shop emails.
+    await completePaidOrder(id, {
+      paymentMethod: "coupon", actor: "Coupon",
+      note: `Nothing to pay — coupon ${order.totals.couponCode ?? ""} covered the full amount`.replace("  ", " "),
+    });
     return NextResponse.json({ gateway: "free", reference, redirectUrl: `${origin}/checkout/return?ref=${encodeURIComponent(reference)}` });
   }
 

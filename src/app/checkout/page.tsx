@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/lib/cart";
 import { useAccount } from "@/lib/account-client";
+import { attributionForOrder } from "@/components/AttributionTracker";
 import { formatPrice } from "@/lib/format";
 import { FITMENT_CENTRES, PAYMENT_METHODS } from "@/lib/shop-config";
 import { Check, Truck, Pin, Shield, Bolt } from "@/components/icons";
@@ -139,6 +140,7 @@ export default function CheckoutPage() {
       })),
       paymentMethod: payment,
       couponCode: coupon?.code,
+      attribution: attributionForOrder(),
     };
 
     try {

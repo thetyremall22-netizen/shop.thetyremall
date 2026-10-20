@@ -4,6 +4,7 @@ import { db, schema, libsql } from "./db";
 import type { LineItem, OrderTotals } from "./totals";
 import type { DeliveryMethod } from "./shop-config";
 import { addAudit } from "./audit";
+import type { Attribution } from "./attribution";
 
 export type OrderStatus =
   | "pending"
@@ -65,6 +66,8 @@ async function ensureSchema() {
   // Add columns to tables created before they existed (ignore if present).
   try { await libsql.execute("ALTER TABLE orders ADD COLUMN test INTEGER NOT NULL DEFAULT 0"); } catch { /* exists */ }
   try { await libsql.execute("ALTER TABLE orders ADD COLUMN refunded INTEGER NOT NULL DEFAULT 0"); } catch { /* exists */ }
+  // Where the sale came from (see lib/attribution). New column, empty for older orders.
+  try { await libsql.execute("ALTER TABLE orders ADD COLUMN attribution TEXT NOT NULL DEFAULT ''"); } catch { /* exists */ }
   await libsql.execute(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')`);
   await libsql.execute(`INSERT OR IGNORE INTO meta (key, value) VALUES ('order_seq', '0')`);
   ensured = true;
@@ -265,5 +268,28 @@ export async function orderIdsByReference(refs: string[]): Promise<Record<string
     const rows = await db.select({ ref: schema.orders.reference, id: schema.orders.orderId }).from(schema.orders)
       .where(sql`${schema.orders.reference} IN (${sql.join(refs.map((r) => sql`${r}`), sql`, `)})`);
     return Object.fromEntries(rows.map((r) => [r.ref, r.id]));
+  } catch { return {}; }
+}
+
+// ---- order attribution ------------------------------------------------------------
+
+export async function setOrderAttribution(orderId: string, a: Attribution): Promise<void> {
+  await ensureSchema();
+  await libsql.execute({ sql: "UPDATE orders SET attribution = ? WHERE order_id = ?", args: [JSON.stringify(a), orderId] });
+}
+
+/** Attribution for several orders at once (order_id → data, or null when none was recorded). */
+export async function orderAttributions(orderIds: string[]): Promise<Record<string, Attribution | null>> {
+  if (!orderIds.length) return {};
+  try {
+    await ensureSchema();
+    const r = await libsql.execute({ sql: `SELECT order_id, attribution FROM orders WHERE order_id IN (${orderIds.map(() => "?").join(",")})`, args: orderIds });
+    const out: Record<string, Attribution | null> = {};
+    for (const row of r.rows) {
+      let a: Attribution | null = null;
+      try { a = row.attribution ? JSON.parse(String(row.attribution)) : null; } catch { /* ignore */ }
+      out[String(row.order_id)] = a;
+    }
+    return out;
   } catch { return {}; }
 }

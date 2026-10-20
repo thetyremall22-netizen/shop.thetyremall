@@ -8,7 +8,8 @@ import { ComposeEmailForm } from "@/components/admin/ComposeEmailForm";
 import { RefundForm } from "@/components/admin/RefundForm";
 import { AuditHistory } from "@/components/admin/AuditHistory";
 import { OrderCustomerEditor, OrderItemsEditor, OrderStatusEditor, OrderEmailActions, OrderNoteForm } from "@/components/admin/OrderEditors";
-import { getOrder, STATUS_LABEL, STATUS_BADGE } from "@/lib/orders";
+import { getOrder, orderAttributions, STATUS_LABEL, STATUS_BADGE } from "@/lib/orders";
+import { OrderAttribution } from "@/components/admin/OrderAttribution";
 import { listAudit } from "@/lib/audit";
 import { getInvoice } from "@/lib/invoices";
 import { supportForOrder, SUPPORT_STATUS_LABEL, SUPPORT_STATUS_BADGE, TOPIC_LABEL } from "@/lib/support";
@@ -26,7 +27,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   const { id } = await params;
   const o = await getOrder(id);
   if (!o) notFound();
-  const [orderEmails, history, invoice, support] = await Promise.all([listEmailsForOrder(o.reference), listAudit("order", o.id), getInvoice(o.id), supportForOrder(o.reference)]);
+  const [orderEmails, history, invoice, support, attr] = await Promise.all([listEmailsForOrder(o.reference), listAudit("order", o.id), getInvoice(o.id), supportForOrder(o.reference), orderAttributions([o.id])]);
   // Show part numbers for orders placed before SKUs were saved on the order.
   const items = await Promise.all(o.items.map(async (i) => (i.sku ? i : { ...i, sku: (await getProduct(i.slug).catch(() => undefined))?.sku || undefined })));
   const canEdit = can(me.role, "orders.edit");
@@ -142,6 +143,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
 
         <div className="space-y-5">
           <OrderCustomerEditor id={o.id} customer={o.customer} delivery={o.delivery} canEdit={canEdit} />
+          <OrderAttribution a={attr[o.id] ?? null} placedAt={o.createdAt} />
           {canEdit && (
             <div className="card p-5">
               <h2 className="font-display text-lg">Add a note</h2>

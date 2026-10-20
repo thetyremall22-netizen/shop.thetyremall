@@ -9,6 +9,7 @@ import { validateCoupon, recordRedemption } from "@/lib/coupons";
 import { sendOrderPaid } from "@/lib/email";
 import { markRecovered } from "@/lib/abandoned";
 import { getSettings } from "@/lib/settings";
+import { addAudit } from "@/lib/audit";
 import type { DeliveryMethod } from "@/lib/shop-config";
 
 interface Body {
@@ -98,6 +99,10 @@ export async function POST(req: NextRequest) {
   };
   try {
     await saveOrder(order);
+    await addAudit({
+      entity: "order", entityId: id, action: "created", actor: "Customer (website)",
+      summary: `Order placed online — ${lines.reduce((n, l) => n + l.qty, 0)} item(s), R${(totals.total / 100).toFixed(2)}, paying by ${paymentMethod}`,
+    });
   } catch (e) {
     console.error("[checkout] saveOrder failed — proceeding to PayFast without a saved order:", (e as Error).message);
   }

@@ -12,6 +12,7 @@ export type EmailType =
   | "order_refunded"
   | "order_completed"
   | "order_on_hold"
+  | "order_invoice"
   | "abandoned_cart"
   | "enquiry"
   | "lead_confirmation"
@@ -156,6 +157,7 @@ export const EMAIL_TYPE_LABELS: Record<string, string> = {
   order_refunded: "Order refunded",
   order_completed: "Order completed",
   order_on_hold: "Order on hold",
+  order_invoice: "Tax invoice (customer)",
   abandoned_cart: "Abandoned cart",
   enquiry: "Enquiry (shop)",
   lead_confirmation: "Enquiry received (customer)",

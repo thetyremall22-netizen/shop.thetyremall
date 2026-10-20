@@ -56,6 +56,13 @@ export async function PATCH(req: NextRequest) {
       timezone: s(m.timezone, 64),
     }) as SiteSettings["commerce"];
   }
+  if (body.invoice) {
+    const iv = body.invoice;
+    patch.invoice = clean({
+      legalName: s(iv.legalName, 160), vatNumber: s(iv.vatNumber, 40),
+      regNumber: s(iv.regNumber, 40), footer: s(iv.footer, 1000),
+    }) as SiteSettings["invoice"];
+  }
   if (body.maintenance) {
     const mt = body.maintenance;
     patch.maintenance = clean({

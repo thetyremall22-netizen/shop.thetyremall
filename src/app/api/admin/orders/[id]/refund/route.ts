@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/admin-auth";
 import { getOrder, updateOrder } from "@/lib/orders";
 import { incrementStock } from "@/lib/db/queries";
+import { actorName, addAudit } from "@/lib/audit";
 import { sendOrderRefunded } from "@/lib/email";
 import { refundHappyPayOrder } from "@/lib/happypay";
 
 const REFUNDABLE = new Set(["processing", "completed", "partially_refunded"]);
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await authorize("orders.edit"))) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const actor = await authorize("orders.edit");
+  if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const { id } = await params;
 
   let body: { amount?: number; reason?: string };
@@ -45,7 +47,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     for (const it of order.items) await incrementStock(it.slug, it.qty);
   }
 
-  const updated = await updateOrder(id, { status, refundedAmount: newRefunded });
+  const updated = await updateOrder(id, { status, refundedAmount: newRefunded }, { actor: actorName(actor) });
+  await addAudit({
+    entity: "order", entityId: id, action: "refund", actor: actorName(actor),
+    summary: `Refund R${(amount / 100).toFixed(2)} — ${reason}${manual ? " (recorded here; release the money in the payment gateway dashboard)" : " (processed through HappyPay)"}. Refunded so far: R${(newRefunded / 100).toFixed(2)}`,
+  });
   if (updated) await sendOrderRefunded(updated).catch(() => {});
 
   return NextResponse.json({ ok: true, manual, refunded: newRefunded, status, amount });

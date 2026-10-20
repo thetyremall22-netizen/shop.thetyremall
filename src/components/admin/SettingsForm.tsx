@@ -101,6 +101,17 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
           <input value={v.contact.hours} onChange={(e) => up("contact", "hours", e.target.value)} className={field} /></label>
       </Group>
 
+      <Group title="Tax invoice details">
+        <label className="block sm:col-span-2"><span className={label}>Registered business name</span>
+          <input value={v.invoice.legalName} onChange={(e) => up("invoice", "legalName", e.target.value)} className={field} /></label>
+        <label className="block"><span className={label}>VAT number</span>
+          <input value={v.invoice.vatNumber} onChange={(e) => up("invoice", "vatNumber", e.target.value)} className={field} /></label>
+        <label className="block"><span className={label}>Company registration no. (optional)</span>
+          <input value={v.invoice.regNumber} onChange={(e) => up("invoice", "regNumber", e.target.value)} className={field} /></label>
+        <label className="block sm:col-span-2"><span className={label}>Invoice footer (e.g. banking details, terms)</span>
+          <textarea value={v.invoice.footer} onChange={(e) => up("invoice", "footer", e.target.value)} rows={3} className={`${field} h-auto py-2`} /></label>
+      </Group>
+
       <Group title="Social links">
         <label className="block"><span className={label}>Facebook URL</span>
           <input value={v.social.facebook} onChange={(e) => up("social", "facebook", e.target.value)} className={field} /></label>

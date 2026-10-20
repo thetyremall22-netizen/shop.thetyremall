@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { listOrders } from "@/lib/orders";
+import { listOrders, orderStatusCounts, STATUS_LABEL, STATUS_BADGE } from "@/lib/orders";
+import { AdminSearch } from "@/components/admin/AdminSearch";
 
 const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2 });
 
 export const instant = false;
+
+const STATUS_TABS = ["", "pending", "processing", "on-hold", "completed", "cancelled", "refunded", "partially_refunded", "failed"];
 
 const VIEW_FILTERS = [
   { v: "", label: "All" },
@@ -20,12 +23,18 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
   const status = sp.status;
   const view = sp.view === "live" || sp.view === "test" ? sp.view : undefined;
   const test = view === "test" ? true : view === "live" ? false : undefined;
-  const { orders, total, perPage } = await listOrders({ page, perPage: 25, status, test });
+  const q = (sp.q ?? "").trim();
+  const [{ orders, total, perPage }, counts] = await Promise.all([
+    listOrders({ page, perPage: 25, status, test, q }),
+    orderStatusCounts({ test }),
+  ]);
+  const allCount = Object.values(counts).reduce((a, b) => a + b, 0);
   const pages = Math.max(1, Math.ceil(total / perPage));
   const qs = (next: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams();
     if (status) p.set("status", status);
     if (view) p.set("view", view);
+    if (q) p.set("q", q);
     for (const [k, val] of Object.entries(next)) { if (val === undefined || val === "") p.delete(k); else p.set(k, String(val)); }
     const s = p.toString();
     return s ? `/admin/orders?${s}` : "/admin/orders";
@@ -33,7 +42,22 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
 
   return (
     <AdminShell>
-      <h1 className="font-display text-3xl">Orders <span className="text-base text-muted">({total.toLocaleString()})</span></h1>
+      <h1 className="font-display text-3xl">Orders <span className="text-base text-muted">({total.toLocaleString()}{q ? " matching" : ""})</span></h1>
+      <p className="mt-1 text-sm text-muted">Open any order to edit the customer, address, items, prices and status, email the invoice, and see its full history.</p>
+
+      <AdminSearch className="mt-4 max-w-xl" placeholder="Search order no., name, email, phone, address, product, part no.…" />
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {STATUS_TABS.filter((v) => v === "" || counts[v] || status === v).map((v) => {
+          const active = (status ?? "") === v;
+          return (
+            <Link key={v || "all"} href={qs({ status: v || undefined, page: undefined })}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${active ? "bg-volt text-volt-ink" : "border border-line text-muted hover:text-fg"}`}>
+              {v ? STATUS_LABEL[v] ?? v : "All statuses"} <span className="opacity-70">({v ? counts[v] ?? 0 : allCount})</span>
+            </Link>
+          );
+        })}
+      </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {VIEW_FILTERS.map((f) => {
@@ -48,7 +72,7 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
       </div>
 
       {orders.length === 0 ? (
-        <p className="mt-5 text-sm text-muted">No orders yet. They&apos;ll appear here the moment a customer pays.</p>
+        <p className="mt-5 text-sm text-muted">{q || status ? "No orders match." : "No orders yet. They’ll appear here the moment a customer pays."}</p>
       ) : (
         <>
           <div className="mt-5 overflow-x-auto rounded-xl border border-line">
@@ -61,6 +85,7 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
                   <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5 text-right">Total</th>
                   <th className="px-4 py-2.5">Date</th>
+                  <th className="px-4 py-2.5" />
                 </tr>
               </thead>
               <tbody>
@@ -76,11 +101,15 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
                     <td className="px-4 py-2.5">
                       <div className="text-fg">{o.customer.firstName} {o.customer.lastName}</div>
                       <div className="text-xs text-muted">{o.customer.email}</div>
+                      <div className="text-xs text-muted">{o.customer.phone}{o.delivery.address?.city ? ` · ${o.delivery.address.city}` : o.delivery.method === "fitment" ? " · fitment" : ""}</div>
                     </td>
                     <td className="px-4 py-2.5 text-muted">{o.items.reduce((n, i) => n + i.qty, 0)}</td>
-                    <td className="px-4 py-2.5"><span className="badge badge-pay">{o.status}</span></td>
+                    <td className="px-4 py-2.5"><span className={`badge ${STATUS_BADGE[o.status] ?? "badge-muted"}`}>{STATUS_LABEL[o.status] ?? o.status}</span></td>
                     <td className="px-4 py-2.5 text-right font-semibold">{zar(o.totals.total)}</td>
                     <td className="px-4 py-2.5 text-xs text-muted">{new Date(o.createdAt).toLocaleDateString("en-ZA")}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <Link href={`/admin/orders/${o.id}`} className="btn btn-volt-outline h-8 whitespace-nowrap px-3 text-xs">Open / Edit →</Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -5,6 +5,7 @@ import { logEmail, type EmailType } from "./email-log";
 import { libsql } from "./db";
 import type { SiteSettings } from "./settings";
 import { getProduct } from "./catalogue";
+import { getSettings } from "./settings";
 
 export const SHOP_EMAIL = process.env.SHOP_EMAIL ?? "shop@thetyremall.co.za";
 
@@ -267,7 +268,7 @@ const BRAND = "#8ac53f";
 const INK = "#14171a";
 
 function layout(title: string, bodyHtml: string): string {
-  return `<!doctype html><html><body style="margin:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:${INK}">
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:${INK}">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:24px 0">
    <tr><td align="center">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)">
@@ -425,6 +426,98 @@ function tOnHoldCustomer(o: Order): Tmpl {
     subject: `Order ${o.reference} is on hold`,
     html: layout("Your order is on hold", `<p style="font-size:14px">Order <b>${o.reference}</b> is on hold while we confirm a few details. We'll be in touch shortly.</p>${itemsTable(o)}`),
   };
+}
+
+/** Tax invoice for an order (sent from Admin → Orders). */
+async function tInvoice(o: Order): Promise<Tmpl> {
+  const st = await getSettings();
+  const inv = st.invoice;
+  const vatRate = st.commerce.vatRate || 0;
+  const t = o.totals;
+  const vat = vatRate > 0
+    ? (st.commerce.vatIncluded ? Math.round((t.total * vatRate) / (100 + vatRate)) : Math.round((t.total * vatRate) / 100))
+    : 0;
+  const paid = ["processing", "completed", "partially_refunded"].includes(o.status);
+  const date = new Date(o.createdAt).toLocaleDateString("en-ZA", { year: "numeric", month: "long", day: "numeric", timeZone: "Africa/Johannesburg" });
+  const c = o.customer;
+  const a = o.delivery.address;
+  const lines = o.items.map((i) => `<tr>
+      <td style="padding:8px 6px;border-bottom:1px solid #eee">${escapeHtml(i.name)}${i.sku ? `<br><span style="font-size:11px;color:#6b7280">Part no: ${escapeHtml(i.sku)}</span>` : ""}</td>
+      <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:center">${i.qty}</td>
+      <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right;white-space:nowrap">${zar(i.price)}</td>
+      <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right;white-space:nowrap">${zar(i.price * i.qty)}</td>
+    </tr>`).join("");
+  const extra = (label: string, v: number, minus = false) => v ? `<tr><td colspan="3" style="padding:4px 6px;text-align:right;color:#6b7280">${label}</td><td style="padding:4px 6px;text-align:right">${minus ? "&minus;" : ""}${zar(v)}</td></tr>` : "";
+  const body = `
+    <table role="presentation" width="100%" style="font-size:13px;border-collapse:collapse;margin-bottom:16px"><tr>
+      <td style="vertical-align:top;padding-right:12px">
+        <b>${escapeHtml(inv.legalName || st.site.name)}</b><br>
+        ${escapeHtml(st.contact.addressLines).replace(/\n/g, "<br>")}<br>
+        ${escapeHtml(st.contact.phoneDisplay)} · ${escapeHtml(st.contact.email)}
+        ${inv.vatNumber ? `<br>VAT no: <b>${escapeHtml(inv.vatNumber)}</b>` : ""}
+        ${inv.regNumber ? `<br>Reg no: ${escapeHtml(inv.regNumber)}` : ""}
+      </td>
+      <td style="vertical-align:top;text-align:right">
+        Invoice no: <b>${escapeHtml(o.reference)}</b><br>Date: ${date}<br>
+        Status: <b style="color:${paid ? "#0f9d63" : "#b45309"}">${paid ? "PAID" : "UNPAID"}</b>
+      </td>
+    </tr></table>
+    <table role="presentation" width="100%" style="font-size:13px;border-collapse:collapse;margin-bottom:16px"><tr>
+      <td style="vertical-align:top;padding-right:12px"><span style="color:#6b7280">Bill to</span><br>
+        <b>${escapeHtml(`${c.firstName} ${c.lastName}`.trim())}</b><br>${escapeHtml(c.email)}<br>${escapeHtml(c.phone)}</td>
+      <td style="vertical-align:top"><span style="color:#6b7280">${o.delivery.method === "fitment" ? "Fitment" : "Deliver to"}</span><br>
+        ${o.delivery.method === "fitment"
+          ? `${escapeHtml(o.delivery.fitmentStore ?? "Partner centre")}${o.delivery.fitmentDate ? `<br>${escapeHtml(o.delivery.fitmentDate)}` : ""}`
+          : a ? [a.street, a.suburb, a.city, a.province, a.postalCode].filter(Boolean).map(escapeHtml).join("<br>") : "—"}</td>
+    </tr></table>
+    <table role="presentation" width="100%" style="font-size:13px;border-collapse:collapse">
+      <tr style="background:#f4f5f7"><th style="padding:8px 6px;text-align:left">Item</th><th style="padding:8px 6px">Qty</th><th style="padding:8px 6px;text-align:right">Unit</th><th style="padding:8px 6px;text-align:right">Amount</th></tr>
+      ${lines}
+      ${extra("Subtotal", t.subtotal)}
+      ${extra("Set of 4 saving", t.setDiscount, true)}
+      ${extra("Wheel alignment", t.alignmentTotal)}
+      ${extra("Balance &amp; valve", t.balanceTotal)}
+      ${extra("Road hazard cover", t.hazardTotal)}
+      ${extra(`Coupon ${escapeHtml(t.couponCode ?? "")}`, t.couponDiscount, true)}
+      <tr><td colspan="3" style="padding:4px 6px;text-align:right;color:#6b7280">Delivery</td><td style="padding:4px 6px;text-align:right">${t.delivery === 0 ? "FREE" : zar(t.delivery)}</td></tr>
+      <tr><td colspan="3" style="padding:10px 6px 4px;text-align:right;font-weight:800;font-size:15px">Total${st.commerce.vatIncluded ? " (incl. VAT)" : ""}</td><td style="padding:10px 6px 4px;text-align:right;font-weight:800;font-size:15px">${zar(st.commerce.vatIncluded ? t.total : t.total + vat)}</td></tr>
+      ${vat ? `<tr><td colspan="3" style="padding:2px 6px;text-align:right;color:#6b7280">VAT @ ${vatRate}%${st.commerce.vatIncluded ? " included" : ""}</td><td style="padding:2px 6px;text-align:right;color:#6b7280">${zar(vat)}</td></tr>` : ""}
+      ${o.refundedAmount ? `<tr><td colspan="3" style="padding:2px 6px;text-align:right;color:#6b7280">Refunded</td><td style="padding:2px 6px;text-align:right;color:#6b7280">&minus;${zar(o.refundedAmount)}</td></tr>` : ""}
+    </table>
+    ${inv.footer ? `<p style="margin:18px 0 0;font-size:12px;color:#6b7280;white-space:pre-line">${escapeHtml(inv.footer)}</p>` : ""}`;
+  return { subject: `Tax invoice ${o.reference} — The Tyre Mall`, html: layout("Tax invoice", body) };
+}
+
+/** Admin actions on an order: (re)send the invoice, the order confirmation, or
+ *  the email for its current status. Logged against the order. */
+export async function sendOrderInvoice(order: Order): Promise<void> {
+  const o = await withSkus(order);
+  const t = await tInvoice(o);
+  await sendMail(o.customer.email, t.subject, t.html, { type: "order_invoice", orderRef: o.reference, ccShop: true });
+}
+export async function resendOrderConfirmation(order: Order): Promise<void> {
+  const o = await withSkus(order);
+  const c = tProcessingCustomer(o);
+  await sendMail(o.customer.email, c.subject, c.html, { type: "order_paid", orderRef: o.reference, resend: true });
+}
+export async function resendStatusEmail(order: Order): Promise<boolean> {
+  const o = await withSkus(order);
+  const map: Partial<Record<string, (x: Order) => Tmpl>> = {
+    processing: tProcessingCustomer, completed: tCompletedCustomer, cancelled: tCancelledCustomer,
+    refunded: tRefundedCustomer, "on-hold": tOnHoldCustomer, failed: tFailedCustomer,
+  };
+  const fn = map[o.status];
+  if (!fn) return false;
+  const c = fn(o);
+  const type = ({ processing: "order_paid", completed: "order_completed", cancelled: "order_cancelled", refunded: "order_refunded", "on-hold": "order_on_hold", failed: "order_failed" } as const)[o.status as "processing"];
+  await sendMail(o.customer.email, c.subject, c.html, { type, orderRef: o.reference, resend: true });
+  return true;
+}
+
+/** Email the shop the full order details (part numbers, customer, address). */
+export async function sendShopOrderCopy(order: Order): Promise<void> {
+  const o = await withSkus(order);
+  await sendMail(SHOP_EMAIL, `[Order ${o.reference}] Order details`, shopOrder(o, `Order ${o.reference}`), { type: "order_new_admin", orderRef: o.reference, resend: true });
 }
 
 // ---- high-level senders tied to order lifecycle -----------------------------

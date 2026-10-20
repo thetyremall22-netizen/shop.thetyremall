@@ -3,6 +3,7 @@ import { eq, desc, sql, and } from "drizzle-orm";
 import { db, schema, libsql } from "./db";
 import type { LineItem, OrderTotals } from "./totals";
 import type { DeliveryMethod } from "./shop-config";
+import { addAudit } from "./audit";
 
 export type OrderStatus =
   | "pending"
@@ -129,12 +130,53 @@ export async function getOrder(id: string): Promise<Order | null> {
   return rows[0] ? rowToOrder(rows[0]) : null;
 }
 
-export async function updateOrder(id: string, patch: Partial<Order>): Promise<Order | null> {
+export const STATUS_LABEL: Record<string, string> = {
+  pending: "Pending payment",
+  processing: "Processing",
+  "on-hold": "On hold",
+  completed: "Completed",
+  cancelled: "Cancelled",
+  refunded: "Refunded",
+  partially_refunded: "Partially refunded",
+  failed: "Failed",
+};
+
+export const STATUS_BADGE: Record<string, string> = {
+  pending: "badge-muted", processing: "badge-volt", "on-hold": "badge-warn", completed: "badge-pay",
+  cancelled: "badge-sale", refunded: "badge-sale", partially_refunded: "badge-warn", failed: "badge-sale",
+};
+
+/** Update an order. Status changes are always written to the order's history
+ *  (who/what made them), whether from an admin or a payment notification. */
+export async function updateOrder(
+  id: string, patch: Partial<Order>, meta: { actor?: string; note?: string } = {},
+): Promise<Order | null> {
   const current = await getOrder(id);
   if (!current) return null;
   const next: Order = { ...current, ...patch, updatedAt: new Date().toISOString() };
   await saveOrder(next);
+  if (patch.status && patch.status !== current.status) {
+    await addAudit({
+      entity: "order", entityId: id, action: "status",
+      summary: `Status: ${STATUS_LABEL[current.status] ?? current.status} → ${STATUS_LABEL[patch.status] ?? patch.status}${meta.note ? ` — ${meta.note}` : ""}`,
+      before: { status: current.status }, after: { status: patch.status },
+      actor: meta.actor ?? (patch.paymentMethod || current.paymentMethod ? `System (${patch.paymentMethod || current.paymentMethod})` : "System"),
+    });
+  }
   return next;
+}
+
+/** Count of orders per status (for the admin tabs). */
+export async function orderStatusCounts(opts: { test?: boolean } = {}): Promise<Record<string, number>> {
+  try {
+    await ensureSchema();
+    const r = opts.test === undefined
+      ? await libsql.execute(`SELECT status, COUNT(*) n FROM orders GROUP BY status`)
+      : await libsql.execute({ sql: `SELECT status, COUNT(*) n FROM orders WHERE test = ? GROUP BY status`, args: [opts.test ? 1 : 0] });
+    const out: Record<string, number> = {};
+    for (const row of r.rows) out[String(row.status)] = Number(row.n);
+    return out;
+  } catch { return {}; }
 }
 
 /** Atomic incrementing order reference via the meta counter. */
@@ -148,7 +190,7 @@ export async function nextReference(): Promise<string> {
 }
 
 // ---- admin ------------------------------------------------------------------
-export async function listOrders(opts: { page?: number; perPage?: number; status?: string; test?: boolean } = {}) {
+export async function listOrders(opts: { page?: number; perPage?: number; status?: string; test?: boolean; q?: string } = {}) {
   const page = Math.max(1, opts.page ?? 1);
   const perPage = opts.perPage ?? 25;
   try {
@@ -156,6 +198,19 @@ export async function listOrders(opts: { page?: number; perPage?: number; status
     const conds = [];
     if (opts.status) conds.push(eq(schema.orders.status, opts.status));
     if (opts.test !== undefined) conds.push(eq(schema.orders.test, opts.test));
+    // Search order number, customer name/email/phone, address, products, SKUs,
+    // payment id — all stored as JSON text, so a LIKE over them finds anything.
+    const q = opts.q?.trim().toLowerCase();
+    if (q) {
+      const like = `%${q}%`;
+      const digits = q.replace(/\D/g, "");
+      conds.push(sql`(
+        LOWER(${schema.orders.reference}) LIKE ${like} OR LOWER(${schema.orders.customer}) LIKE ${like}
+        OR LOWER(${schema.orders.delivery}) LIKE ${like} OR LOWER(${schema.orders.items}) LIKE ${like}
+        OR LOWER(IFNULL(${schema.orders.pfPaymentId}, '')) LIKE ${like} OR LOWER(${schema.orders.paymentMethod}) LIKE ${like}
+        ${digits.length >= 6 ? sql`OR REPLACE(REPLACE(${schema.orders.customer}, ' ', ''), '+27', '0') LIKE ${"%" + (digits.startsWith("27") ? "0" + digits.slice(2) : digits) + "%"}` : sql``}
+      )`);
+    }
     const where = conds.length ? and(...conds) : undefined;
     const rows = await db.select().from(schema.orders).where(where)
       .orderBy(desc(schema.orders.id)).limit(perPage).offset((page - 1) * perPage);

@@ -1,153 +1,137 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-auth";
+import { can } from "@/lib/admin-users";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { OrderStatusForm } from "@/components/admin/OrderStatusForm";
 import { ComposeEmailForm } from "@/components/admin/ComposeEmailForm";
 import { RefundForm } from "@/components/admin/RefundForm";
-import { getOrder } from "@/lib/orders";
+import { AuditHistory } from "@/components/admin/AuditHistory";
+import { OrderCustomerEditor, OrderItemsEditor, OrderStatusEditor, OrderEmailActions, OrderNoteForm } from "@/components/admin/OrderEditors";
+import { getOrder, STATUS_LABEL, STATUS_BADGE } from "@/lib/orders";
+import { listAudit } from "@/lib/audit";
 import { listEmailsForOrder, EMAIL_TYPE_LABELS } from "@/lib/email-log";
+import { getProduct } from "@/lib/catalogue";
+import { Close } from "@/components/icons";
 
 export const instant = false;
 
 const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2 });
+const when = (d: string | number) => new Date(d).toLocaleString("en-ZA", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Johannesburg" });
 
 export default async function AdminOrderDetail({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  const me = await requireAdmin();
   const { id } = await params;
   const o = await getOrder(id);
   if (!o) notFound();
-  const orderEmails = await listEmailsForOrder(o.reference);
-
-  const a = o.delivery.address;
+  const [orderEmails, history] = await Promise.all([listEmailsForOrder(o.reference), listAudit("order", o.id)]);
+  // Show part numbers for orders placed before SKUs were saved on the order.
+  const items = await Promise.all(o.items.map(async (i) => (i.sku ? i : { ...i, sku: (await getProduct(i.slug).catch(() => undefined))?.sku || undefined })));
+  const canEdit = can(me.role, "orders.edit");
   const t = o.totals;
 
   return (
     <AdminShell>
-      <Link href="/admin/orders" className="text-sm font-bold text-volt hover:underline">← Orders</Link>
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl">{o.reference}</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          {o.test && <span className="badge badge-warn">test order</span>}
-          {o.totals.total === 0 && <span className="badge badge-muted">free</span>}
-          <span className="badge badge-pay">{o.status}</span>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <Link href="/admin/orders" className="text-sm font-bold text-volt hover:underline">← Orders</Link>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <h1 className="font-display text-2xl">{o.reference}</h1>
+            <span className={`badge ${STATUS_BADGE[o.status] ?? "badge-muted"}`}>{STATUS_LABEL[o.status] ?? o.status}</span>
+            {o.test && <span className="badge badge-warn">test order</span>}
+            {o.totals.total === 0 && <span className="badge badge-muted">free</span>}
+          </div>
+          <div className="mt-1 text-sm text-muted">Placed {when(o.createdAt)} · {o.paymentMethod}{o.pfPaymentId ? ` (PF ${o.pfPaymentId})` : ""} · Last updated {when(o.updatedAt)}</div>
         </div>
+        <Link href="/admin/orders" aria-label="Close" title="Close" className="grid size-10 shrink-0 place-items-center rounded-full border border-line text-muted transition hover:border-sale hover:text-sale">
+          <Close width={16} height={16} />
+        </Link>
       </div>
-      <div className="mt-1 text-sm text-muted">Placed {new Date(o.createdAt).toLocaleString("en-ZA")} · Paid via {o.paymentMethod}{o.pfPaymentId ? ` (PF ${o.pfPaymentId})` : ""}</div>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_300px]">
-        <div className="card p-5">
-          <h2 className="font-display text-lg">Items</h2>
-          <table className="mt-3 w-full text-sm">
-            <tbody>
-              {o.items.map((i) => (
-                <tr key={i.slug} className="border-b border-line last:border-0">
-                  <td className="py-2">{i.name}{i.qty > 1 ? ` × ${i.qty}` : ""}
-                    {(i.alignment || (i.balanceQty ?? 0) > 0 || i.roadHazard) && (
-                      <div className="text-xs text-muted">
-                        {i.alignment ? "alignment " : ""}{(i.balanceQty ?? 0) > 0 ? `balance×${i.balanceQty} ` : ""}{i.roadHazard ? "road-hazard" : ""}
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-2 text-right whitespace-nowrap">{zar(i.price * i.qty)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <dl className="mt-3 space-y-1 border-t border-line pt-3 text-sm">
-            <Row k="Subtotal" v={zar(t.subtotal)} />
-            {t.alignmentTotal > 0 && <Row k="Alignment" v={zar(t.alignmentTotal)} />}
-            {t.balanceTotal > 0 && <Row k="Balance & valve" v={zar(t.balanceTotal)} />}
-            {t.hazardTotal > 0 && <Row k="Road hazard" v={zar(t.hazardTotal)} />}
-            {t.couponDiscount > 0 && <Row k={`Coupon ${t.couponCode ?? ""}`} v={`−${zar(t.couponDiscount)}`} />}
-            <Row k="Delivery" v={t.delivery === 0 ? "FREE" : zar(t.delivery)} />
-            <div className="flex justify-between border-t border-line pt-2 font-bold"><dt>Total</dt><dd>{zar(t.total)}</dd></div>
-          </dl>
+      <div className="mt-5 card p-4">
+        <OrderEmailActions id={o.id} customerEmail={o.customer.email} canSend={can(me.role, "emails.send")} />
+      </div>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_340px]">
+        <div className="space-y-5">
+          <OrderItemsEditor id={o.id} items={items} totals={t} canEdit={canEdit} />
+
+          <div className="card p-5">
+            <h2 className="font-display text-lg">Order status</h2>
+            <div className="mt-3"><OrderStatusEditor id={o.id} current={o.status} canEdit={canEdit} /></div>
+          </div>
+
+          {(() => {
+            const refunded = o.refundedAmount ?? 0;
+            const remaining = t.total - refunded;
+            const canRefund = canEdit && ["processing", "completed", "partially_refunded"].includes(o.status) && remaining > 0;
+            if (refunded === 0 && !canRefund) return null;
+            return (
+              <div className="card p-5">
+                <h2 className="font-display text-lg">Refund</h2>
+                {refunded > 0 && <p className="mt-1 text-sm text-muted">Refunded so far: <span className="font-semibold text-fg">{zar(refunded)}</span> of {zar(t.total)}{remaining > 0 ? ` · ${zar(remaining)} remaining` : " · fully refunded"}.</p>}
+                {canRefund
+                  ? <div className="mt-3"><RefundForm id={o.id} maxRefundCents={remaining} paymentMethod={o.paymentMethod} /></div>
+                  : <p className="mt-1 text-sm text-muted">This order is fully refunded.</p>}
+              </div>
+            );
+          })()}
+
+          <div className="card p-5">
+            <h2 className="font-display text-lg">Emails for this order <span className="text-sm text-muted">({orderEmails.length})</span></h2>
+            {orderEmails.length === 0 ? (
+              <p className="mt-2 text-sm text-muted">No emails logged for this order yet. Every email about this order (confirmation, invoice, status changes, and messages you write below) is recorded here.</p>
+            ) : (
+              <div className="mt-3 overflow-hidden rounded-xl border border-line">
+                <table className="w-full text-sm">
+                  <tbody>
+                    {orderEmails.map((e) => (
+                      <tr key={e.id} className="border-b border-line last:border-0 hover:bg-surface">
+                        <td className="px-4 py-2.5 whitespace-nowrap text-xs text-muted">{when(e.createdAt)}</td>
+                        <td className="px-4 py-2.5">
+                          <Link href={`/admin/emails/${e.id}`} className="font-semibold text-volt hover:underline">{EMAIL_TYPE_LABELS[e.type] ?? e.type}</Link>
+                          {e.resend && <span className="ml-1.5 badge badge-muted">resend</span>}
+                          <div className="text-xs text-muted">{e.subject}</div>
+                          <div className="text-xs text-muted">To {e.toAddr}</div>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className={`badge ${e.status === "sent" ? "badge-pay" : e.status === "failed" ? "badge-sale" : "badge-muted"}`}>{e.status === "skipped" ? "not sent" : e.status}</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-right whitespace-nowrap"><Link href={`/admin/emails/${e.id}`} className="text-sm font-semibold text-volt hover:underline">View / resend →</Link></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {can(me.role, "emails.send") && (
+            <div className="card p-5">
+              <h2 className="font-display text-lg">Write an email to the customer</h2>
+              <p className="mt-1 text-sm text-muted">Send {o.customer.firstName} a message about this order. CC&apos;d to the shop and logged in this order&apos;s emails.</p>
+              <div className="mt-4 max-w-2xl">
+                <ComposeEmailForm
+                  initialTo={o.customer.email}
+                  initialSubject={`The Tyre Mall — about your order ${o.reference}`}
+                  initialMessage={`Hi ${o.customer.firstName},\n\nRegarding your order ${o.reference}: `}
+                  orderRef={o.reference}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-5">
-          <div className="card p-5">
-            <h2 className="font-display text-lg">Customer</h2>
-            <div className="mt-2 text-sm">
-              <div className="font-semibold text-fg">{o.customer.firstName} {o.customer.lastName}</div>
-              <div className="text-muted">{o.customer.email}</div>
-              <div className="text-muted">{o.customer.phone}</div>
+          <OrderCustomerEditor id={o.id} customer={o.customer} delivery={o.delivery} canEdit={canEdit} />
+          {canEdit && (
+            <div className="card p-5">
+              <h2 className="font-display text-lg">Add a note</h2>
+              <div className="mt-3"><OrderNoteForm id={o.id} /></div>
             </div>
-            <h3 className="mt-4 text-xs font-bold uppercase tracking-wide text-muted">{o.delivery.method === "fitment" ? "Fitment" : "Delivery"}</h3>
-            <div className="mt-1 text-sm text-fg">
-              {o.delivery.method === "fitment"
-                ? <>{o.delivery.fitmentStore ?? "Partner centre"}{o.delivery.fitmentDate ? ` · ${o.delivery.fitmentDate}` : ""}</>
-                : a ? <>{a.street}, {a.suburb}<br />{a.city}, {a.province} {a.postalCode}</> : "—"}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 card p-5">
-        <h2 className="font-display text-lg">Update status</h2>
-        <div className="mt-3"><OrderStatusForm id={o.id} current={o.status} /></div>
-      </div>
-
-      {(() => {
-        const refunded = o.refundedAmount ?? 0;
-        const remaining = t.total - refunded;
-        const canRefund = ["processing", "completed", "partially_refunded"].includes(o.status) && remaining > 0;
-        if (refunded === 0 && !canRefund) return null;
-        return (
-          <div className="mt-5 card p-5">
-            <h2 className="font-display text-lg">Refund</h2>
-            {refunded > 0 && <p className="mt-1 text-sm text-muted">Refunded so far: <span className="font-semibold text-fg">{zar(refunded)}</span> of {zar(t.total)}{remaining > 0 ? ` · ${zar(remaining)} remaining` : " · fully refunded"}.</p>}
-            {canRefund
-              ? <div className="mt-3"><RefundForm id={o.id} maxRefundCents={remaining} paymentMethod={o.paymentMethod} /></div>
-              : <p className="mt-1 text-sm text-muted">This order is fully refunded.</p>}
-          </div>
-        );
-      })()}
-
-      <div className="mt-5 card p-5">
-        <h2 className="font-display text-lg">Emails for this order</h2>
-        {orderEmails.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">No emails logged for this order yet. They&apos;re recorded here as the order&apos;s confirmation, status-change and other emails go out.</p>
-        ) : (
-          <div className="mt-3 overflow-hidden rounded-xl border border-line">
-            <table className="w-full text-sm">
-              <tbody>
-                {orderEmails.map((e) => (
-                  <tr key={e.id} className="border-b border-line last:border-0 hover:bg-surface">
-                    <td className="px-4 py-2.5 whitespace-nowrap text-xs text-muted">{new Date(e.createdAt).toLocaleString("en-ZA")}</td>
-                    <td className="px-4 py-2.5">
-                      <Link href={`/admin/emails/${e.id}`} className="font-semibold text-volt hover:underline">{EMAIL_TYPE_LABELS[e.type] ?? e.type}</Link>
-                      {e.resend && <span className="ml-1.5 badge badge-muted">resend</span>}
-                      <div className="text-xs text-muted">{e.toAddr}</div>
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <span className={`badge ${e.status === "sent" ? "badge-pay" : e.status === "failed" ? "badge-sale" : "badge-muted"}`}>{e.status === "skipped" ? "not sent" : e.status}</span>
-                    </td>
-                    <td className="px-4 py-2.5 text-right"><Link href={`/admin/emails/${e.id}`} className="text-sm font-semibold text-volt hover:underline">Open / resend →</Link></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-5 card p-5">
-        <h2 className="font-display text-lg">Email this customer</h2>
-        <p className="mt-1 text-sm text-muted">Send {o.customer.firstName} a message about this order. CC&apos;d to the shop and logged above.</p>
-        <div className="mt-4 max-w-2xl">
-          <ComposeEmailForm
-            initialTo={o.customer.email}
-            initialSubject={`The Tyre Mall — about your order ${o.reference}`}
-            initialMessage={`Hi ${o.customer.firstName},\n\nRegarding your order ${o.reference}: `}
-            orderRef={o.reference}
-          />
+          )}
+          <AuditHistory title="Order history" entries={history} empty={`Order placed ${when(o.createdAt)}. No changes yet.`} />
         </div>
       </div>
     </AdminShell>
   );
-}
-
-function Row({ k, v }: { k: string; v: string }) {
-  return <div className="flex justify-between"><dt className="text-muted">{k}</dt><dd>{v}</dd></div>;
 }

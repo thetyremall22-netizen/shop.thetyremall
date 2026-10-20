@@ -121,6 +121,9 @@ async function ensureTables() {
   await libsql.execute(`CREATE INDEX IF NOT EXISTS cart_recovery_status ON cart_recovery (status)`);
   await libsql.execute(`CREATE UNIQUE INDEX IF NOT EXISTS cart_recovery_token ON cart_recovery (token)`);
   await libsql.execute(`CREATE TABLE IF NOT EXISTS cart_recovery_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')`);
+  // When Cart Recovery first ran on this database: orders from before then are
+  // never picked up, so going live doesn't email existing customers.
+  await libsql.execute({ sql: "INSERT OR IGNORE INTO cart_recovery_meta (key, value) VALUES ('started_at', ?)", args: [String(Date.now())] });
   // One-time import of carts captured by the old single-email version.
   try {
     const n = await libsql.execute("SELECT COUNT(*) c FROM cart_recovery");
@@ -129,12 +132,14 @@ async function ensureTables() {
       const old = await libsql.execute("SELECT * FROM abandoned_carts").catch(() => ({ rows: [] as Record<string, unknown>[] }));
       for (const r of old.rows as Record<string, unknown>[]) {
         const items = safeJson<RecoveryItem[]>(String(r.items ?? "[]"), []);
-        const status: CartStatus = Number(r.recovered) ? "purchased" : r.emailed_at ? "contacted" : "abandoned";
+        // Carried across as HISTORY only: marked as fully emailed (3) and
+        // closed, so the new flow never emails anyone from the old system.
+        const status: CartStatus = Number(r.recovered) ? "purchased" : "lost";
         await libsql.execute({
           sql: `INSERT INTO cart_recovery (email, phone, items, signature, total, source, status, token, emails_sent, last_email_at, created_at, updated_at, last_activity_at)
                 VALUES (?,?,?,?,?,'checkout',?,?,?,?,?,?,?)`,
           args: [String(r.email), String(r.phone ?? ""), JSON.stringify(items), signature(items), Number(r.total) || 0, status, newToken(),
-            r.emailed_at ? 1 : 0, r.emailed_at ? Number(r.emailed_at) : null, Number(r.created_at) || Date.now(), Number(r.updated_at) || Date.now(), Number(r.updated_at) || Date.now()],
+            3, r.emailed_at ? Number(r.emailed_at) : null, Number(r.created_at) || Date.now(), Number(r.updated_at) || Date.now(), Number(r.updated_at) || Date.now()],
         });
       }
       await libsql.execute({ sql: "INSERT OR REPLACE INTO cart_recovery_meta (key, value) VALUES ('migrated_v1', ?)", args: [String(Date.now())] });
@@ -298,7 +303,8 @@ async function syncOrders(s: RecoverySettings): Promise<void> {
   if (s.captureFailed) want.push("failed");
   if (s.captureCancelled) want.push("cancelled");
   if (!want.length) return;
-  const since = Date.now() - 14 * 86400_000;
+  const started = await libsql.execute("SELECT value FROM cart_recovery_meta WHERE key = 'started_at'");
+  const since = Math.max(Date.now() - 14 * 86400_000, Number(started.rows[0]?.value) || Date.now());
   const r = await libsql.execute({
     sql: `SELECT o.* FROM orders o WHERE o.status IN (${want.map(() => "?").join(",")}) AND o.created_at > ? AND o.test = 0
           AND NOT EXISTS (SELECT 1 FROM cart_recovery c WHERE c.order_ref = o.reference)`,

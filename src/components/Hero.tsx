@@ -37,7 +37,7 @@ export function Hero({ image = "/brand/hero-bg.webp" }: { image?: string }) {
       {/* legibility gradient (dark on the left where the text sits) */}
       <div className="absolute inset-0 bg-[linear-gradient(90deg,#0a0b0d_0%,rgba(10,11,13,0.85)_26%,rgba(10,11,13,0.4)_52%,transparent_78%)]" />
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-ink to-transparent" />
-      {/* rain motion */}
+      {/* rain motion — desktop only (hidden under 768px in globals.css) */}
       <div className="rain" />
       <div className="rain slow" />
 

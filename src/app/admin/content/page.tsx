@@ -19,16 +19,20 @@ const TABS = [
 ];
 
 export default async function AdminContent({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  await requirePermission("content.edit");
+  const me = await requirePermission("content.edit");
+  // Landing pages are Super Admin only; Home page and Our story & team are
+  // open to everyone who can edit content.
+  const superAdmin = me.role === "super_admin";
   const sp = await searchParams;
-  const tab = TABS.some((t) => t.v === sp.tab) ? sp.tab! : "home";
+  const tabs = TABS.filter((t) => t.v !== "pages" || superAdmin);
+  const tab = tabs.some((t) => t.v === sp.tab) ? sp.tab! : "home";
 
   return (
     <AdminShell>
       <h1 className="font-display text-3xl">Website content</h1>
       <p className="mt-1 text-sm text-muted">Edit what customers see on the home page and the main landing pages. Product pages and the shop are managed in Products. Changes go live within a few seconds.</p>
       <div className="mt-4 flex flex-wrap gap-2">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <Link key={t.v} href={t.v === "home" ? "/admin/content" : `/admin/content?tab=${t.v}`}
             className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${tab === t.v ? "bg-volt text-volt-ink" : "border border-line text-muted hover:text-fg"}`}>
             {t.label}

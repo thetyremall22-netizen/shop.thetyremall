@@ -9,8 +9,9 @@ const image = (v: unknown) => { const s = str(v, 500); return s && (/^\/(api\/me
 
 /** Save one landing page's editable content. */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ key: string }> }) {
+  // Landing pages: Super Admin only (protects the existing page copy).
   const actor = await authorize("content.edit");
-  if (!actor) return NextResponse.json({ error: "You don't have permission to edit content." }, { status: 403 });
+  if (!actor || actor.role !== "super_admin") return NextResponse.json({ error: "Only a Super Admin can edit landing pages." }, { status: 403 });
   const { key } = await params;
   if (!PAGE_KEYS.includes(key)) return NextResponse.json({ error: "Unknown page." }, { status: 404 });
   let b: Record<string, unknown>;

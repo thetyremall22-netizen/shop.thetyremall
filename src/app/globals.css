@@ -356,6 +356,11 @@ body::before {
   .df-ember { display: none; }
 }
 
+/* No hero rain on phones and tablets. */
+@media (max-width: 767px) {
+  .rain { display: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .text-chrome { animation: none; background-position: 50% 0; }
   .rain { display: none; }

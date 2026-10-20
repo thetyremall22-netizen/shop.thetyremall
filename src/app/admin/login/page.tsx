@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { PasswordInput } from "@/components/admin/PasswordInput";
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -16,19 +17,30 @@ export default function AdminLogin() {
     e.preventDefault();
     setError(null);
     setBusy(true);
-    const res = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, website }),
-    });
-    if (res.ok) {
-      router.push("/admin");
-      router.refresh();
-    } else {
+    // Never leave the button stuck on "Signing in…": give up after 20s and
+    // show a clear message if the server can't be reached.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 20_000);
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password, website }),
+        signal: ctrl.signal,
+      });
+      if (res.ok) {
+        router.push("/admin");
+        router.refresh();
+        return;
+      }
       const d = await res.json().catch(() => ({}));
       setError(d.error ?? "Login failed.");
-      setBusy(false);
+    } catch {
+      setError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      clearTimeout(timer);
     }
+    setBusy(false);
   }
 
   return (
@@ -60,8 +72,7 @@ export default function AdminLogin() {
           className="mb-3 h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt"
         />
         <label className="mb-1.5 block text-xs font-semibold text-muted">Password</label>
-        <input
-          type="password"
+        <PasswordInput
           value={password}
           autoComplete="current-password"
           onChange={(e) => setPassword(e.target.value)}

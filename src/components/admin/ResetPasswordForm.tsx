@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PasswordInput } from "./PasswordInput";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -37,9 +38,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
   return (
     <form onSubmit={onSubmit}>
       <label className="mb-1.5 block text-xs font-semibold text-muted">New password (min 10 characters)</label>
-      <input type="password" value={password} autoFocus autoComplete="new-password" onChange={(e) => setPassword(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" />
+      <PasswordInput value={password} autoFocus autoComplete="new-password" onChange={(e) => setPassword(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" />
       <label className="mb-1.5 mt-3 block text-xs font-semibold text-muted">Confirm password</label>
-      <input type="password" value={confirm} autoComplete="new-password" onChange={(e) => setConfirm(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" />
+      <PasswordInput value={confirm} autoComplete="new-password" onChange={(e) => setConfirm(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" />
       {error && <div className="mt-3 rounded-lg border border-sale/40 bg-sale/10 p-2.5 text-sm font-semibold text-sale">{error}</div>}
       <button type="submit" disabled={busy} className="btn btn-volt mt-5 w-full py-3 disabled:opacity-60">{busy ? "Updating…" : "Set new password"}</button>
     </form>

@@ -3,10 +3,8 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { whatsappHref } from "@/lib/shop-config";
 import { validateContact, type ContactErrors } from "@/lib/validate";
+import { loadSavedContact, storeSavedContact } from "@/lib/saved-contact";
 import { WhatsApp } from "./icons";
-
-// Remembered on the customer's own device so a returning visitor doesn't retype.
-const SAVED_KEY = "ttm-contact";
 
 export interface WhatsAppLead {
   source: "whatsapp-enquiry" | "whatsapp-chat";
@@ -14,15 +12,6 @@ export interface WhatsAppLead {
   sku?: string;
   price?: number;
   productUrl?: string;
-}
-
-function loadSaved(): { name: string; email: string; phone: string } {
-  try {
-    const v = JSON.parse(localStorage.getItem(SAVED_KEY) || "{}");
-    return { name: v.name || "", email: v.email || "", phone: v.phone || "" };
-  } catch {
-    return { name: "", email: "", phone: "" };
-  }
 }
 
 /** Every WhatsApp hand-off goes through this: it requires a valid name, email
@@ -43,7 +32,7 @@ export function WhatsAppGate({
 
   useEffect(() => {
     if (!open) return;
-    const s = loadSaved();
+    const s = loadSavedContact();
     setName(s.name); setEmail(s.email); setPhone(s.phone); setErrors({});
   }, [open]);
 
@@ -65,7 +54,7 @@ export function WhatsAppGate({
       body: JSON.stringify({ ...lead, ...clean, message: fullMessage }),
       keepalive: true,
     }).catch(() => {});
-    try { localStorage.setItem(SAVED_KEY, JSON.stringify(clean)); } catch { /* private mode */ }
+    storeSavedContact(clean as { name: string; email: string; phone: string });
 
     const url = whatsappHref(fullMessage);
     const w = window.open(url, "_blank", "noopener,noreferrer");
@@ -95,7 +84,7 @@ export function WhatsAppGate({
   );
 }
 
-function GateField({
+export function GateField({
   label, value, onChange, error, type = "text", ...rest
 }: {
   label: string; value: string; onChange: (v: string) => void; error?: string; type?: string;

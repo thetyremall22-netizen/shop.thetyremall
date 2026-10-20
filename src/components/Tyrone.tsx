@@ -9,6 +9,9 @@ import { cleanVoiceQuery, correctBrands, detectTyreSize } from "@/lib/voice-sear
 import { parseSize, sizeToShopHref } from "@/lib/tyre-size";
 import { MicButton } from "./MicButton";
 import { WhatsAppPanel } from "./WhatsAppPanel";
+import { TyroneDetails } from "./TyroneDetails";
+import { loadSavedContact, type SavedContact } from "@/lib/saved-contact";
+import { validateContact } from "@/lib/validate";
 import { useCart } from "@/lib/cart";
 import type { VehicleRecord } from "./VehicleSizeChoice";
 
@@ -283,6 +286,13 @@ export function Tyrone() {
   const [mode, setMode] = useState<"wheels" | null>(null); // wheel-context after tapping "Mag wheels"
   const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", text: GREETING, buttons: MAIN_MENU }]);
   const [typing, setTyping] = useState(false);
+  // Name, email and mobile are required before chatting (TyroneDetails). A
+  // returning visitor's details are remembered on their device.
+  const [contact, setContact] = useState<SavedContact | null>(null);
+  useEffect(() => {
+    const s = loadSavedContact();
+    if (!Object.keys(validateContact(s, { name: true, email: true, phone: true }).errors).length) setContact(s);
+  }, []);
   // Vehicle flow state (persisted so a trip to /shop and back keeps the flow).
   const [veh, setVeh] = useState<Veh | null>(null);
   const makesRef = useRef<string[]>([]);
@@ -315,7 +325,7 @@ export function Tyrone() {
   // When a new bot message arrives (and the panel is open), type it out. The
   // greeting types on first open too. Honours reduced-motion by skipping it.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !contact) return;
     const idx = msgs.length - 1;
     if (idx < 0 || idx <= streamedRef.current) return;
     const m = msgs[idx];
@@ -323,7 +333,7 @@ export function Tyrone() {
     streamedRef.current = idx;
     const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (m.text && !reduce) setStream({ idx, n: 0 });
-  }, [msgs, open]);
+  }, [msgs, open, contact]);
 
   // Advance the typewriter a few characters at a time.
   useEffect(() => {
@@ -613,7 +623,7 @@ export function Tyrone() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: "tyrone",
-        message: t,
+        message: contact ? `${t}\nFrom: ${contact.name} · ${contact.phone} · ${contact.email}` : t,
         productSlug: firstProduct?.slug,
         productName: firstProduct?.name,
         price: firstProduct?.price,
@@ -689,7 +699,10 @@ export function Tyrone() {
             </button>
           </div>
 
+          {!contact && <TyroneDetails onDone={setContact} />}
+
           {/* messages */}
+          {contact && <>
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             {msgs.map((m, i) => (
               <div
@@ -798,6 +811,7 @@ export function Tyrone() {
           <div className="border-t border-line bg-ink px-3 pb-2 pt-1 text-center text-[10px] text-faint">
             Tyrone gives general help · for orders call 078 0088 788
           </div>
+          </>}
         </div>
       )}
 

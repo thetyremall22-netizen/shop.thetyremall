@@ -25,7 +25,9 @@ export async function POST(req: NextRequest) {
   let email = str(body.email);
   let phone = str(body.phone);
 
-  if (FORM_SOURCES.has(source)) {
+  // Tyrone's "before we chat" step sends structured details: same strict rules.
+  const tyroneStart = source === "tyrone" && !!(name || email || phone);
+  if (FORM_SOURCES.has(source) || tyroneStart) {
     const { errors, clean } = validateContact({ name, email, phone }, { name: true, email: true, phone: true });
     if (Object.keys(errors).length) {
       return NextResponse.json({ error: Object.values(errors)[0], errors }, { status: 400 });

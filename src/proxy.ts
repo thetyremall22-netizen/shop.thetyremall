@@ -53,17 +53,29 @@ export async function proxy(req: NextRequest) {
   // Admins preview the real site even while the gate is on.
   if (req.cookies.get(ADMIN_COOKIE)) return NextResponse.next();
 
-  if (maintenanceOn()) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/maintenance";
-    url.search = "";
-    return NextResponse.rewrite(url);
-  }
+  // Gate with a temporary REDIRECT, not a rewrite. When the server runs with
+  // HOSTNAME=127.0.0.1 behind an HTTPS proxy, Next treats a rewrite as an
+  // external URL and proxies it to itself over HTTPS, which fails with a 500.
+  // A same-host redirect is relativized to "/maintenance" and always works.
+  const on = maintenanceOn();
+  const onGatePage = req.nextUrl.pathname === "/maintenance";
+  if (on && !onGatePage) return redirectTo(req, "/maintenance");
+  // Gate switched off: send anyone still sitting on the gate page home.
+  if (!on && onGatePage) return redirectTo(req, "/");
   return NextResponse.next();
 }
 
-// Gate page routes only — never /api, /_next, /admin, the gate page itself,
-// or any path with a file extension (static assets).
+function redirectTo(req: NextRequest, pathname: string) {
+  const url = req.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = "";
+  const res = NextResponse.redirect(url, 307);
+  res.headers.set("cache-control", "no-store");
+  return res;
+}
+
+// Gate page routes only — never /api, /_next, /admin, or any path with a file
+// extension (static assets).
 export const config = {
-  matcher: ["/((?!api|_next|admin|maintenance|.*\\..*).*)"],
+  matcher: ["/((?!api|_next|admin|.*\\..*).*)"],
 };

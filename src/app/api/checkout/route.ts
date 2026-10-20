@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     const p = await getProduct(it.slug);
     if (!p) continue;
     lines.push({
-      id: p.id, slug: p.slug, name: p.name, brand: p.brand, price: p.price, type: p.type,
+      id: p.id, slug: p.slug, name: p.name, brand: p.brand, sku: p.sku || undefined, price: p.price, type: p.type,
       qty: Math.max(1, Math.min(99, Math.floor(it.qty || 1))),
       roadHazard: !!it.roadHazard, alignment: !!it.alignment,
       balanceQty: Math.max(0, Math.min(8, Math.floor(it.balanceQty ?? 0))),

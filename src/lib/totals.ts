@@ -15,6 +15,8 @@ export interface LineItem {
   slug: string;
   name: string;
   brand?: string;
+  /** Part number / SKU (saved at checkout; older orders are looked up by slug). */
+  sku?: string;
   price: number; // minor units (cents)
   type: "tyre" | "wheel" | "other";
   qty: number;

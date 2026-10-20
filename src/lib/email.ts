@@ -4,6 +4,7 @@ import type { Order } from "./orders";
 import { logEmail, type EmailType } from "./email-log";
 import { libsql } from "./db";
 import type { SiteSettings } from "./settings";
+import { getProduct } from "./catalogue";
 
 export const SHOP_EMAIL = process.env.SHOP_EMAIL ?? "shop@thetyremall.co.za";
 
@@ -242,11 +243,13 @@ function layout(title: string, bodyHtml: string): string {
   </table></body></html>`;
 }
 
-function itemsTable(o: Order): string {
+function itemsTable(o: Order, showSku = false): string {
   const rows = o.items
     .map(
       (i) => `<tr>
-        <td style="padding:8px 0;border-bottom:1px solid #eee">${i.name}${i.qty > 1 ? ` × ${i.qty}` : ""}</td>
+        <td style="padding:8px 0;border-bottom:1px solid #eee">${i.name}${i.qty > 1 ? ` × ${i.qty}` : ""}${
+          showSku ? `<br><span style="font-size:12px;color:#6b7280">Part no: <b style="color:${INK}">${i.sku ? escapeHtml(i.sku) : "—"}</b> · Qty ${i.qty}</span>` : ""
+        }</td>
         <td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;white-space:nowrap">${zar(i.price * i.qty)}</td>
       </tr>`
     )
@@ -280,8 +283,43 @@ function deliveryBlock(o: Order): string {
     : "";
 }
 
-function customerLine(o: Order): string {
-  return `<p style="font-size:14px"><b>${o.customer.firstName} ${o.customer.lastName}</b><br>${o.customer.email} · ${o.customer.phone}</p>`;
+/** Everything the shop needs to action an order, at the top of every shop
+ *  notification: customer details, delivery address / fitment, and payment. */
+function shopDetails(o: Order): string {
+  const c = o.customer;
+  const row = (k: string, v: string) =>
+    `<tr><td style="padding:4px 12px 4px 0;color:#6b7280;white-space:nowrap;vertical-align:top">${k}</td><td style="padding:4px 0">${v}</td></tr>`;
+  const a = o.delivery.address;
+  const where = o.delivery.method === "fitment"
+    ? row("Fitment", `${escapeHtml(o.delivery.fitmentStore ?? "Partner centre")}${o.delivery.fitmentDate ? ` on ${escapeHtml(o.delivery.fitmentDate)}` : ""}`)
+    : row("Delivery address", a
+        ? [a.street, a.suburb, a.city, a.province, a.postalCode].filter(Boolean).map(escapeHtml).join("<br>")
+        : "<i>No address captured</i>");
+  return `<h3 style="margin:8px 0 4px;font-size:15px">Customer details</h3>
+    <table role="presentation" style="border-collapse:collapse;font-size:14px">
+      ${row("Name", `<b>${escapeHtml(`${c.firstName} ${c.lastName}`.trim())}</b>`)}
+      ${row("Email", `<a href="mailto:${escapeHtml(c.email)}" style="color:${INK}">${escapeHtml(c.email)}</a>`)}
+      ${row("Phone", c.phone ? `<a href="tel:${escapeHtml(c.phone.replace(/\s+/g, ""))}" style="color:${INK}">${escapeHtml(c.phone)}</a>` : "—")}
+      ${row("Order", `<b>${escapeHtml(o.reference)}</b> · ${escapeHtml(o.status)}`)}
+      ${where}
+      ${row("Payment", `${escapeHtml(o.paymentMethod)}${o.pfPaymentId ? ` · PF ${escapeHtml(o.pfPaymentId)}` : ""}`)}
+    </table>
+    <h3 style="margin:18px 0 0;font-size:15px">Items</h3>`;
+}
+
+/** Fill in part numbers for orders placed before SKUs were saved on the order. */
+async function withSkus(o: Order): Promise<Order> {
+  if (o.items.every((i) => i.sku)) return o;
+  const items = await Promise.all(o.items.map(async (i) => {
+    if (i.sku) return i;
+    try { return { ...i, sku: (await getProduct(i.slug))?.sku || undefined }; } catch { return i; }
+  }));
+  return { ...o, items };
+}
+
+/** The shop's copy of any order email. */
+function shopOrder(o: Order, title: string): string {
+  return layout(title, `${shopDetails(o)}${itemsTable(o, true)}`);
 }
 
 // ---- templates --------------------------------------------------------------
@@ -301,11 +339,7 @@ function tProcessingCustomer(o: Order): Tmpl {
 function tNewOrderAdmin(o: Order): Tmpl {
   return {
     subject: `New order ${o.reference} — ${zar(o.totals.total)}`,
-    html: layout(
-      `New paid order ${o.reference}`,
-      `${customerLine(o)}${itemsTable(o)}${deliveryBlock(o)}
-       <p style="font-size:13px;color:#6b7280">Payment: ${o.paymentMethod}${o.pfPaymentId ? ` · PF ${o.pfPaymentId}` : ""}</p>`
-    ),
+    html: shopOrder(o, `New paid order ${o.reference}`),
   };
 }
 function tFailedCustomer(o: Order): Tmpl {
@@ -319,7 +353,7 @@ function tFailedCustomer(o: Order): Tmpl {
   };
 }
 function tFailedAdmin(o: Order): Tmpl {
-  return { subject: `Failed order ${o.reference}`, html: layout(`Failed order ${o.reference}`, `${customerLine(o)}${itemsTable(o)}`) };
+  return { subject: `Failed order ${o.reference}`, html: shopOrder(o, `Failed order ${o.reference}`) };
 }
 function tCancelledCustomer(o: Order): Tmpl {
   return {
@@ -328,7 +362,7 @@ function tCancelledCustomer(o: Order): Tmpl {
   };
 }
 function tCancelledAdmin(o: Order): Tmpl {
-  return { subject: `Cancelled order ${o.reference}`, html: layout(`Cancelled order ${o.reference}`, `${customerLine(o)}${itemsTable(o)}`) };
+  return { subject: `Cancelled order ${o.reference}`, html: shopOrder(o, `Cancelled order ${o.reference}`) };
 }
 function tRefundedCustomer(o: Order): Tmpl {
   return {
@@ -350,7 +384,8 @@ function tOnHoldCustomer(o: Order): Tmpl {
 }
 
 // ---- high-level senders tied to order lifecycle -----------------------------
-export async function sendOrderPaid(o: Order): Promise<void> {
+export async function sendOrderPaid(order: Order): Promise<void> {
+  const o = await withSkus(order);
   const cust = tProcessingCustomer(o);
   const admin = tNewOrderAdmin(o);
   await Promise.all([
@@ -358,7 +393,8 @@ export async function sendOrderPaid(o: Order): Promise<void> {
     sendMail(SHOP_EMAIL, admin.subject, admin.html, { type: "order_new_admin", orderRef: o.reference }),
   ]);
 }
-export async function sendOrderFailed(o: Order): Promise<void> {
+export async function sendOrderFailed(order: Order): Promise<void> {
+  const o = await withSkus(order);
   const c = tFailedCustomer(o);
   const a = tFailedAdmin(o);
   await Promise.all([
@@ -366,7 +402,8 @@ export async function sendOrderFailed(o: Order): Promise<void> {
     sendMail(SHOP_EMAIL, a.subject, a.html, { type: "order_failed_admin", orderRef: o.reference }),
   ]);
 }
-export async function sendOrderCancelled(o: Order): Promise<void> {
+export async function sendOrderCancelled(order: Order): Promise<void> {
+  const o = await withSkus(order);
   const c = tCancelledCustomer(o);
   const a = tCancelledAdmin(o);
   await Promise.all([
@@ -374,24 +411,27 @@ export async function sendOrderCancelled(o: Order): Promise<void> {
     sendMail(SHOP_EMAIL, a.subject, a.html, { type: "order_cancelled_admin", orderRef: o.reference }),
   ]);
 }
-export async function sendOrderRefunded(o: Order): Promise<void> {
+export async function sendOrderRefunded(order: Order): Promise<void> {
+  const o = await withSkus(order);
   const c = tRefundedCustomer(o);
   await Promise.all([
     sendMail(o.customer.email, c.subject, c.html, { type: "order_refunded", orderRef: o.reference }),
-    sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, c.html, { type: "order_refunded", orderRef: o.reference }),
+    sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, shopOrder(o, `Order ${o.reference} refunded`), { type: "order_refunded", orderRef: o.reference }),
   ]);
 }
-export async function sendOrderCompleted(o: Order): Promise<void> {
+export async function sendOrderCompleted(order: Order): Promise<void> {
+  const o = await withSkus(order);
   const c = tCompletedCustomer(o);
   await Promise.all([
     sendMail(o.customer.email, c.subject, c.html, { type: "order_completed", orderRef: o.reference }),
-    sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, c.html, { type: "order_completed", orderRef: o.reference }),
+    sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, shopOrder(o, `Order ${o.reference} completed`), { type: "order_completed", orderRef: o.reference }),
   ]);
 }
-export async function sendOrderOnHold(o: Order): Promise<void> {
+export async function sendOrderOnHold(order: Order): Promise<void> {
+  const o = await withSkus(order);
   const c = tOnHoldCustomer(o);
   await Promise.all([
     sendMail(o.customer.email, c.subject, c.html, { type: "order_on_hold", orderRef: o.reference }),
-    sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, c.html, { type: "order_on_hold", orderRef: o.reference }),
+    sendMail(SHOP_EMAIL, `[Order ${o.reference}] ${c.subject}`, shopOrder(o, `Order ${o.reference} on hold`), { type: "order_on_hold", orderRef: o.reference }),
   ]);
 }

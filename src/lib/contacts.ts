@@ -39,29 +39,30 @@ async function ensureTable() {
   )`);
   // Add the product-context columns to tables created before they existed.
   // SQLite has no "ADD COLUMN IF NOT EXISTS", so just ignore the duplicate error.
-  for (const col of ["product_name TEXT", "sku TEXT", "product_url TEXT"]) {
+  for (const col of ["product_name TEXT", "sku TEXT", "product_url TEXT", "notes TEXT", "updated_at INTEGER"]) {
     try { await libsql.execute(`ALTER TABLE contacts ADD COLUMN ${col}`); } catch { /* column already exists */ }
   }
   ensured = true;
 }
 
-/** Store a captured lead. De-dupes only exact repeats (same contact + same
- *  source + same product within 24h) so different forms / different products
- *  are always kept. Never throws. */
-export async function saveLead(l: Lead): Promise<boolean> {
-  if (!l.email && !l.phone) return false;
+/** Store a captured lead and return its id (null if not saved). Drops only an
+ *  accidental double-submit (same source + contact + product + message within
+ *  10 minutes), so every genuine enquiry is kept. Never throws. */
+export async function saveLead(l: Lead): Promise<number | null> {
+  if (!l.email && !l.phone) return null;
   try {
     await ensureTable();
-    const dayAgo = Date.now() - 24 * 3600 * 1000;
+    const since = Date.now() - 10 * 60 * 1000;
     const dup = await libsql.execute({
       sql: `SELECT id FROM contacts
             WHERE created_at > ? AND source = ?
               AND ((email IS NOT NULL AND email = ?) OR (phone IS NOT NULL AND phone = ?))
-              AND IFNULL(product_name,'') = IFNULL(?,'') LIMIT 1`,
-      args: [dayAgo, l.source, l.email ?? "", l.phone ?? "", l.productName ?? null],
+              AND IFNULL(product_name,'') = IFNULL(?,'')
+              AND IFNULL(message,'') = IFNULL(?,'') LIMIT 1`,
+      args: [since, l.source, l.email ?? "", l.phone ?? "", l.productName ?? null, l.message ?? null],
     });
-    if (dup.rows.length) return false;
-    await libsql.execute({
+    if (dup.rows.length) return null;
+    const res = await libsql.execute({
       sql: `INSERT INTO contacts (email, phone, name, source, message, product_name, sku, product_url, created_at)
             VALUES (?,?,?,?,?,?,?,?,?)`,
       args: [
@@ -69,23 +70,62 @@ export async function saveLead(l: Lead): Promise<boolean> {
         l.productName ?? null, l.sku ?? null, l.productUrl ?? null, Date.now(),
       ],
     });
-    return true;
+    return Number(res.lastInsertRowid) || null;
   } catch (err) {
     console.error("[contacts] save failed", err);
-    return false;
+    return null;
   }
 }
 
-/** Recent leads for the admin view, optionally filtered to one source (tab). */
-export async function listLeads(opts: { limit?: number; source?: string } = {}): Promise<Record<string, unknown>[]> {
+/** Recent leads for the admin view, optionally filtered to one source (tab)
+ *  and/or a search term (name, email, phone, product, SKU, message, notes). */
+export async function listLeads(opts: { limit?: number; source?: string; q?: string } = {}): Promise<Record<string, unknown>[]> {
   const limit = opts.limit ?? 200;
   try {
     await ensureTable();
-    const res = opts.source
-      ? await libsql.execute({ sql: `SELECT * FROM contacts WHERE source = ? ORDER BY id DESC LIMIT ?`, args: [opts.source, limit] })
-      : await libsql.execute({ sql: `SELECT * FROM contacts ORDER BY id DESC LIMIT ?`, args: [limit] });
+    const where: string[] = [];
+    const args: (string | number)[] = [];
+    if (opts.source) { where.push("source = ?"); args.push(opts.source); }
+    const q = opts.q?.trim();
+    if (q) {
+      const like = `%${q.toLowerCase()}%`;
+      const digits = q.replace(/\D/g, "");
+      const cols = ["name", "email", "phone", "product_name", "sku", "message", "notes", "source"];
+      const parts = cols.map((c) => `LOWER(IFNULL(${c},'')) LIKE ?`);
+      args.push(...cols.map(() => like));
+      // "082 123 4567" should find "+27821234567": match on the last 9 digits too.
+      if (digits.length >= 6) { parts.push(`REPLACE(IFNULL(phone,''),' ','') LIKE ?`); args.push(`%${digits.slice(-9)}%`); }
+      where.push(`(${parts.join(" OR ")})`);
+    }
+    args.push(limit);
+    const res = await libsql.execute({
+      sql: `SELECT * FROM contacts ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY id DESC LIMIT ?`,
+      args,
+    });
     return res.rows as unknown as Record<string, unknown>[];
   } catch { return []; }
+}
+
+export const LEAD_EDITABLE = ["name", "email", "phone", "message", "product_name", "sku", "product_url", "notes"] as const;
+export type LeadField = (typeof LEAD_EDITABLE)[number];
+
+/** Edit a lead's fields; returns the row before and after the change. */
+export async function updateLead(id: number, patch: Partial<Record<LeadField, string | null>>): Promise<{ before: Record<string, unknown>; after: Record<string, unknown> } | null> {
+  await ensureTable();
+  const before = await getLead(id);
+  if (!before) return null;
+  const sets: string[] = [];
+  const args: (string | number | null)[] = [];
+  for (const k of LEAD_EDITABLE) {
+    if (k in patch) { sets.push(`${k} = ?`); args.push(patch[k] ?? null); }
+  }
+  if (sets.length) {
+    sets.push("updated_at = ?"); args.push(Date.now());
+    args.push(id);
+    await libsql.execute({ sql: `UPDATE contacts SET ${sets.join(", ")} WHERE id = ?`, args });
+  }
+  const after = (await getLead(id)) ?? before;
+  return { before, after };
 }
 
 /** Count of leads per source, for the admin tab badges. */

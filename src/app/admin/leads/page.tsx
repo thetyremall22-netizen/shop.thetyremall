@@ -5,6 +5,7 @@ import { listLeads, leadCounts } from "@/lib/contacts";
 import { listEnquiries } from "@/lib/enquiries";
 import { listAbandoned } from "@/lib/abandoned";
 import { formatPrice } from "@/lib/format";
+import { AdminSearch } from "@/components/admin/AdminSearch";
 
 export const instant = false;
 
@@ -15,48 +16,80 @@ const when = (ms: unknown) => {
 function str(v: unknown): string { return v == null ? "" : String(v); }
 function truncate(s: string, n: number): string { return s.length > n ? s.slice(0, n) + "…" : s; }
 
-// One tab per website form (matched on the lead's `source`), plus abandoned
-// carts and call taps.
+// One tab per website form (matched on the lead's `source`), then each kind of
+// activity on its own tab: Tyrone questions, older WhatsApp taps, call taps and
+// abandoned carts.
 const SOURCE_TABS = [
   { v: "contact", label: "Contact form" },
   { v: "whatsapp-quote", label: "WhatsApp quote" },
-  { v: "whatsapp-enquiry", label: "Product enquiry" },
+  { v: "whatsapp-enquiry", label: "Product enquiry (WhatsApp)" },
   { v: "whatsapp-chat", label: "WhatsApp chat" },
   { v: "tyrone", label: "Tyrone chat" },
 ] as const;
-type TabV = (typeof SOURCE_TABS)[number]["v"] | "carts" | "calls" | "questions";
+type TabV = (typeof SOURCE_TABS)[number]["v"] | "tyrone-questions" | "wa-taps" | "calls" | "carts";
 const isSourceTab = (t: string): boolean => SOURCE_TABS.some((s) => s.v === t);
+
+/** Case-insensitive match of a search term against any field of a row. */
+function rowMatches(row: Record<string, unknown>, q: string): boolean {
+  if (!q) return true;
+  const needle = q.toLowerCase();
+  const digits = q.replace(/\D/g, "");
+  return Object.values(row).some((v) => {
+    const s = v == null ? "" : String(v).toLowerCase();
+    return s.includes(needle) || (digits.length >= 6 && s.replace(/\D/g, "").includes(digits.slice(-9)));
+  });
+}
 
 export default async function AdminLeadsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   await requireAdmin();
   const sp = await searchParams;
-  const valid: string[] = [...SOURCE_TABS.map((t) => t.v), "carts", "calls", "questions"];
+  const valid: string[] = [...SOURCE_TABS.map((t) => t.v), "tyrone-questions", "wa-taps", "calls", "carts"];
   const tab: TabV = valid.includes(sp.tab ?? "") ? (sp.tab as TabV) : "contact";
+  const q = (sp.q ?? "").trim();
 
-  const [counts, carts, calls] = await Promise.all([leadCounts(), listAbandoned(200), listEnquiries(200)]);
-  const callRows = calls.filter((e) => str(e.type) === "call");
-  // Tyrone questions and WhatsApp taps from before the "Before we chat" step:
-  // no contact details, but kept visible so nothing is lost.
-  const questionRows = calls.filter((e) => str(e.type) !== "call");
-  const leadRows = isSourceTab(tab) ? await listLeads({ source: tab, limit: 300 }) : [];
+  const [counts, cartsAll, enquiries] = await Promise.all([leadCounts(), listAbandoned(500), listEnquiries(1000)]);
+  const byType = (t: string) => enquiries.filter((e) => str(e.type) === t);
+  // Each kind of activity on its own tab.
+  const questionRows = byType("tyrone").filter((r) => rowMatches(r, q));
+  const waTapRows = byType("whatsapp").filter((r) => rowMatches(r, q));
+  const callRows = byType("call").filter((r) => rowMatches(r, q));
+  const carts = cartsAll.filter((r) => rowMatches(r, q));
+  const leadRows = isSourceTab(tab) ? await listLeads({ source: tab, limit: 500, q }) : [];
+  // While searching, show how many matches each tab has.
+  const leadMatchCounts: Record<string, number> = {};
+  if (q) {
+    const all = await listLeads({ limit: 5000, q });
+    for (const l of all) leadMatchCounts[str(l.source)] = (leadMatchCounts[str(l.source)] ?? 0) + 1;
+  }
 
   const tabs: { v: TabV; label: string; count: number }[] = [
-    ...SOURCE_TABS.map((t) => ({ v: t.v as TabV, label: t.label, count: counts[t.v] ?? 0 })),
-    { v: "carts", label: "Abandoned carts", count: carts.length },
+    ...SOURCE_TABS.map((t) => ({ v: t.v as TabV, label: t.label, count: q ? leadMatchCounts[t.v] ?? 0 : counts[t.v] ?? 0 })),
+    { v: "tyrone-questions", label: "Tyrone questions", count: questionRows.length },
+    { v: "wa-taps", label: "WhatsApp taps (before details step)", count: waTapRows.length },
     { v: "calls", label: "Call taps", count: callRows.length },
-    { v: "questions", label: "Chat questions & older taps", count: questionRows.length },
+    { v: "carts", label: "Abandoned carts", count: carts.length },
   ];
+  const tabHref = (v: TabV) => {
+    const p = new URLSearchParams();
+    if (v !== "contact") p.set("tab", v);
+    if (q) p.set("q", q);
+    const s = p.toString();
+    return s ? `/admin/leads?${s}` : "/admin/leads";
+  };
 
   return (
     <AdminShell>
       <h1 className="font-display text-3xl">Leads &amp; Enquiries</h1>
-      <p className="mt-1 text-sm text-muted">Every website form lands here under its own tab, plus call taps and abandoned checkouts. Follow these up.</p>
+      <p className="mt-1 text-sm text-muted">Every website form lands here under its own tab, plus Tyrone questions, call taps and abandoned checkouts. Open any lead to see or edit all its details.</p>
+
+      <AdminSearch className="mt-4 max-w-xl" placeholder="Search name, email, phone, product, SKU, message…" />
+      {q && <p className="mt-2 text-xs text-muted">Showing matches for “{q}”. Tab numbers show how many matches each tab has.</p>}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {tabs.map((t) => {
           const active = tab === t.v;
           return (
-            <Link key={t.v} href={t.v === "contact" ? "/admin/leads" : `/admin/leads?tab=${t.v}`}
+            <Link key={t.v} href={tabHref(t.v)}
               className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${active ? "bg-volt text-volt-ink" : "border border-line text-muted hover:text-fg"}`}>
               {t.label} <span className={active ? "opacity-80" : "opacity-70"}>({t.count})</span>
             </Link>
@@ -66,7 +99,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
 
       {isSourceTab(tab) && (
         <Table
-          empty="Nothing captured here yet."
+          empty={q ? "No matches on this tab." : "Nothing captured here yet."}
           head={["When", "Name", "Phone", "Email", "Product", "Message"]}
           rows={leadRows.map((l) => ({
             href: `/admin/leads/contact/${l.id}`,
@@ -92,18 +125,34 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
         />
       )}
 
-      {tab === "questions" && (
+      {tab === "tyrone-questions" && (
         <Table
-          empty="No chat questions yet."
-          head={["When", "Type", "Product", "Message"]}
+          empty={q ? "No matches." : "No Tyrone questions yet."}
+          head={["When", "Question", "Product shown"]}
           rows={questionRows.map((e) => ({
             href: `/admin/leads/enquiry/${e.id}`,
-            cells: [when(e.created_at), str(e.type), str(e.product_name) || "—", truncate(str(e.message), 70)],
+            cells: [when(e.created_at), truncate(str(e.message), 90), str(e.product_name) || "—"],
           }))}
         />
       )}
 
+      {tab === "wa-taps" && (
+        <>
+          <p className="mt-4 text-sm text-muted">Taps on a WhatsApp button from before the “Before we chat” details step was added, so no contact details were captured. Check the business WhatsApp for these chats.</p>
+          <Table
+            empty={q ? "No matches." : "None."}
+            head={["When", "Product", "Message"]}
+            rows={waTapRows.map((e) => ({
+              href: `/admin/leads/enquiry/${e.id}`,
+              cells: [when(e.created_at), str(e.product_name) || "—", truncate(str(e.message), 70)],
+            }))}
+          />
+        </>
+      )}
+
       {tab === "calls" && (
+        <>
+        <p className="mt-4 text-sm text-muted">Each row is someone tapping a phone number on the website to call a store. The caller isn&apos;t identified; this shows which stores and products get calls.</p>
         <Table
           empty="No call taps yet."
           head={["When", "Store", "Product"]}
@@ -112,6 +161,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
             cells: [when(e.created_at), str(e.store_name) || "—", str(e.product_name) || "—"],
           }))}
         />
+        </>
       )}
     </AdminShell>
   );

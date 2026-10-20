@@ -14,6 +14,7 @@ export type EmailType =
   | "order_on_hold"
   | "abandoned_cart"
   | "enquiry"
+  | "lead_confirmation"
   | "custom";
 
 export type EmailStatus = "sent" | "failed" | "skipped";
@@ -157,5 +158,6 @@ export const EMAIL_TYPE_LABELS: Record<string, string> = {
   order_on_hold: "Order on hold",
   abandoned_cart: "Abandoned cart",
   enquiry: "Enquiry (shop)",
+  lead_confirmation: "Enquiry received (customer)",
   custom: "Custom",
 };

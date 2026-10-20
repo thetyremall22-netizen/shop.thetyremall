@@ -209,7 +209,7 @@ export type Perm =
   | "products.view" | "products.edit" | "products.bulk" | "products.import" | "products.delete"
   | "orders.view" | "orders.edit"
   | "emails.view" | "emails.send"
-  | "leads.view" | "leads.reply"
+  | "leads.view" | "leads.reply" | "leads.edit"
   | "content.view" | "content.edit"
   | "settings.manage" | "users.manage" | "deals.manage";
 
@@ -218,7 +218,7 @@ const ROLE_PERMS: Record<Role, Perm[] | "*"> = {
   manager: [
     "products.view", "products.edit", "products.bulk", "products.import",
     "orders.view", "orders.edit", "emails.view", "emails.send",
-    "leads.view", "leads.reply", "content.view", "content.edit", "deals.manage",
+    "leads.view", "leads.reply", "leads.edit", "content.view", "content.edit", "deals.manage",
   ],
   editor: ["products.view", "products.edit", "content.view", "content.edit", "leads.view"],
   viewer: ["products.view", "orders.view", "emails.view", "leads.view", "content.view"],

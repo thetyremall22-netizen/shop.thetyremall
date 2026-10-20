@@ -50,12 +50,12 @@ export async function POST(req: NextRequest) {
   const productUrl = str(body.productUrl);
   const price = typeof body.price === "number" ? body.price : undefined;
 
-  const saved = await saveLead({ email, phone, name, source, message, productName, sku, productUrl });
+  const leadId = await saveLead({ email, phone, name, source, message, productName, sku, productUrl });
 
-  if (saved) {
-    sendLeadEmail({ source, name, email, phone, productName, sku, price, productUrl, message })
+  if (leadId) {
+    sendLeadEmail({ source, name, email, phone, productName, sku, price, productUrl, message, leadId })
       .catch((e) => console.error("[lead] email failed", e));
   }
 
-  return NextResponse.json({ ok: true, captured: saved });
+  return NextResponse.json({ ok: true, captured: !!leadId });
 }

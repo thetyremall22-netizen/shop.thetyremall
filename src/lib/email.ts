@@ -189,6 +189,8 @@ const LEAD_SOURCE_LABEL: Record<string, string> = {
 export async function sendLeadEmail(l: {
   source: string; name?: string; email?: string; phone?: string;
   productName?: string; sku?: string; price?: number; productUrl?: string; message?: string;
+  /** Admin → Leads id, for a direct "open this lead" link. */
+  leadId?: number | null;
 }): Promise<void> {
   const label = LEAD_SOURCE_LABEL[l.source] ?? l.source;
   const row = (k: string, v: string) =>
@@ -203,17 +205,59 @@ export async function sendLeadEmail(l: {
   if (l.productUrl) rows.push(row("Link", `<a href="${escapeHtml(l.productUrl)}">${escapeHtml(l.productUrl)}</a>`));
   if (l.message) rows.push(row("Message", escapeHtml(l.message).replace(/\n/g, "<br>")));
   const who = l.name || l.phone || l.email || "website";
-  await sendMail(
+  const adminLink = l.leadId
+    ? `<p style="margin:18px 0 0"><a href="${SITE_URL}/admin/leads/contact/${l.leadId}" style="display:inline-block;background:${BRAND};color:${INK};font-weight:800;text-decoration:none;padding:10px 18px;border-radius:10px">Open this lead in Admin →</a></p>`
+    : "";
+  const table = `<table role="presentation" style="font-size:14px;border-collapse:collapse">${rows.join("")}</table>`;
+  const shop = sendMail(
     SHOP_EMAIL,
     `New lead — ${label} — ${who}`,
     layout(
       label,
       `<p style="margin:0 0 14px;font-size:14px">A customer submitted a <b>${label.toLowerCase()}</b> on the website. Please follow up so it doesn't drop off:</p>
-       <table role="presentation" style="font-size:14px;border-collapse:collapse">${rows.join("")}</table>`
+       ${table}${adminLink}`
     ),
     { type: "enquiry" }
   );
+
+  // A copy for the customer too, so they have a record of what they sent and
+  // how to reach us (e.g. if WhatsApp drops).
+  const customer = l.email
+    ? sendMail(
+        l.email,
+        LEAD_CONFIRM_SUBJECT[l.source] ?? "We've received your enquiry — The Tyre Mall",
+        layout(
+          `Thanks${l.name ? ` ${escapeHtml(l.name.split(" ")[0])}` : ""} — we've got your details`,
+          `<p style="margin:0 0 14px;font-size:14px">${LEAD_CONFIRM_INTRO[l.source] ?? "We've received your enquiry and a member of our team will be in touch shortly."}</p>
+           <p style="margin:0 0 6px;font-size:13px;color:#6b7280">Here's a copy of what you sent us:</p>
+           ${table}
+           <p style="margin:18px 0 0;font-size:14px">Need us sooner? Call or WhatsApp <a href="tel:0780088788" style="color:${INK};font-weight:700">078 0088 788</a> (Mon–Fri 8:00–17:00, Sat 8:00–13:00) or reply to this email.</p>`
+        ),
+        { type: "lead_confirmation", noCc: true }
+      )
+    : Promise.resolve();
+
+  // Only the shop copy is critical; a customer-copy failure is logged (Admin →
+  // Emails) but doesn't fail the form.
+  const [shopRes, custRes] = await Promise.allSettled([shop, customer]);
+  if (custRes.status === "rejected") console.error("[lead] customer copy failed", custRes.reason);
+  if (shopRes.status === "rejected") throw shopRes.reason;
 }
+
+const LEAD_CONFIRM_SUBJECT: Record<string, string> = {
+  "contact": "We've received your message — The Tyre Mall",
+  "whatsapp-quote": "We've received your quote request — The Tyre Mall",
+  "whatsapp-enquiry": "Your tyre enquiry — The Tyre Mall",
+  "whatsapp-chat": "Thanks for contacting The Tyre Mall",
+  "tyrone": "Thanks for chatting with Tyrone — The Tyre Mall",
+};
+const LEAD_CONFIRM_INTRO: Record<string, string> = {
+  "contact": "Thanks for contacting The Tyre Mall. We've received your message and will get back to you within one business day.",
+  "whatsapp-quote": "Thanks for your quote request. Our team is putting your quote together and will contact you shortly.",
+  "whatsapp-enquiry": "Thanks for your enquiry on WhatsApp. If the chat drops or we lose signal, we'll contact you on the details below.",
+  "whatsapp-chat": "Thanks for reaching out on WhatsApp. If the chat drops or we lose signal, we'll contact you on the details below.",
+  "tyrone": "Thanks for chatting with Tyrone, our tyre assistant. If you'd like a person to help, our team can contact you on the details below.",
+};
 
 // ---- formatting helpers -----------------------------------------------------
 const zar = (minor: number) =>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { categoryPath } from "@/lib/shop-url";
 import Image from "next/image";
 import { Logo } from "./Logo";
 import { Truck, Shield, Bolt, Phone, Pin } from "./icons";
@@ -52,7 +53,7 @@ export async function Footer() {
           <ul className="space-y-2 text-sm text-muted">
             {NAV_PRIMARY.slice(0, 6).map((c) => (
               <li key={c.slug}>
-                <Link href={`/shop?category=${c.slug}`} className="hover:text-volt">{c.label} Tyres</Link>
+                <Link href={categoryPath(c.slug)} className="hover:text-volt">{c.label} Tyres</Link>
               </li>
             ))}
             <li><Link href="/shop?type=wheel" className="hover:text-volt">Mag Wheels</Link></li>

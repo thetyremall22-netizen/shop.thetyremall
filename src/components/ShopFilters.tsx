@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { shopHref } from "@/lib/shop-url";
 import { useCallback, useState } from "react";
 import { Close, Filter, ChevronDown } from "./icons";
 import type { Category } from "@/lib/types";
@@ -77,7 +78,7 @@ function FilterBody({
       // Apply the filter, then bring the page back to the top so the results
       // (and the banner/heading) always start from the top — never left
       // scrolled down past the end of a short result set.
-      router.push(`/shop?${next.toString()}`, { scroll: false });
+      router.push(shopHref(next), { scroll: false });
       if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
       onNavigate?.();
     },

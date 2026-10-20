@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { shopHref } from "@/lib/shop-url";
 import { Close } from "./icons";
 import type { Category } from "@/lib/types";
 
@@ -38,7 +39,7 @@ export function ActiveFilterChips({ search, categories }: { search: string; cate
     const next = new URLSearchParams(search);
     next.delete(key);
     next.delete("page");
-    router.push(next.toString() ? `/shop?${next.toString()}` : "/shop", { scroll: false });
+    router.push(shopHref(next), { scroll: false });
   };
 
   return (

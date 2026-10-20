@@ -38,6 +38,11 @@ const nextConfig: NextConfig = {
       "./node_modules/file-uri-to-path/**",
     ],
   },
+  // Old WooCommerce category links (e.g. /product-category/mag-wheel/ in
+  // Google Ads) end in "/". Serve them directly instead of 308-redirecting to
+  // the no-slash URL. This only changes the build's routes-manifest (inside
+  // .next); every page sets a canonical URL, so search engines see one address.
+  skipTrailingSlashRedirect: true,
   images: {
     // Product images are pre-sized local webp — serve them directly instead of
     // through Vercel's image optimizer so we don't hit the Hobby transform cap.

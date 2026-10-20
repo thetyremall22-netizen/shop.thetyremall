@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { categoryPath } from "@/lib/shop-url";
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { MegaSearch } from "./MegaSearch";
@@ -83,7 +84,7 @@ export function Header() {
                       {NAV_PRIMARY.filter((c) => c.slug !== "wheel-rims").map((c) => (
                         <Link
                           key={c.slug}
-                          href={`/shop?category=${c.slug}`}
+                          href={categoryPath(c.slug)}
                           className="block px-4 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface hover:text-volt"
                         >
                           {c.label} Tyres
@@ -171,7 +172,7 @@ export function Header() {
               <div className="mt-3 border-t border-line pt-3">
                 <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted">Shop by category</div>
                 {NAV_PRIMARY.filter((c) => c.slug !== "wheel-rims").map((c) => (
-                  <Link key={c.slug} href={`/shop?category=${c.slug}`} onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-medium text-fg">
+                  <Link key={c.slug} href={categoryPath(c.slug)} onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-medium text-fg">
                     {c.label} Tyres
                   </Link>
                 ))}

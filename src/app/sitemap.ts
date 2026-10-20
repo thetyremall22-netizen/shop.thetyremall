@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
-import { getProducts } from "@/lib/catalogue";
+import { getProducts, categories } from "@/lib/catalogue";
+import { categoryPath } from "@/lib/shop-url";
 import { BLOG_POSTS } from "@/data/blog";
 
 const BASE = "https://thetyremall.co.za";
@@ -53,5 +54,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  return [...staticEntries, ...productEntries, ...blogEntries];
+  // Category listings at their original /product-category/<slug> addresses.
+  const categoryEntries: MetadataRoute.Sitemap = categories.filter((c) => c.count > 0).map((c) => ({
+    url: `${BASE}${categoryPath(c.slug)}`,
+    lastModified: now,
+    changeFrequency: "daily",
+    priority: c.primary ? 0.8 : 0.6,
+  }));
+
+  return [...staticEntries, ...categoryEntries, ...productEntries, ...blogEntries];
 }

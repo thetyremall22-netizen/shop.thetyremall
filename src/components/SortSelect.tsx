@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { shopHref } from "@/lib/shop-url";
 import { ChevronDown } from "./icons";
 
 const OPTIONS = [
@@ -25,7 +26,7 @@ export function SortSelect({ search }: { search: string }) {
           if (e.target.value === "relevance") next.delete("sort");
           else next.set("sort", e.target.value);
           next.delete("page");
-          router.push(`/shop?${next.toString()}`, { scroll: false });
+          router.push(shopHref(next), { scroll: false });
         }}
         className="h-10 appearance-none rounded-lg border border-line bg-surface-2 pl-3 pr-9 text-sm font-semibold text-fg outline-none focus:border-volt"
       >

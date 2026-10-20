@@ -18,7 +18,7 @@ const MODE_HELP: Record<string, string> = {
   update: "Only update existing products. New rows are skipped (nothing created).",
 };
 
-const TEMPLATE = "slug,sku,name,brand,type,regular_price,sale_price,on_sale,stock,low_stock_threshold,visible,categories,short_description,description,image\n";
+const TEMPLATE = "slug,sku,name,brand,brand_logo,type,regular_price,sale_price,on_sale,stock,low_stock_threshold,visible,categories,short_description,description,image\n";
 
 export function ProductImporter() {
   const router = useRouter();
@@ -97,6 +97,7 @@ export function ProductImporter() {
           {error && <span className="text-sm font-semibold text-sale">{error}</span>}
         </div>
         <p className="mt-2 text-xs text-muted">Prices in <code>regular_price</code>/<code>sale_price</code> are in cents (matches Export CSV); <code>price_retail</code>/<code>price_sale</code> are in Rand. Nothing is written until you review the preview and click Import.</p>
+        <p className="mt-1 text-xs text-muted">New brand? Just type it in the <code>brand</code> column and it appears on the site automatically. Optionally add a <code>brand_logo</code> column with a link to the logo image (https://…); or upload the logo afterwards in Products → Brands.</p>
       </div>
 
       {report && (

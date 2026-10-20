@@ -12,6 +12,6 @@ export async function POST(req: NextRequest) {
   try { b = (await req.json()) as Record<string, unknown>; } catch { return NextResponse.json({ error: "bad request" }, { status: 400 }); }
   const r = await createSpecial(parseSpecialBody(b));
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 });
-  await addAudit({ entity: "special", entityId: r.special.id, action: "created", actor: actorName(actor), summary: `Created special “${r.special.name}” (/product-category/${r.special.slug})` });
+  await addAudit({ entity: "special", entityId: r.special.id, action: "created", actor: actorName(actor), summary: `Created ${r.special.kind === "sale" ? "sale" : "special"} category “${r.special.name}” (/product-category/${r.special.slug})` });
   return NextResponse.json({ ok: true, special: r.special });
 }

@@ -1,4 +1,5 @@
 import "server-only";
+import { setBrandLogoIfMissing } from "./brand-registry";
 import { randomUUID } from "crypto";
 import { libsql } from "./db";
 import { getProductRow, createProduct, updateProductFields, deleteProduct, type NewProduct, type ProductPatch } from "./db/queries";
@@ -224,6 +225,16 @@ export async function runImport(csvText: string, mode: ImportMode, commit: boole
     sql: "INSERT INTO import_batches (id, created_at, mode, summary, ops) VALUES (?,?,?,?,?)",
     args: [batchId, Date.now(), mode, JSON.stringify({ created, updated }), JSON.stringify(ops)],
   });
+  // Optional "brand_logo" column (an https link or site path): gives a new
+  // brand its logo (never replaces one already set in Admin → Brands).
+  const logos = new Map<string, string>();
+  for (const r of rows) {
+    const brand = (val(r, "brand") ?? "").trim();
+    const logo = (val(r, "brand_logo", "brand_logo_url") ?? "").trim();
+    if (brand && logo && (/^https:\/\//i.test(logo) || /^\/(api\/media\/\d+|brand\/)/.test(logo))) logos.set(brand, logo);
+  }
+  for (const [brand, logo] of logos) await setBrandLogoIfMissing(brand, logo).catch(() => {});
+
   report.committed = true;
   report.batchId = batchId;
   report.createdCount = created;

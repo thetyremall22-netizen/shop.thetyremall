@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { queryProducts, meta } from "@/lib/catalogue";
 import { findCategory, shopCategories } from "@/lib/special-categories";
+import { filterBrands } from "@/lib/brand-registry";
 import { detectTyreSize } from "@/lib/voice-search";
 import { findVehicle, factorySizes } from "@/lib/vehicles";
 import { canonicalSize } from "@/lib/tyre-size";
@@ -68,7 +69,7 @@ export async function ShopListing({ sp }: { sp: SP }) {
     perPage: 24,
   });
 
-  const [cat, categories] = await Promise.all([category ? findCategory(category) : undefined, shopCategories()]);
+  const [cat, categories, brands] = await Promise.all([category ? findCategory(category) : undefined, shopCategories(), filterBrands()]);
   const heading = vehicle
     ? `Tyres for your ${vehicle.make} ${vehicle.model}`
     : vehicleCtx
@@ -156,7 +157,7 @@ export async function ShopListing({ sp }: { sp: SP }) {
         <aside className="lg:sticky lg:top-40 lg:max-h-[calc(100vh-11rem)] lg:overflow-y-auto lg:pr-1">
           <ShopFilters
             categories={categories}
-            brands={meta.brands}
+            brands={brands}
             widths={meta.widths}
             profiles={meta.profiles}
             rims={meta.rims}

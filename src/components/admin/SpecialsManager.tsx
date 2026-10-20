@@ -28,12 +28,12 @@ const blank: Form = { name: "", slug: "", description: "", image: "", start: "",
 const toForm = (s: SpecialRow): Form => ({ name: s.name, slug: s.slug, description: s.description, image: s.image, start: toLocal(s.startAt), end: toLocal(s.endAt), enabled: s.enabled });
 const body = (f: Form) => ({ name: f.name, slug: f.slug, description: f.description, image: f.image, startAt: fromLocal(f.start), endAt: fromLocal(f.end), enabled: f.enabled });
 
-function SpecialForm({ f, set, slugEdited, setSlugEdited }: { f: Form; set: (f: Form) => void; slugEdited: boolean; setSlugEdited: (v: boolean) => void }) {
+function SpecialForm({ f, set, slugEdited, setSlugEdited, example = "Father's Day Specials" }: { f: Form; set: (f: Form) => void; slugEdited: boolean; setSlugEdited: (v: boolean) => void; example?: string }) {
   return (
     <div className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
         <label><span className={lab}>Name (shown on the site)</span>
-          <input className={field} value={f.name} placeholder="Father's Day Specials" onChange={(e) => set({ ...f, name: e.target.value, slug: slugEdited ? f.slug : slugify(e.target.value) })} /></label>
+          <input className={field} value={f.name} placeholder={example} onChange={(e) => set({ ...f, name: e.target.value, slug: slugEdited ? f.slug : slugify(e.target.value) })} /></label>
         <label><span className={lab}>Web address</span>
           <span className="flex items-center gap-1 text-xs text-muted">/product-category/
             <input className={field} value={f.slug} onChange={(e) => { setSlugEdited(true); set({ ...f, slug: slugify(e.target.value) }); }} /></span></label>
@@ -149,7 +149,9 @@ function ProductPicker({ special, canEdit }: { special: SpecialRow; canEdit: boo
   );
 }
 
-export function SpecialsManager({ specials, canEdit, canDelete }: { specials: SpecialRow[]; canEdit: boolean; canDelete: boolean }) {
+export function SpecialsManager({ specials, canEdit, canDelete, kind = "special" }: { specials: SpecialRow[]; canEdit: boolean; canDelete: boolean; kind?: "special" | "sale" }) {
+  const word = kind === "sale" ? "sale category" : "special category";
+  const example = kind === "sale" ? "Black Friday Sale" : "Father's Day Specials";
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [newF, setNewF] = useState<Form>(blank);
@@ -166,7 +168,7 @@ export function SpecialsManager({ specials, canEdit, canDelete }: { specials: Sp
     if (!pending) return;
     setBusy(true); setMsg(null);
     let res: Response;
-    if (pending.kind === "create") res = await fetch("/api/admin/specials", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body(newF)) });
+    if (pending.kind === "create") res = await fetch("/api/admin/specials", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body(newF), kind }) });
     else if (pending.kind === "save") res = await fetch(`/api/admin/specials/${pending.s.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body(editF)) });
     else res = await fetch(`/api/admin/specials/${pending.s.id}`, { method: "DELETE" });
     const d = await res.json().catch(() => ({}));
@@ -190,18 +192,18 @@ export function SpecialsManager({ specials, canEdit, canDelete }: { specials: Sp
       {msg && <p className={`text-sm font-semibold ${msg.ok ? "text-pay" : "text-sale"}`}>{msg.text}</p>}
       {canEdit && (creating ? (
         <div className="card p-5">
-          <h2 className="font-display text-lg">New special category</h2>
-          <div className="mt-3"><SpecialForm f={newF} set={setNewF} slugEdited={newSlugEdited} setSlugEdited={setNewSlugEdited} /></div>
+          <h2 className="font-display text-lg">New {word}</h2>
+          <div className="mt-3"><SpecialForm f={newF} set={setNewF} slugEdited={newSlugEdited} setSlugEdited={setNewSlugEdited} example={example} /></div>
           <div className="mt-4 flex gap-2">
             <button className="btn btn-dark px-4" onClick={() => setCreating(false)}>Cancel</button>
-            <button className="btn btn-volt px-5 disabled:opacity-50" disabled={!newF.name.trim()} onClick={() => setPending({ kind: "create" })}>Create special</button>
+            <button className="btn btn-volt px-5 disabled:opacity-50" disabled={!newF.name.trim()} onClick={() => setPending({ kind: "create" })}>Create {word}</button>
           </div>
         </div>
       ) : (
-        <button className="btn btn-volt h-10 px-4 text-sm" onClick={() => { setCreating(true); setMsg(null); }}>+ New special category</button>
+        <button className="btn btn-volt h-10 px-4 text-sm" onClick={() => { setCreating(true); setMsg(null); }}>+ New {word}</button>
       ))}
 
-      {specials.length === 0 && !creating && <p className="text-sm text-muted">No special categories yet. Create one for Father&apos;s Day, Black Friday, Christmas and so on.</p>}
+      {specials.length === 0 && !creating && <p className="text-sm text-muted">{kind === "sale" ? "No sale categories yet. Create one for a Black Friday Sale, Clearance Sale, Month-end Sale and so on." : "No special categories yet. Create one for Father’s Day, Christmas, Women’s Month and so on."}</p>}
 
       {specials.map((s) => (
         <div key={s.id} className="card overflow-hidden">

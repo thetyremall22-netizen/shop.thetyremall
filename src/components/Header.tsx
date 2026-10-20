@@ -9,7 +9,6 @@ import { BrandTile } from "./BrandTile";
 import { Cart, Menu, Close, Bolt, User, Heart, Chevron } from "./icons";
 import { ThemeToggle } from "./ThemeToggle";
 import { PROMOS, NAV_PRIMARY } from "@/lib/nav";
-import { BRANDS } from "@/lib/brands";
 import { useCart } from "@/lib/cart";
 
 const NAV = [
@@ -21,7 +20,7 @@ const NAV = [
 ];
 
 
-export function Header() {
+export function Header({ brands = [] }: { brands?: { name: string; logo: string | null }[] }) {
   const { totals, setDrawerOpen } = useCart();
   const [promoIdx, setPromoIdx] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -110,8 +109,8 @@ export function Header() {
                         <Link href="/shop" className="text-xs font-bold text-volt hover:underline">View all →</Link>
                       </div>
                       <div className="grid grid-cols-4 gap-2.5 lg:grid-cols-6">
-                        {BRANDS.map((b) => (
-                          <BrandTile key={b} brand={b} />
+                        {brands.map((b) => (
+                          <BrandTile key={b.name} brand={b.name} logo={b.logo} />
                         ))}
                       </div>
                     </div>

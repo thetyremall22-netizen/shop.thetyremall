@@ -8,6 +8,8 @@ import type { CompareItem } from "@/lib/compare";
 import { Star, Arrow } from "./icons";
 import { BurstLink } from "./BurstLink";
 import { getStrings, fmt } from "@/lib/strings";
+import { brandLogoMap } from "@/lib/brand-registry";
+import { brandSlug as libBrandSlug } from "@/lib/brands";
 
 function toCompareItem(p: Product): CompareItem {
   return {
@@ -28,7 +30,11 @@ const brandLogoSrc = (b: string) => {
   const s = brandSlug(b);
   return s === "radar" ? "/brand/logos/radar.png" : `/brand/logos/${s}.webp`;
 };
-function BrandMark({ brand }: { brand: string }) {
+function BrandMark({ brand, logo }: { brand: string; logo?: string }) {
+  // Uploaded logo (Admin → Brands) first, then the built-in logo files.
+  if (logo) {
+    return <Image src={logo} alt={brand} width={120} height={32} unoptimized={!logo.startsWith("/brand/")} className="h-6 w-auto max-w-[70%] object-contain" />;
+  }
   if (LOGO_BRANDS.has(brandSlug(brand))) {
     return <Image src={brandLogoSrc(brand)} alt={brand} width={120} height={32} className="h-6 w-auto max-w-[70%] object-contain" />;
   }
@@ -38,7 +44,7 @@ function BrandMark({ brand }: { brand: string }) {
 export async function ProductCard({ p }: { p: Product }) {
   const pct = discountPct(p.regularPrice, p.salePrice);
   const payLater = formatPriceShort(Math.round(p.price / 2));
-  const s = await getStrings();
+  const [s, logos] = await Promise.all([getStrings(), brandLogoMap()]);
 
   return (
     <div
@@ -135,7 +141,7 @@ export async function ProductCard({ p }: { p: Product }) {
 
       {/* brand logo */}
       <div className="flex items-center justify-center border-t border-black/5 bg-neutral-50 py-2.5">
-        <BrandMark brand={p.brand} />
+        <BrandMark brand={p.brand} logo={logos[libBrandSlug(p.brand)]} />
       </div>
     </div>
   );

@@ -11,8 +11,12 @@ import type { Category } from "./types";
 // /product-category/<slug> page work for them automatically. Outside its dates
 // a special is hidden from the site.
 
+export type SpecialKind = "special" | "sale";
+
 export interface SpecialCategory {
   id: number;
+  /** "special" (seasonal, e.g. Father's Day) or "sale" (e.g. Black Friday Sale). */
+  kind: SpecialKind;
   slug: string;
   name: string;
   description: string;
@@ -48,22 +52,24 @@ async function ensureTable() {
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   )`);
+  try { await libsql.execute("ALTER TABLE special_categories ADD COLUMN kind TEXT NOT NULL DEFAULT 'special'"); } catch { /* already there */ }
   ensured = true;
 }
 
 function toSpecial(r: Record<string, unknown>): SpecialCategory {
   return {
-    id: Number(r.id), slug: String(r.slug), name: String(r.name), description: String(r.description ?? ""),
+    id: Number(r.id), kind: String(r.kind ?? "special") === "sale" ? "sale" : "special", slug: String(r.slug), name: String(r.name), description: String(r.description ?? ""),
     image: String(r.image ?? ""), startAt: r.start_at == null ? null : Number(r.start_at), endAt: r.end_at == null ? null : Number(r.end_at),
     enabled: Number(r.enabled) === 1, createdAt: Number(r.created_at), updatedAt: Number(r.updated_at),
   };
 }
 
-export async function listSpecials(): Promise<SpecialCategory[]> {
+export async function listSpecials(kind?: SpecialKind): Promise<SpecialCategory[]> {
   try {
     await ensureTable();
     const r = await libsql.execute("SELECT * FROM special_categories ORDER BY COALESCE(start_at, created_at) DESC");
-    return (r.rows as Record<string, unknown>[]).map(toSpecial);
+    const all = (r.rows as Record<string, unknown>[]).map(toSpecial);
+    return kind ? all.filter((s) => s.kind === kind) : all;
   } catch { return []; }
 }
 
@@ -108,7 +114,7 @@ export async function shopCategories(): Promise<Category[]> {
 
 // ---- create / edit / delete --------------------------------------------------------
 
-export interface SpecialInput { name: string; slug?: string; description?: string; image?: string; startAt?: number | null; endAt?: number | null; enabled?: boolean }
+export interface SpecialInput { kind?: SpecialKind; name: string; slug?: string; description?: string; image?: string; startAt?: number | null; endAt?: number | null; enabled?: boolean }
 
 async function slugTaken(slug: string, exceptId?: number): Promise<boolean> {
   if (getCategory(slug)) return true;
@@ -131,8 +137,8 @@ export async function createSpecial(i: SpecialInput): Promise<{ ok: true; specia
   if (await slugTaken(slug)) return { ok: false, error: `The address “${slug}” is already used by another category. Choose a different one.` };
   const now = Date.now();
   const r = await libsql.execute({
-    sql: `INSERT INTO special_categories (slug, name, description, image, start_at, end_at, enabled, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)`,
-    args: [slug, i.name.trim(), i.description?.trim() ?? "", i.image ?? "", i.startAt ?? null, i.endAt ?? null, i.enabled === false ? 0 : 1, now, now],
+    sql: `INSERT INTO special_categories (kind, slug, name, description, image, start_at, end_at, enabled, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    args: [i.kind === "sale" ? "sale" : "special", slug, i.name.trim(), i.description?.trim() ?? "", i.image ?? "", i.startAt ?? null, i.endAt ?? null, i.enabled === false ? 0 : 1, now, now],
   });
   revalidateProducts();
   return { ok: true, special: (await getSpecial(Number(r.lastInsertRowid)))! };

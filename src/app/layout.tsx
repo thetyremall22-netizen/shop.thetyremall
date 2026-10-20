@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { menuBrands } from "@/lib/brand-registry";
 import { Anton, Inter } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/lib/cart";
@@ -41,6 +42,7 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const themeVars = await themeCss();
+  const brands = await menuBrands(); // live brand list for the "Shop by Brands" menu
   return (
     <html lang="en" className={`${inter.variable} ${anton.variable}`} suppressHydrationWarning>
       <head>
@@ -57,7 +59,7 @@ export default async function RootLayout({
         <CartProvider>
           <CompareProvider>
             <ScrollToTop />
-            <Header />
+            <Header brands={brands} />
             <main>{children}</main>
             <Footer />
             <CartDrawer />

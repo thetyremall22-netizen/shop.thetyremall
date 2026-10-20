@@ -6,6 +6,7 @@ const image = (v: unknown) => { const s = str(v, 500); return s && (/^\/(api\/me
 
 export function parseSpecialBody(b: Record<string, unknown>): SpecialInput {
   return {
+    kind: b.kind === "sale" ? "sale" : "special",
     name: str(b.name, 80), slug: str(b.slug, 80), description: str(b.description, 600), image: image(b.image),
     startAt: when(b.startAt), endAt: when(b.endAt), enabled: b.enabled !== false,
   };

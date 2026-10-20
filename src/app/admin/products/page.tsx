@@ -26,7 +26,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
     productTypeCounts(),
     listSpecials(),
   ]);
-  const catName = new Map<string, string>([...BUILT_IN_CATEGORIES.map((c) => [c.slug, c.name] as [string, string]), ...specials.map((s) => [s.slug, `★ ${s.name}`] as [string, string])]);
+  const catName = new Map<string, string>([...BUILT_IN_CATEGORIES.map((c) => [c.slug, c.name] as [string, string]), ...specials.map((s) => [s.slug, `${s.kind === "sale" ? "%" : "★"} ${s.name}`] as [string, string])]);
   const tableRows = rows.map((r) => {
     let cats: string[] = [];
     try { cats = JSON.parse(r.categories || "[]"); } catch { /* none */ }
@@ -78,8 +78,10 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
           );
         })}
       </div>
-      <div className="mt-2">
-        <Link href="/admin/products/specials" className="inline-flex rounded-full border border-volt/50 px-3.5 py-1.5 text-sm font-semibold text-volt hover:bg-volt/10">★ Special categories (Father&apos;s Day, Christmas…) →</Link>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Link href="/admin/products/brands" className="inline-flex rounded-full border border-volt/50 px-3.5 py-1.5 text-sm font-semibold text-volt hover:bg-volt/10">🏷 Brands &amp; logos →</Link>
+        <Link href="/admin/products/specials" className="inline-flex rounded-full border border-volt/50 px-3.5 py-1.5 text-sm font-semibold text-volt hover:bg-volt/10">★ Special categories →</Link>
+        <Link href="/admin/products/specials?kind=sale" className="inline-flex rounded-full border border-volt/50 px-3.5 py-1.5 text-sm font-semibold text-volt hover:bg-volt/10">% Sale categories →</Link>
       </div>
       {type === "other" && counts.other === 0 && (
         <p className="mt-3 text-sm text-muted">No other products yet. When you add a product that isn&apos;t a tyre or wheel (e.g. valves, nuts, accessories), set its type to “Other” and it will appear here.</p>

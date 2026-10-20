@@ -14,7 +14,7 @@ import { AnimatedRating } from "@/components/AnimatedRating";
 import { RotatingReviews } from "@/components/RotatingReviews";
 import { AboutTeam } from "@/components/AboutTeam";
 import { BrandTile } from "@/components/BrandTile";
-import { BRANDS } from "@/lib/brands";
+import { menuBrands, filterBrands } from "@/lib/brand-registry";
 import { Arrow } from "@/components/icons";
 import { HappyPayLogo } from "@/components/HappyPayLogo";
 import { HappyPayQualify } from "@/components/HappyPayQualify";
@@ -28,6 +28,7 @@ export default async function Home() {
   const [sellers, deals, mags, ratingSummary, reviews, home] = await Promise.all([
     bestSellers(10), dealProducts(8), wheelProducts(10), getRatingSummary(), getFeaturedReviews(), getHomeContent(),
   ]);
+  const [brandWall, brandOptions] = await Promise.all([menuBrands(), filterBrands()]);
   const [tileA, tileB] = home.tiles.items;
   const tagList = (t: string) => t.split("|").map((x) => x.trim()).filter(Boolean);
 
@@ -39,7 +40,7 @@ export default async function Home() {
       <section className="container-x relative z-10 -mt-4 py-8">
         <Reveal>
           <TyreWheelSearch
-            tyreBrands={meta.brands.map((b) => b.name)}
+            tyreBrands={brandOptions.map((b) => b.name).filter((b) => !meta.wheelBrands.includes(b))}
             wheelBrands={meta.wheelBrands}
           />
         </Reveal>
@@ -181,9 +182,9 @@ export default async function Home() {
             </div>
           </Reveal>
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-8">
-            {BRANDS.map((b, i) => (
-              <Reveal key={b} delay={(i % 8) * 35}>
-                <BrandTile brand={b} />
+            {brandWall.map((b, i) => (
+              <Reveal key={b.name} delay={(i % 8) * 35}>
+                <BrandTile brand={b.name} logo={b.logo} />
               </Reveal>
             ))}
           </div>

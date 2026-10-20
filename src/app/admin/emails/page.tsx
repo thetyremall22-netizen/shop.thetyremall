@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { listEmails, EMAIL_TYPE_LABELS } from "@/lib/email-log";
+import { listEmails, emailTabCounts, EMAIL_TYPE_LABELS, EMAIL_TABS } from "@/lib/email-log";
+import { AdminSearch } from "@/components/admin/AdminSearch";
 
 export const instant = false;
 
@@ -12,13 +13,7 @@ const STATUS_FILTERS = [
   { v: "skipped", label: "Not sent" },
 ];
 
-const TYPE_FILTERS = [
-  { v: "", label: "All types" },
-  { v: "order_new_admin", label: "New orders (shop)" },
-  { v: "order_paid", label: "Order confirmations" },
-  { v: "enquiry", label: "Enquiries" },
-  { v: "abandoned_cart", label: "Abandoned carts" },
-];
+const TABS = [{ v: "", label: "All emails" }, ...EMAIL_TABS];
 
 function statusBadge(s: string) {
   if (s === "sent") return "badge-pay";
@@ -31,14 +26,19 @@ export default async function AdminEmails({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page) || 1);
   const status = sp.status || undefined;
-  const type = sp.type || undefined;
-  const { rows, total, perPage } = await listEmails({ page, perPage: 40, status, type });
+  const tab = EMAIL_TABS.find((t) => t.v === sp.tab);
+  const q = (sp.q ?? "").trim();
+  const [{ rows, total, perPage }, counts] = await Promise.all([
+    listEmails({ page, perPage: 40, status, types: tab?.types, q }),
+    emailTabCounts(),
+  ]);
   const pages = Math.max(1, Math.ceil(total / perPage));
 
   const qs = (next: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams();
     if (status) p.set("status", status);
-    if (type) p.set("type", type);
+    if (tab) p.set("tab", tab.v);
+    if (q) p.set("q", q);
     for (const [k, v] of Object.entries(next)) { if (v === undefined || v === "") p.delete(k); else p.set(k, String(v)); }
     const s = p.toString();
     return s ? `/admin/emails?${s}` : "/admin/emails";
@@ -52,13 +52,15 @@ export default async function AdminEmails({ searchParams }: { searchParams: Prom
       </div>
       <p className="mt-1 text-sm text-muted">Every email the site sends — order confirmations, failures, cancellations, refunds, enquiries and abandoned-cart nudges. Open one to read, resend, or edit &amp; resend.</p>
 
+      <AdminSearch className="mt-4 max-w-xl" placeholder="Search recipient, subject or order no.…" />
+
       <div className="mt-4 flex flex-wrap gap-2">
-        {TYPE_FILTERS.map((f) => {
-          const active = (type ?? "") === f.v;
+        {TABS.map((f) => {
+          const active = (tab?.v ?? "") === f.v;
           return (
-            <Link key={f.label} href={qs({ type: f.v, page: undefined })}
+            <Link key={f.label} href={qs({ tab: f.v, page: undefined })}
               className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${active ? "bg-volt text-volt-ink" : "border border-line text-muted hover:text-fg"}`}>
-              {f.label}
+              {f.label} <span className="opacity-70">({counts[f.v || "all"] ?? 0})</span>
             </Link>
           );
         })}
@@ -78,7 +80,7 @@ export default async function AdminEmails({ searchParams }: { searchParams: Prom
 
       {rows.length === 0 ? (
         <p className="mt-6 text-sm text-muted">
-          No emails logged yet. They&apos;ll appear here as soon as the site sends one (and a persistent database is connected).
+          {q || tab || status ? "No emails match." : "No emails logged yet. They’ll appear here as soon as the site sends one."}
         </p>
       ) : (
         <>

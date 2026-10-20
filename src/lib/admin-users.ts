@@ -168,7 +168,7 @@ async function ensureResetTable() {
 
 /** Create a reset token for an email. Returns the raw token (emailed), or null
  *  if there's no active account (callers must not reveal which). */
-export async function createResetToken(email: string): Promise<{ token: string; user: AdminUser } | null> {
+export async function createResetToken(email: string, ttlMs = RESET_TTL_MS): Promise<{ token: string; user: AdminUser } | null> {
   try {
     await ensureResetTable();
     const user = await getUserForAuth(email);
@@ -176,7 +176,7 @@ export async function createResetToken(email: string): Promise<{ token: string; 
     const token = crypto.randomBytes(32).toString("hex");
     await libsql.execute({
       sql: "INSERT INTO password_resets (user_id, token_hash, expires_at, used) VALUES (?,?,?,0)",
-      args: [user.id, sha(token), Date.now() + RESET_TTL_MS],
+      args: [user.id, sha(token), Date.now() + ttlMs],
     });
     return { token, user };
   } catch (e) {

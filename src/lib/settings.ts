@@ -26,7 +26,14 @@ function writeMaintenanceFlag(enabled: boolean): void {
 
 // ---- shape -----------------------------------------------------------------
 export interface SiteSettings {
-  site: { name: string; tagline: string; copyrightName: string };
+  site: {
+    name: string; tagline: string;
+    /** Footer copyright: "© <year> <copyrightName>. <copyrightText>" — the year updates itself. */
+    copyrightName: string;
+    copyrightUrl: string;  // optional link for the copyright name
+    copyrightText: string; // e.g. "All rights reserved."
+    footerNote: string;    // optional small text on the right of the footer bar
+  };
   contact: {
     email: string;
     phoneDisplay: string;
@@ -76,6 +83,9 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     name: "The Tyre Mall",
     tagline: "SA's Largest Online Tyre Supplier",
     copyrightName: "The Tyre Mall",
+    copyrightUrl: "",
+    copyrightText: "All rights reserved.",
+    footerNote: "",
   },
   contact: {
     email: sc.SHOP_EMAIL,

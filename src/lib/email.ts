@@ -260,6 +260,24 @@ const LEAD_CONFIRM_INTRO: Record<string, string> = {
   "tyrone": "Thanks for chatting with Tyrone, our tyre assistant. If you'd like a person to help, our team can contact you on the details below.",
 };
 
+/** Staff account emails: an invite to set a password, or a reset link sent by
+ *  an admin. Never CC'd to the shop. */
+export async function sendStaffAccessEmail(kind: "invite" | "reset", to: string, name: string, link: string, role: string, hours: number): Promise<void> {
+  const first = escapeHtml((name || "").split(" ")[0] || "there");
+  const title = kind === "invite" ? "You've been given access to The Tyre Mall admin" : "Reset your Tyre Mall admin password";
+  const intro = kind === "invite"
+    ? `Hi ${first}, you've been added to The Tyre Mall admin panel as <b>${escapeHtml(role)}</b>. Click below to choose your own password and sign in.`
+    : `Hi ${first}, an administrator has sent you a link to set a new password for your Tyre Mall admin account.`;
+  await sendMail(
+    to,
+    kind === "invite" ? "Your Tyre Mall admin access — set your password" : "Reset your Tyre Mall admin password",
+    layout(title, `<p style="font-size:14px">${intro}</p>
+      <p style="margin:20px 0"><a href="${escapeHtml(link)}" style="display:inline-block;background:${BRAND};color:${INK};font-weight:800;text-decoration:none;padding:12px 22px;border-radius:10px">${kind === "invite" ? "Set my password →" : "Reset password →"}</a></p>
+      <p style="font-size:12px;color:#6b7280">This link works once and expires in ${hours} hours. Sign in afterwards at <a href="${SITE_URL}/admin/login" style="color:${INK}">${SITE_URL.replace(/^https?:\/\//, "")}/admin/login</a> with this email address. If you weren't expecting this, you can ignore it.</p>`),
+    { type: "staff_account", noCc: true },
+  );
+}
+
 // ---- formatting helpers -----------------------------------------------------
 const zar = (minor: number) =>
   "R" + (minor / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

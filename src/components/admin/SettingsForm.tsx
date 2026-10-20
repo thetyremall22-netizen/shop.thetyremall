@@ -80,8 +80,18 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
           <input value={v.site.name} onChange={(e) => up("site", "name", e.target.value)} className={field} /></label>
         <label className="block"><span className={label}>Tagline</span>
           <input value={v.site.tagline} onChange={(e) => up("site", "tagline", e.target.value)} className={field} /></label>
-        <label className="block sm:col-span-2"><span className={label}>Copyright name (footer)</span>
+        <div className="sm:col-span-2 rounded-lg bg-surface px-3 py-2 text-xs text-muted">
+          Footer copyright line preview: <b className="text-fg">© {new Date().getFullYear()} {v.site.copyrightUrl ? <u>{v.site.copyrightName}</u> : v.site.copyrightName}{v.site.copyrightText ? `. ${v.site.copyrightText}` : "."}</b>
+          <br />The year changes automatically every 1 January (2026, 2027, 2028…). An underlined name is a link.
+        </div>
+        <label className="block"><span className={label}>Copyright name</span>
           <input value={v.site.copyrightName} onChange={(e) => up("site", "copyrightName", e.target.value)} className={field} /></label>
+        <label className="block"><span className={label}>Copyright link (optional)</span>
+          <input value={v.site.copyrightUrl} onChange={(e) => up("site", "copyrightUrl", e.target.value)} placeholder="https://thetyremall.co.za or /about" className={field} /></label>
+        <label className="block"><span className={label}>Text after the name</span>
+          <input value={v.site.copyrightText} onChange={(e) => up("site", "copyrightText", e.target.value)} placeholder="All rights reserved." className={field} /></label>
+        <label className="block"><span className={label}>Small note on the right of the footer (optional)</span>
+          <input value={v.site.footerNote} onChange={(e) => up("site", "footerNote", e.target.value)} className={field} /></label>
       </Group>
 
       <Group title="Contact & hours">
@@ -113,6 +123,7 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
       </Group>
 
       <Group title="Social links">
+        <p className="sm:col-span-2 text-xs text-muted">Paste the full link to each page, e.g. https://www.facebook.com/thetyremall (or just the page name). Icons show in the website footer. On phones they open the Facebook, Instagram, TikTok or YouTube app; on computers, the website. Leave a box empty to hide that icon.</p>
         <label className="block"><span className={label}>Facebook URL</span>
           <input value={v.social.facebook} onChange={(e) => up("social", "facebook", e.target.value)} className={field} /></label>
         <label className="block"><span className={label}>Instagram URL</span>

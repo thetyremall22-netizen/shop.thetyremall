@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     </td></tr></table></body></html>`;
 
   try {
-    await sendMail(created.user.email, "Reset your Tyre Mall admin password", html, { type: "custom", noCc: true });
+    await sendMail(created.user.email, "Reset your Tyre Mall admin password", html, { type: "staff_account", noCc: true });
   } catch (e) {
     console.error("[forgot] send failed:", (e as Error).message);
   }

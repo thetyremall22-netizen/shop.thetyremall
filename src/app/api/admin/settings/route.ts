@@ -25,7 +25,13 @@ export async function PATCH(req: NextRequest) {
   const patch: Partial<SiteSettings> = {};
 
   if (body.site) {
-    patch.site = clean({ name: s(body.site.name, 120), tagline: s(body.site.tagline, 200), copyrightName: s(body.site.copyrightName, 120) }) as SiteSettings["site"];
+    const url = s(body.site.copyrightUrl, 300);
+    patch.site = clean({
+      name: s(body.site.name, 120), tagline: s(body.site.tagline, 200), copyrightName: s(body.site.copyrightName, 120),
+      // Only http(s) or site-relative links.
+      copyrightUrl: url === undefined ? undefined : url === "" || /^(https?:\/\/|\/)/i.test(url) ? url : `https://${url}`,
+      copyrightText: s(body.site.copyrightText, 200), footerNote: s(body.site.footerNote, 200),
+    }) as SiteSettings["site"];
   }
   if (body.contact) {
     const c = body.contact;

@@ -4,6 +4,7 @@ import { Logo } from "./Logo";
 import { Truck, Shield, Bolt, Phone, Pin } from "./icons";
 import { NAV_PRIMARY } from "@/lib/nav";
 import { getSettings, currentYear } from "@/lib/settings";
+import { SocialLinks } from "./SocialLinks";
 
 export async function Footer() {
   const s = await getSettings();
@@ -42,6 +43,7 @@ export async function Footer() {
           <a href={`tel:${s.contact.phoneTel}`} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-fg">
             <Phone width={16} height={16} className="text-volt" /> {s.contact.phoneDisplay}
           </a>
+          <SocialLinks social={s.social} className="mt-4" />
           <Image src="/brand/springboks.png" alt="Proud supporters of the Springboks" width={300} height={120} className="mt-6 h-16 w-auto" />
         </div>
 
@@ -105,8 +107,14 @@ export async function Footer() {
 
       <div className="border-t border-line">
         <div className="container-x flex flex-col items-center justify-between gap-2 py-5 text-xs text-faint sm:flex-row">
-          <p>© {year} {s.site.copyrightName}. All rights reserved.</p>
-          <p>Demo build — design preview. Prices & stock from live catalogue.</p>
+          <p>
+            © {year}{" "}
+            {s.site.copyrightUrl
+              ? <a href={s.site.copyrightUrl} className="hover:text-volt" {...(/^https?:/i.test(s.site.copyrightUrl) ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{s.site.copyrightName}</a>
+              : s.site.copyrightName}
+            {s.site.copyrightText ? `. ${s.site.copyrightText}` : "."}
+          </p>
+          {s.site.footerNote && <p>{s.site.footerNote}</p>}
         </div>
       </div>
     </footer>

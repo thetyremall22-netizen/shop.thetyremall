@@ -1,5 +1,5 @@
 import "server-only";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, inArray } from "drizzle-orm";
 import { db, schema, libsql } from "./db";
 
 export type EmailType =
@@ -16,6 +16,7 @@ export type EmailType =
   | "abandoned_cart"
   | "enquiry"
   | "lead_confirmation"
+  | "staff_account"
   | "custom";
 
 export type EmailStatus = "sent" | "failed" | "skipped";
@@ -77,14 +78,42 @@ export async function logEmail(e: LoggedEmail): Promise<void> {
   }
 }
 
-export async function listEmails(opts: { page?: number; perPage?: number; type?: string; status?: string } = {}) {
+/** Email log tabs: each groups related email types. */
+export const EMAIL_TABS: { v: string; label: string; types: string[] }[] = [
+  { v: "orders", label: "Orders", types: ["order_paid", "order_new_admin", "order_completed", "order_on_hold", "order_failed", "order_failed_admin", "order_cancelled", "order_cancelled_admin", "order_refunded"] },
+  { v: "invoices", label: "Invoices", types: ["order_invoice"] },
+  { v: "leads", label: "Leads & enquiries", types: ["enquiry", "lead_confirmation"] },
+  { v: "carts", label: "Abandoned carts", types: ["abandoned_cart"] },
+  { v: "custom", label: "Written by staff", types: ["custom"] },
+  { v: "staff", label: "Staff accounts", types: ["staff_account"] },
+];
+
+/** Email counts per tab (and per status within a tab). */
+export async function emailTabCounts(): Promise<Record<string, number>> {
+  try {
+    await ensureSchema();
+    const r = await libsql.execute(`SELECT type, COUNT(*) n FROM emails GROUP BY type`);
+    const byType = new Map(r.rows.map((x) => [String(x.type), Number(x.n)]));
+    const out: Record<string, number> = { all: [...byType.values()].reduce((a, b) => a + b, 0) };
+    for (const t of EMAIL_TABS) out[t.v] = t.types.reduce((n, ty) => n + (byType.get(ty) ?? 0), 0);
+    return out;
+  } catch { return {}; }
+}
+
+export async function listEmails(opts: { page?: number; perPage?: number; type?: string; types?: string[]; status?: string; q?: string } = {}) {
   const page = Math.max(1, opts.page ?? 1);
   const perPage = opts.perPage ?? 30;
   try {
     await ensureSchema();
     const conds = [];
     if (opts.type) conds.push(eq(schema.emails.type, opts.type));
+    if (opts.types?.length) conds.push(inArray(schema.emails.type, opts.types));
     if (opts.status) conds.push(eq(schema.emails.status, opts.status));
+    const q = opts.q?.trim().toLowerCase();
+    if (q) {
+      const like = `%${q}%`;
+      conds.push(sql`(LOWER(${schema.emails.toAddr}) LIKE ${like} OR LOWER(${schema.emails.subject}) LIKE ${like} OR LOWER(IFNULL(${schema.emails.orderRef}, '')) LIKE ${like} OR LOWER(${schema.emails.cc}) LIKE ${like})`);
+    }
     const where = conds.length ? and(...conds) : undefined;
     // Don't pull the (large) html column into the list query.
     const rows = await db
@@ -161,5 +190,6 @@ export const EMAIL_TYPE_LABELS: Record<string, string> = {
   abandoned_cart: "Abandoned cart",
   enquiry: "Enquiry (shop)",
   lead_confirmation: "Enquiry received (customer)",
+  staff_account: "Staff account (password reset / invite)",
   custom: "Custom",
 };

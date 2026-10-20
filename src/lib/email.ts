@@ -178,6 +178,7 @@ const LEAD_SOURCE_LABEL: Record<string, string> = {
   "contact": "Contact form",
   "whatsapp-quote": "WhatsApp quote request",
   "whatsapp-enquiry": "WhatsApp product enquiry",
+  "whatsapp-chat": "WhatsApp chat request",
   "tyrone": "Tyrone chat",
 };
 

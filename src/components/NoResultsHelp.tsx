@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { whatsappHref, SHOP_EMAIL, SHOP_PHONE_DISPLAY } from "@/lib/shop-config";
+import { SHOP_EMAIL, SHOP_PHONE_DISPLAY } from "@/lib/shop-config";
 import { WhatsApp } from "./icons";
+import { WhatsAppGateButton } from "./WhatsAppGate";
 
 const GREETING =
   "Hey! 👋 I see you couldn't find what you were looking for — I'm here to help! Tell me your tyre size (like 205/55R16) or your vehicle, and I'll find it. Or reach our sales team any time.";
@@ -27,14 +28,13 @@ export function NoResultsHelp({ query }: { query?: string }) {
 
       <div className="mt-5 flex flex-wrap justify-center gap-2.5">
         <button onClick={openTyrone} className="btn btn-volt h-11 px-5">💬 Chat with Tyrone</button>
-        <a
-          href={whatsappHref(waText)}
-          target="_blank"
-          rel="noopener noreferrer"
+        <WhatsAppGateButton
+          message={waText}
+          lead={{ source: "whatsapp-chat" }}
           className="btn h-11 border border-[#25D366]/60 bg-[#25D366]/10 px-5 text-[#25D366] hover:bg-[#25D366]/20"
         >
           <WhatsApp width={17} height={17} /> WhatsApp us
-        </a>
+        </WhatsAppGateButton>
         <a href={`mailto:${SHOP_EMAIL}?subject=${encodeURIComponent(`Tyre enquiry${query ? ` — ${query}` : ""}`)}`} className="btn btn-ghost h-11 px-5">
           Email sales
         </a>

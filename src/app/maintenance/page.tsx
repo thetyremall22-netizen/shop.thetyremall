@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { getSettings, currentYear } from "@/lib/settings";
 import { Phone } from "@/components/icons";
+import { WhatsAppGateButton } from "@/components/WhatsAppGate";
 
 export const metadata: Metadata = {
   title: "Coming soon — The Tyre Mall",
@@ -13,7 +14,6 @@ export default async function Maintenance() {
   const [s, year] = await Promise.all([getSettings(), currentYear()]);
   const phoneTel = s.contact.phoneTel || "0780088788";
   const phoneDisplay = s.contact.phoneDisplay || "078 0088 788";
-  const waLink = s.contact.whatsappLink || "https://wa.me/27780088788";
 
   return (
     // Fixed, opaque, top of the stack — covers the site chrome entirely.
@@ -28,9 +28,9 @@ export default async function Maintenance() {
           <a href={`tel:${phoneTel}`} className="btn btn-volt">
             <Phone width={16} height={16} /> {phoneDisplay}
           </a>
-          <a href={waLink} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
+          <WhatsAppGateButton message="Hi The Tyre Mall! I'd like some help with tyres." lead={{ source: "whatsapp-chat" }} className="btn btn-ghost">
             WhatsApp us
-          </a>
+          </WhatsAppGateButton>
         </div>
 
         <p className="mt-10 text-xs text-faint">© {year} The Tyre Mall · SA&apos;s Largest Online Tyre Supplier</p>

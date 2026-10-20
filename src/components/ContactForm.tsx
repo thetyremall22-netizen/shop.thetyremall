@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check } from "./icons";
+import { validateContact, type ContactErrors } from "@/lib/validate";
 
 const REASONS = ["General enquiry", "Help with an order", "Fitment question", "Delivery / returns", "Bulk / fleet pricing"];
 
@@ -9,13 +10,19 @@ export function ContactForm() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErr, setFieldErr] = useState<ContactErrors>({});
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setSending(true);
     const fd = new FormData(e.currentTarget);
-    const body = Object.fromEntries(fd.entries());
+    const body = Object.fromEntries(fd.entries()) as Record<string, string>;
+    // Name, email and mobile must be real (same rules the server enforces).
+    const { errors, clean } = validateContact(body, { name: true, email: true, phone: true });
+    setFieldErr(errors);
+    if (Object.keys(errors).length) return;
+    Object.assign(body, clean);
+    setSending(true);
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
@@ -24,6 +31,7 @@ export function ContactForm() {
       });
       const data = await res.json();
       if (!res.ok) {
+        if (data.errors) setFieldErr(data.errors);
         setError(data.error ?? "Couldn't send — please try again, or call us.");
         setSending(false);
         return;
@@ -50,9 +58,9 @@ export function ContactForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input name="name" label="Your name" required />
-        <Input name="email" label="Email" type="email" required />
-        <Input name="phone" label="Mobile" type="tel" required />
+        <Input name="name" label="Your name" required error={fieldErr.name} autoComplete="name" />
+        <Input name="email" label="Email" type="email" required error={fieldErr.email} autoComplete="email" />
+        <Input name="phone" label="Mobile" type="tel" required error={fieldErr.phone} autoComplete="tel" />
         <label className="block">
           <span className="mb-1.5 block text-xs font-semibold text-muted">Reason <span className="text-sale">*</span></span>
           <select name="reason" required className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt">
@@ -76,11 +84,12 @@ export function ContactForm() {
   );
 }
 
-function Input({ name, label, type = "text", required }: { name: string; label: string; type?: string; required?: boolean }) {
+function Input({ name, label, type = "text", required, error, autoComplete }: { name: string; label: string; type?: string; required?: boolean; error?: string; autoComplete?: string }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-semibold text-muted">{label}{required && <span className="text-sale"> *</span>}</span>
-      <input name={name} type={type} required={required} className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" />
+      <input name={name} type={type} required={required} autoComplete={autoComplete} aria-invalid={!!error} className={`h-11 w-full rounded-lg border bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt ${error ? "border-sale" : "border-line"}`} />
+      {error && <span className="mt-1 block text-xs font-semibold text-sale">{error}</span>}
     </label>
   );
 }

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { whatsappHref, SHOP_EMAIL, SHOP_PHONE_DISPLAY } from "@/lib/shop-config";
 import { Close, WhatsApp, Check } from "./icons";
+import { validateContact, type ContactErrors } from "@/lib/validate";
+import { WhatsAppGateButton } from "./WhatsAppGate";
 
 type Tab = "quote" | "chat";
 const VEHICLE_TYPES = ["Car / Hatch / Sedan", "SUV", "Bakkie / 4x4", "Commercial / LDV", "Truck / Bus", "Motorbike", "Other"];
@@ -12,12 +14,14 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [fieldErr, setFieldErr] = useState<ContactErrors>({});
   const [consent, setConsent] = useState(true); // POPIA — pre-ticked
   const [f, setF] = useState({ name: "", email: "", phone: "", vehicle: VEHICLE_TYPES[0], tyreSize: "", rimSize: "", message: "" });
 
   if (!open) return null;
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setErr(null);
+    setFieldErr((fe) => ({ ...fe, [k]: undefined }));
     setF((s) => ({ ...s, [k]: e.target.value }));
   };
 
@@ -35,23 +39,33 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    // Native `required` covers name/email/phone; enforce at-least-one size here
-    // (a tyre buyer has no rim size and vice-versa, so we can't demand both).
+    // Name, email and mobile must be real (same rules the server enforces).
+    const { errors, clean } = validateContact(f, { name: true, email: true, phone: true });
+    setFieldErr(errors);
+    if (Object.keys(errors).length) return;
+    // At least one size (a tyre buyer has no rim size and vice-versa).
     if (!f.tyreSize.trim() && !f.rimSize.trim()) {
       setErr("Please fill in your tyre size or your rim / wheel size.");
       return;
     }
     setBusy(true);
     try {
-      await fetch("/api/lead", {
+      const res = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source: "whatsapp-quote", name: f.name, email: f.email, phone: f.phone, message: buildMessage(), contactConsent: consent }),
+        body: JSON.stringify({ source: "whatsapp-quote", ...clean, message: buildMessage(), contactConsent: consent }),
         keepalive: true,
       });
+      if (res.status === 400) {
+        const data = await res.json().catch(() => ({}));
+        setFieldErr(data.errors ?? {});
+        setErr(data.error ?? "Please check your details.");
+        setBusy(false);
+        return;
+      }
       setSent(true);
     } catch {
-      setSent(true); // optimistic — the request is best-effort
+      setSent(true); // network hiccup: still let them continue on WhatsApp
     }
     setBusy(false);
   }
@@ -101,9 +115,9 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
           ) : (
             <form onSubmit={submit} className="space-y-3">
               <p className="text-xs text-muted">Tell us what you need and we&apos;ll send you a price. All fields are required.</p>
-              <Field label="Name" value={f.name} onChange={set("name")} placeholder="Your name" required />
-              <Field label="Email" type="email" value={f.email} onChange={set("email")} placeholder="you@email.com" required />
-              <Field label="Mobile" type="tel" value={f.phone} onChange={set("phone")} placeholder="082 …" required />
+              <Field label="Name" value={f.name} onChange={set("name")} placeholder="Your name" required error={fieldErr.name} autoComplete="name" />
+              <Field label="Email" type="email" value={f.email} onChange={set("email")} placeholder="you@gmail.com" required error={fieldErr.email} autoComplete="email" />
+              <Field label="Mobile" type="tel" value={f.phone} onChange={set("phone")} placeholder="082 123 4567" required error={fieldErr.phone} autoComplete="tel" />
               <label className="block">
                 <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted">Vehicle type <span className="text-sale">*</span></span>
                 <select required value={f.vehicle} onChange={set("vehicle")} className="h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt">
@@ -132,8 +146,8 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
             <div>
               <div className="mx-auto grid size-16 place-items-center rounded-full bg-[#25D366]/15 text-[#25D366]"><WhatsApp width={32} height={32} /></div>
               <p className="mt-4 font-display text-xl text-fg">Chat to sales on WhatsApp</p>
-              <p className="mx-auto mt-2 max-w-xs text-sm text-muted">Opens WhatsApp with your details pre-filled. Just press send.</p>
-              <a href={whatsappHref(waText)} target="_blank" rel="noopener noreferrer" className="btn mt-5 h-12 bg-[#25D366] px-6 text-black hover:bg-[#1fb757]"><WhatsApp width={18} height={18} /> Open WhatsApp</a>
+              <p className="mx-auto mt-2 max-w-xs text-sm text-muted">Pop in your details, then WhatsApp opens with your message ready. Just press send.</p>
+              <WhatsAppGateButton message={waText} lead={{ source: "whatsapp-chat" }} className="btn mt-5 h-12 bg-[#25D366] px-6 text-black hover:bg-[#1fb757]"><WhatsApp width={18} height={18} /> Open WhatsApp</WhatsAppGateButton>
               <p className="mt-4 text-xs text-muted">or email <a href={`mailto:${SHOP_EMAIL}`} className="font-semibold text-fg hover:text-volt">{SHOP_EMAIL}</a><br />call {SHOP_PHONE_DISPLAY}</p>
             </div>
           </div>
@@ -143,11 +157,12 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
   );
 }
 
-function Field({ label, value, onChange, type = "text", placeholder, required }: { label: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; type?: string; placeholder?: string; required?: boolean }) {
+function Field({ label, value, onChange, type = "text", placeholder, required, error, autoComplete }: { label: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; type?: string; placeholder?: string; required?: boolean; error?: string; autoComplete?: string }) {
   return (
     <label className="block">
       <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted">{label}{required && <span className="text-sale"> *</span>}</span>
-      <input type={type} value={value} onChange={onChange} placeholder={placeholder} required={required} className="h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" />
+      <input type={type} value={value} onChange={onChange} placeholder={placeholder} required={required} autoComplete={autoComplete} aria-invalid={!!error} className={`h-10 w-full rounded-lg border bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt ${error ? "border-sale" : "border-line"}`} />
+      {error && <span className="mt-1 block text-[11px] font-semibold text-sale">{error}</span>}
     </label>
   );
 }

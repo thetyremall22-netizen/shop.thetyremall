@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Close, WhatsApp, Search } from "./icons";
 import { parseSize, sizeToShopHref } from "@/lib/tyre-size";
-import { whatsappHref } from "@/lib/shop-config";
+import { WhatsAppGateButton } from "./WhatsAppGate";
 
 // Mirror of the server VehicleRecord (see src/lib/vehicles.ts).
 export interface VehicleRecord {
@@ -100,9 +100,9 @@ export function VehicleSizeChoice({ record, compact = false }: { record: Vehicle
           {tyreOptions.length === 0 ? (
             <div className="mt-4 rounded-xl border border-volt/30 bg-volt/5 p-4 text-sm">
               <p className="font-semibold text-fg">We don&apos;t have a listed size for this exact variant yet.</p>
-              <a href={whatsappHref(`Hi The Tyre Mall! What tyre size fits my ${vehicleLabel}?`)} target="_blank" rel="noopener noreferrer" className="btn mt-3 h-10 border border-[#25D366]/60 bg-[#25D366]/10 px-4 text-sm text-[#25D366] hover:bg-[#25D366]/20">
+              <WhatsAppGateButton message={`Hi The Tyre Mall! What tyre size fits my ${vehicleLabel}?`} lead={{ source: "whatsapp-chat" }} className="btn mt-3 h-10 border border-[#25D366]/60 bg-[#25D366]/10 px-4 text-sm text-[#25D366] hover:bg-[#25D366]/20">
                 <WhatsApp width={16} height={16} /> Ask on WhatsApp
-              </a>
+              </WhatsAppGateButton>
             </div>
           ) : (
             <>

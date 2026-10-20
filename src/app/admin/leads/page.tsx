@@ -21,25 +21,30 @@ const SOURCE_TABS = [
   { v: "contact", label: "Contact form" },
   { v: "whatsapp-quote", label: "WhatsApp quote" },
   { v: "whatsapp-enquiry", label: "Product enquiry" },
+  { v: "whatsapp-chat", label: "WhatsApp chat" },
   { v: "tyrone", label: "Tyrone chat" },
 ] as const;
-type TabV = (typeof SOURCE_TABS)[number]["v"] | "carts" | "calls";
+type TabV = (typeof SOURCE_TABS)[number]["v"] | "carts" | "calls" | "questions";
 const isSourceTab = (t: string): boolean => SOURCE_TABS.some((s) => s.v === t);
 
 export default async function AdminLeadsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   await requireAdmin();
   const sp = await searchParams;
-  const valid: string[] = [...SOURCE_TABS.map((t) => t.v), "carts", "calls"];
+  const valid: string[] = [...SOURCE_TABS.map((t) => t.v), "carts", "calls", "questions"];
   const tab: TabV = valid.includes(sp.tab ?? "") ? (sp.tab as TabV) : "contact";
 
   const [counts, carts, calls] = await Promise.all([leadCounts(), listAbandoned(200), listEnquiries(200)]);
   const callRows = calls.filter((e) => str(e.type) === "call");
+  // Tyrone questions and WhatsApp taps from before the "Before we chat" step:
+  // no contact details, but kept visible so nothing is lost.
+  const questionRows = calls.filter((e) => str(e.type) !== "call");
   const leadRows = isSourceTab(tab) ? await listLeads({ source: tab, limit: 300 }) : [];
 
   const tabs: { v: TabV; label: string; count: number }[] = [
     ...SOURCE_TABS.map((t) => ({ v: t.v as TabV, label: t.label, count: counts[t.v] ?? 0 })),
     { v: "carts", label: "Abandoned carts", count: carts.length },
     { v: "calls", label: "Call taps", count: callRows.length },
+    { v: "questions", label: "Chat questions & older taps", count: questionRows.length },
   ];
 
   return (
@@ -83,6 +88,17 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
               formatPrice(Number(c.total) || 0),
               Number(c.recovered) ? "Recovered" : Number(c.emailed_at) ? "Reminder sent" : "Pending",
             ],
+          }))}
+        />
+      )}
+
+      {tab === "questions" && (
+        <Table
+          empty="No chat questions yet."
+          head={["When", "Type", "Product", "Message"]}
+          rows={questionRows.map((e) => ({
+            href: `/admin/leads/enquiry/${e.id}`,
+            cells: [when(e.created_at), str(e.type), str(e.product_name) || "—", truncate(str(e.message), 70)],
           }))}
         />
       )}

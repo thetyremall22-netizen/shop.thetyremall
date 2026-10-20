@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { compressImage, fitImageToCanvas, MEDIA_LIMITS } from "./image-compress";
+import { compressImage, fitImageToCanvas, MEDIA_LIMITS, type Canvas } from "./image-compress";
 
 interface MediaItem { id: number; kind: string; title: string; width: number; height: number; bytes: number }
 
@@ -10,7 +10,7 @@ interface MediaItem { id: number; kind: string; title: string; width: number; he
 export function ImagePicker({ value, onChange, label = "Image", hint, fit, previewClass = "h-16 w-28" }: {
   value: string; onChange: (src: string) => void; label?: string; hint?: string;
   /** Fit uploads into this exact canvas (e.g. brand logos) instead of just compressing. */
-  fit?: { width: number; height: number; padding: number; maxBytes: number };
+  fit?: Canvas;
   previewClass?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -47,12 +47,12 @@ export function ImagePicker({ value, onChange, label = "Image", hint, fit, previ
     <div>
       <span className="mb-1 block text-xs font-semibold text-muted">{label}</span>
       <div className="flex items-start gap-3">
-        <div className={`grid ${previewClass} shrink-0 place-items-center overflow-hidden rounded-lg border border-line ${fit ? "bg-white p-1" : "bg-surface-2"}`}>
+        <div className={`grid ${previewClass} shrink-0 place-items-center overflow-hidden rounded-lg border border-line ${fit?.mode === "contain" ? "bg-white p-1" : "bg-surface-2"}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {value ? <img src={value} alt="" className={`size-full ${fit ? "object-contain" : "object-cover"}`} /> : <span className="text-xs text-faint">none</span>}
+          {value ? <img src={value} alt="" className={`size-full ${fit?.mode === "contain" ? "object-contain" : "object-cover"}`} /> : <span className="text-xs text-faint">none</span>}
         </div>
         <div className="flex flex-wrap gap-2">
-          {!fit && <button type="button" onClick={() => setOpen(!open)} className="btn btn-dark h-9 px-3 text-xs">{open ? "Close library" : "Choose from Media"}</button>}
+          {(!fit || fit.mode === "cover") && <button type="button" onClick={() => setOpen(!open)} className="btn btn-dark h-9 px-3 text-xs">{open ? "Close library" : "Choose from Media"}</button>}
           <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} className="btn btn-volt-outline h-9 px-3 text-xs">{busy ? "Uploading…" : "Upload new"}</button>
           <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => upload(e.target.files?.[0])} />
         </div>

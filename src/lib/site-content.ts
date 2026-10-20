@@ -27,10 +27,14 @@ async function ensureTables() {
   await libsql.execute(`CREATE TABLE IF NOT EXISTS stats (id INTEGER PRIMARY KEY AUTOINCREMENT, value TEXT NOT NULL DEFAULT '', label TEXT NOT NULL DEFAULT '', sort_order INTEGER NOT NULL DEFAULT 0)`);
   await libsql.execute(`CREATE TABLE IF NOT EXISTS team_members (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL DEFAULT '', role TEXT NOT NULL DEFAULT '', photo TEXT NOT NULL DEFAULT '', sort_order INTEGER NOT NULL DEFAULT 0)`);
   await libsql.execute(`CREATE TABLE IF NOT EXISTS content_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')`);
-  const c = await libsql.execute("SELECT COUNT(*) n FROM stats");
-  if (Number(c.rows[0].n) === 0) {
-    for (let i = 0; i < SEED_STATS.length; i++) await libsql.execute({ sql: "INSERT INTO stats (value, label, sort_order) VALUES (?,?,?)", args: [SEED_STATS[i].value, SEED_STATS[i].label, i] });
-  }
+  // Starter stats, added in ONE statement only while the table is empty, so
+  // several server processes starting together can't each add a copy.
+  await libsql.execute({
+    sql: `INSERT INTO stats (value, label, sort_order)
+          SELECT v, l, s FROM (${SEED_STATS.map(() => "SELECT ? AS v, ? AS l, ? AS s").join(" UNION ALL ")})
+          WHERE NOT EXISTS (SELECT 1 FROM stats)`,
+    args: SEED_STATS.flatMap((x, i) => [x.value, x.label, i]),
+  });
   ensured = true;
 }
 

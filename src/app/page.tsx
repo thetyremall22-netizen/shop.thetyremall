@@ -19,14 +19,27 @@ import { Arrow } from "@/components/icons";
 import { HappyPayLogo } from "@/components/HappyPayLogo";
 import { HappyPayQualify } from "@/components/HappyPayQualify";
 import { HomeBanners, LiteYouTube } from "@/components/HomeBanners";
-import { getHomeContent } from "@/lib/home-content";
+import { getHomeContent, type ProductSection } from "@/lib/home-content";
+import { productsFromCategories } from "@/lib/home-products";
+import { categoryPath } from "@/lib/shop-url";
 import { DragScroll } from "@/components/DragScroll";
 import { getRatingSummary, getFeaturedReviews } from "@/lib/reviews";
 
 
 export default async function Home() {
-  const [sellers, deals, mags, ratingSummary, reviews, home] = await Promise.all([
-    bestSellers(10), dealProducts(8), wheelProducts(10), getRatingSummary(), getFeaturedReviews(), getHomeContent(),
+  const home = await getHomeContent();
+  // Each product row is automatic, or built from the categories chosen in
+  // Admin → Content → Home page (falls back to automatic if those are empty).
+  const pick = async (sec: ProductSection, auto: (n: number) => Promise<Awaited<ReturnType<typeof bestSellers>>>) => {
+    if (sec.source === "categories" && sec.categories.length) {
+      const list = await productsFromCategories(sec.categories, sec.limit);
+      if (list.length) return list;
+    }
+    return auto(sec.limit);
+  };
+  const viewAll = (sec: ProductSection, fallback: string) => (sec.source === "categories" && sec.categories[0] ? categoryPath(sec.categories[0]) : fallback);
+  const [sellers, deals, mags, ratingSummary, reviews] = await Promise.all([
+    pick(home.fanFavourites, bestSellers), pick(home.deals, dealProducts), pick(home.mags, wheelProducts), getRatingSummary(), getFeaturedReviews(),
   ]);
   const [brandWall, brandOptions] = await Promise.all([menuBrands(), filterBrands()]);
   const [tileA, tileB] = home.tiles.items;
@@ -83,7 +96,7 @@ export default async function Home() {
       {/* ============ BEST SELLERS ============ */}
       {home.fanFavourites.show && (
       <section className="container-x pb-12">
-        <Reveal><SectionHead eyebrow={home.fanFavourites.eyebrow} silver={home.fanFavourites.silver} green={home.fanFavourites.green} href="/shop" /></Reveal>
+        <Reveal><SectionHead eyebrow={home.fanFavourites.eyebrow} silver={home.fanFavourites.silver} green={home.fanFavourites.green} href={viewAll(home.fanFavourites, "/shop")} /></Reveal>
         <DragScroll className="no-scrollbar -mx-4 mt-4 flex gap-4 overflow-x-auto px-4 py-6">
           {sellers.map((p, i) => (
             <Reveal key={p.id} delay={i * 50} className="shrink-0"><ProductRailCard p={p} /></Reveal>
@@ -124,11 +137,18 @@ export default async function Home() {
       {/* ============ FEATURED VIDEO (optional) ============ */}
       {home.video.show && home.video.youtubeId && (
         <section className="container-x pb-12">
-          {home.video.heading && (
-            <Reveal><h2 className="skew-italic mb-4 font-display text-3xl leading-none sm:text-4xl"><span className="text-volt-grad">{home.video.heading}</span></h2></Reveal>
-          )}
-          <LiteYouTube id={home.video.youtubeId} title={home.video.heading || "The Tyre Mall"} />
-          {home.video.caption && <p className="mt-3 text-sm text-muted">{home.video.caption}</p>}
+          <div className={`mx-auto ${{ full: "max-w-none", large: "max-w-5xl", medium: "max-w-3xl", small: "max-w-xl" }[home.video.size] ?? "max-w-5xl"} ${home.video.shape === "9:16" ? "!max-w-sm" : ""}`}>
+            {(home.video.eyebrow || home.video.heading) && (
+              <Reveal>
+                <div className="mb-4">
+                  {home.video.eyebrow && <span className="eyebrow">{home.video.eyebrow}</span>}
+                  {home.video.heading && <h2 className="skew-italic mt-1 font-display text-3xl leading-none sm:text-4xl"><span className="text-volt-grad">{home.video.heading}</span></h2>}
+                </div>
+              </Reveal>
+            )}
+            <LiteYouTube id={home.video.youtubeId} title={home.video.heading || "The Tyre Mall"} shape={home.video.shape} />
+            {home.video.caption && <p className="mt-3 text-sm text-muted">{home.video.caption}</p>}
+          </div>
         </section>
       )}
 
@@ -143,7 +163,7 @@ export default async function Home() {
                 <span className="text-chrome">{home.deals.silver}</span> <span className="text-volt-grad">{home.deals.green}</span>
               </h2>
             </div>
-            <Link href="/shop?onSale=1" className="btn btn-ghost shrink-0">All deals</Link>
+            <Link href={viewAll(home.deals, "/shop?onSale=1")} className="btn btn-ghost shrink-0">All deals</Link>
           </div>
         </Reveal>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -157,7 +177,7 @@ export default async function Home() {
       {/* ============ MAG WHEELS ============ */}
       {home.mags.show && mags.length > 0 && (
         <section className="container-x pb-12">
-          <Reveal><SectionHead eyebrow={home.mags.eyebrow} silver={home.mags.silver} green={home.mags.green} href="/shop?type=wheel" /></Reveal>
+          <Reveal><SectionHead eyebrow={home.mags.eyebrow} silver={home.mags.silver} green={home.mags.green} href={viewAll(home.mags, "/shop?type=wheel")} /></Reveal>
           <DragScroll className="no-scrollbar -mx-4 mt-4 flex gap-4 overflow-x-auto px-4 py-6">
             {mags.map((p, i) => (
               <Reveal key={p.id} delay={i * 50} className="shrink-0"><ProductRailCard p={p} /></Reveal>

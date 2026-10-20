@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog, ChangeList, UndoBar } from "./ConfirmDialog";
 import { ImagePicker } from "./ImagePicker";
+import { BANNER_CANVAS, canvasHint } from "./image-compress";
 import type { PageDef, PageOverride } from "@/lib/page-content";
 
 const field = "h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt";
@@ -47,7 +48,7 @@ function PageEditor({ def, initial }: { def: PageDef; initial: PageOverride }) {
       <div className="rounded-xl border border-line p-3">
         <b className="text-sm">Banner (optional)</b>
         <p className="mb-2 text-xs text-muted">Shows under the heading. Best size 2000 × 668 px.</p>
-        <ImagePicker value={v.banner.src} onChange={(src) => setV({ ...v, banner: { ...v.banner, src } })} label="Banner image" />
+        <ImagePicker value={v.banner.src} onChange={(src) => setV({ ...v, banner: { ...v.banner, src } })} label="Banner image" fit={BANNER_CANVAS} previewClass="h-14 w-40" hint={canvasHint(BANNER_CANVAS)} />
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
           <label><span className={lab}>Link (optional)</span><input className={field} value={v.banner.href} placeholder="/shop?brand=Radar" onChange={(e) => setV({ ...v, banner: { ...v.banner, href: e.target.value } })} /></label>
           <label><span className={lab}>Description</span><input className={field} value={v.banner.alt} onChange={(e) => setV({ ...v, banner: { ...v.banner, alt: e.target.value } })} /></label>

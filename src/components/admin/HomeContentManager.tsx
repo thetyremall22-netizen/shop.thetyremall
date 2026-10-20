@@ -4,7 +4,10 @@ import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog, UndoBar } from "./ConfirmDialog";
 import { ImagePicker } from "./ImagePicker";
-import type { HomeContent, Heading } from "@/lib/home-content";
+import type { HomeContent, Heading, ProductSection } from "@/lib/home-content";
+import { BANNER_CANVAS, TILE_CANVAS, HERO_CANVAS, canvasHint } from "./image-compress";
+
+export interface CategoryOption { slug: string; name: string; kind: "built-in" | "special" | "sale"; status?: string }
 
 const MAX = 3;
 const field = "h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt";
@@ -28,7 +31,7 @@ function Section({ title, show, onShow, children, note }: { title: string; show?
   );
 }
 
-function HeadingFields({ h, set, eyebrowHint }: { h: Heading; set: (h: Heading) => void; eyebrowHint?: string }) {
+function HeadingFields<T extends Heading>({ h, set, eyebrowHint }: { h: T; set: (h: T) => void; eyebrowHint?: string }) {
   return (
     <div className="grid gap-2 sm:grid-cols-3">
       <label><span className={lab}>Small line above{eyebrowHint ? ` (${eyebrowHint})` : ""}</span><input className={field} value={h.eyebrow} onChange={(e) => set({ ...h, eyebrow: e.target.value })} /></label>
@@ -38,7 +41,48 @@ function HeadingFields({ h, set, eyebrowHint }: { h: Heading; set: (h: Heading) 
   );
 }
 
-export function HomeContentManager({ initial, defaults }: { initial: HomeContent; defaults: HomeContent }) {
+/** Which products a home page row shows: automatic, or chosen categories. */
+function ProductSource({ sec, set, options, autoLabel }: { sec: ProductSection; set: (s: ProductSection) => void; options: CategoryOption[]; autoLabel: string }) {
+  const [find, setFind] = useState("");
+  const shown = options.filter((o) => !find || o.name.toLowerCase().includes(find.toLowerCase()));
+  const toggle = (slug: string) => set({ ...sec, categories: sec.categories.includes(slug) ? sec.categories.filter((c) => c !== slug) : [...sec.categories, slug] });
+  const KIND: Record<CategoryOption["kind"], string> = { "built-in": "", special: "★ ", sale: "% " };
+  return (
+    <div className="rounded-xl border border-line p-3">
+      <b className="text-sm">Products shown</b>
+      <div className="mt-2 flex flex-wrap items-center gap-4 text-sm">
+        <label className="flex items-center gap-2"><input type="radio" checked={sec.source === "auto"} onChange={() => set({ ...sec, source: "auto" })} className="accent-[var(--color-volt)]" /> {autoLabel}</label>
+        <label className="flex items-center gap-2"><input type="radio" checked={sec.source === "categories"} onChange={() => set({ ...sec, source: "categories" })} className="accent-[var(--color-volt)]" /> Products from categories I choose</label>
+        <label className="flex items-center gap-2">How many
+          <select value={sec.limit} onChange={(e) => set({ ...sec, limit: Number(e.target.value) })} className="h-9 rounded-lg border border-line bg-surface-2 px-2 text-sm">
+            {[4, 6, 8, 10, 12, 16].map((n) => <option key={n} value={n}>{n}</option>)}
+          </select></label>
+      </div>
+      {sec.source === "categories" && (
+        <div className="mt-3">
+          <p className="mb-2 text-xs text-muted">Pick one or more categories, e.g. a Black Friday sale category. Products are mixed from each one; the &ldquo;View all&rdquo; button opens the first. ★ special / % sale categories only show while they&apos;re live, and the row goes back to automatic if none have products.</p>
+          {sec.categories.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {sec.categories.map((c) => { const o = options.find((x) => x.slug === c); return (
+                <button key={c} type="button" onClick={() => toggle(c)} className="rounded-full bg-volt px-2.5 py-1 text-xs font-semibold text-volt-ink">{o ? KIND[o.kind] + o.name : c} ✕</button>
+              ); })}
+            </div>
+          )}
+          <input value={find} onChange={(e) => setFind(e.target.value)} placeholder="Search categories…" className={`${field} max-w-xs`} />
+          <div className="mt-2 flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
+            {shown.filter((o) => !sec.categories.includes(o.slug)).map((o) => (
+              <button key={o.slug} type="button" onClick={() => toggle(o.slug)} className="rounded-full border border-line px-2.5 py-1 text-xs text-muted hover:border-volt hover:text-fg">
+                + {KIND[o.kind]}{o.name}{o.status && o.status !== "live" ? ` (${o.status})` : ""}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function HomeContentManager({ initial, defaults, categoryOptions = [] }: { initial: HomeContent; defaults: HomeContent; categoryOptions?: CategoryOption[] }) {
   const router = useRouter();
   const [saved, setSaved] = useState<HomeContent>(initial);
   const [v, setV] = useState<HomeContent>(initial);
@@ -93,7 +137,7 @@ export function HomeContentManager({ initial, defaults }: { initial: HomeContent
                 <button type="button" onClick={() => setSlides(slides.filter((_, j) => j !== i))} className="btn btn-dark h-8 px-2 text-xs hover:text-sale">Remove</button>
               </div>
             </div>
-            <ImagePicker value={s.src} onChange={(src) => setSlides(slides.map((x, j) => (j === i ? { ...x, src } : x)))} label="Banner image" />
+            <ImagePicker value={s.src} onChange={(src) => setSlides(slides.map((x, j) => (j === i ? { ...x, src } : x)))} label="Banner image" fit={BANNER_CANVAS} previewClass="h-14 w-40" hint={canvasHint(BANNER_CANVAS)} />
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <label><span className={lab}>Link (page it opens)</span><input className={field} value={s.href} placeholder="/shop?q=Renegade" onChange={(e) => setSlides(slides.map((x, j) => (j === i ? { ...x, href: e.target.value } : x)))} /></label>
               <label><span className={lab}>Description (for screen readers &amp; Google)</span><input className={field} value={s.alt} onChange={(e) => setSlides(slides.map((x, j) => (j === i ? { ...x, alt: e.target.value } : x)))} /></label>
@@ -107,7 +151,7 @@ export function HomeContentManager({ initial, defaults }: { initial: HomeContent
       </Section>
 
       <Section title="Hero background" note="The big image behind “South Africa’s cheapest tyres” at the top of the page (best: 1920 × 1080 px).">
-        <ImagePicker value={v.hero.image} onChange={(image) => up("hero", { image })} label="Background image" />
+        <ImagePicker value={v.hero.image} onChange={(image) => up("hero", { image })} label="Background image" fit={HERO_CANVAS} previewClass="h-16 w-36" hint={canvasHint(HERO_CANVAS, "The left side sits behind the headline, so keep it fairly dark there.")} />
         {v.hero.image !== defaults.hero.image && <button type="button" onClick={() => up("hero", defaults.hero)} className="text-xs font-semibold text-muted hover:text-volt">Restore original image</button>}
       </Section>
 
@@ -120,7 +164,7 @@ export function HomeContentManager({ initial, defaults }: { initial: HomeContent
               <label><span className={lab}>Tags (separate with |)</span><input className={field} value={t.tags} onChange={(e) => up("tiles", { ...v.tiles, items: v.tiles.items.map((x, j) => (j === i ? { ...x, tags: e.target.value } : x)) as HomeContent["tiles"]["items"] })} /></label>
               <label><span className={lab}>Link</span><input className={field} value={t.href} onChange={(e) => up("tiles", { ...v.tiles, items: v.tiles.items.map((x, j) => (j === i ? { ...x, href: e.target.value } : x)) as HomeContent["tiles"]["items"] })} /></label>
             </div>
-            <div className="mt-2"><ImagePicker value={t.image} onChange={(image) => up("tiles", { ...v.tiles, items: v.tiles.items.map((x, j) => (j === i ? { ...x, image } : x)) as HomeContent["tiles"]["items"] })} label="Tile image" /></div>
+            <div className="mt-2"><ImagePicker value={t.image} onChange={(image) => up("tiles", { ...v.tiles, items: v.tiles.items.map((x, j) => (j === i ? { ...x, image } : x)) as HomeContent["tiles"]["items"] })} label="Tile image" fit={TILE_CANVAS} previewClass="h-14 w-36" hint={canvasHint(TILE_CANVAS, "The title sits on the left, so keep the tyre or wheel towards the right.")} /></div>
           </div>
         ))}
       </Section>
@@ -130,6 +174,7 @@ export function HomeContentManager({ initial, defaults }: { initial: HomeContent
       </Section>
       <Section title="Fan favourites (best sellers)" show={v.fanFavourites.show} onShow={(x) => up("fanFavourites", { ...v.fanFavourites, show: x })}>
         <HeadingFields h={v.fanFavourites} set={(h) => up("fanFavourites", h)} />
+        <ProductSource sec={v.fanFavourites} set={(x) => up("fanFavourites", x)} options={categoryOptions} autoLabel="Automatic (in-stock best sellers)" />
       </Section>
       <Section title="HappyPay — buy now, pay later" show={v.happyPay.show} onShow={(x) => up("happyPay", { ...v.happyPay, show: x })}>
         <label className="block"><span className={lab}>Heading (new line = line break)</span><textarea rows={2} className={`${field} h-auto py-2`} value={v.happyPay.heading} onChange={(e) => up("happyPay", { ...v.happyPay, heading: e.target.value })} /></label>
@@ -140,15 +185,28 @@ export function HomeContentManager({ initial, defaults }: { initial: HomeContent
         note="Shows a YouTube video below the HappyPay block. Paste a YouTube link. The player only loads when a visitor taps play, so it doesn't slow the page.">
         <label className="block"><span className={lab}>YouTube link</span><input className={field} value={v.video.youtubeId} placeholder="https://www.youtube.com/watch?v=…" onChange={(e) => up("video", { ...v.video, youtubeId: e.target.value })} /></label>
         <div className="grid gap-2 sm:grid-cols-2">
-          <label><span className={lab}>Heading</span><input className={field} value={v.video.heading} onChange={(e) => up("video", { ...v.video, heading: e.target.value })} /></label>
-          <label><span className={lab}>Caption</span><input className={field} value={v.video.caption} onChange={(e) => up("video", { ...v.video, caption: e.target.value })} /></label>
+          <label><span className={lab}>Small line above (optional)</span><input className={field} value={v.video.eyebrow} placeholder="See us in action" onChange={(e) => up("video", { ...v.video, eyebrow: e.target.value })} /></label>
+          <label><span className={lab}>Section title (shown above the video)</span><input className={field} value={v.video.heading} placeholder="HOW WE FIT YOUR TYRES" onChange={(e) => up("video", { ...v.video, heading: e.target.value })} /></label>
+        </div>
+        <label className="block"><span className={lab}>Caption under the video (optional)</span><input className={field} value={v.video.caption} onChange={(e) => up("video", { ...v.video, caption: e.target.value })} /></label>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label><span className={lab}>Size on the page</span>
+            <select className={field} value={v.video.size} onChange={(e) => up("video", { ...v.video, size: e.target.value as HomeContent["video"]["size"] })}>
+              <option value="full">Full width</option><option value="large">Large (default)</option><option value="medium">Medium</option><option value="small">Small</option>
+            </select></label>
+          <label><span className={lab}>Shape (match your video)</span>
+            <select className={field} value={v.video.shape} onChange={(e) => up("video", { ...v.video, shape: e.target.value as HomeContent["video"]["shape"] })}>
+              <option value="16:9">Widescreen 16:9 (normal YouTube video)</option><option value="4:3">Classic 4:3</option><option value="1:1">Square 1:1</option><option value="9:16">Vertical 9:16 (YouTube Shorts / reels)</option>
+            </select></label>
         </div>
       </Section>
       <Section title="Massive savings (deals)" show={v.deals.show} onShow={(x) => up("deals", { ...v.deals, show: x })}>
         <HeadingFields h={v.deals} set={(h) => up("deals", h)} />
+        <ProductSource sec={v.deals} set={(x) => up("deals", x)} options={categoryOptions} autoLabel="Automatic (products on sale)" />
       </Section>
       <Section title="Fresh mags (wheels)" show={v.mags.show} onShow={(x) => up("mags", { ...v.mags, show: x })}>
         <HeadingFields h={v.mags} set={(h) => up("mags", h)} />
+        <ProductSource sec={v.mags} set={(x) => up("mags", x)} options={categoryOptions} autoLabel="Automatic (mag wheels)" />
       </Section>
       <Section title="Our story & team" show={v.about.show} onShow={(x) => up("about", { show: x })} note="The text, stat tiles and team photos are edited in the sections further down this page." />
       <Section title="Shop by brand" show={v.brands.show} onShow={(x) => up("brands", { ...v.brands, show: x })}>

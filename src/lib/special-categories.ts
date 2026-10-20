@@ -1,4 +1,5 @@
 import "server-only";
+import { cacheTag, cacheLife, revalidateTag } from "next/cache";
 import { libsql } from "./db";
 import { categories as STATIC_CATEGORIES, getCategory } from "./catalogue";
 import { revalidateProducts } from "./catalogue-cache";
@@ -89,11 +90,29 @@ async function getSpecialBySlug(slug: string): Promise<SpecialCategory | null> {
 
 export const slugify = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/[\s_]+/g, "-").replace(/-+/g, "-").slice(0, 60);
 
+export const SPECIALS_TAG = "special-categories";
+
+/** Slugs of the specials/sales live right now. Cached (refreshed every few
+ *  minutes, and at once when one is edited) so pre-built pages like the home
+ *  page can use it — and a special appears/disappears within minutes of its
+ *  start/end time. */
+export async function liveSpecialSlugs(): Promise<string[]> {
+  "use cache";
+  cacheTag(SPECIALS_TAG);
+  cacheLife("minutes");
+  const now = Date.now();
+  return (await listSpecials()).filter((c) => specialStatus(c, now) === "live").map((c) => c.slug);
+}
+
+function bumpSpecials() {
+  try { revalidateTag(SPECIALS_TAG, "max"); } catch { /* outside a request */ }
+}
+
 /** Specials showing on the site right now, shaped like normal categories. */
 export async function liveSpecialCategories(): Promise<Category[]> {
-  const now = Date.now();
+  const liveSet = new Set(await liveSpecialSlugs());
   const all = await listSpecials();
-  const live = all.filter((c) => specialStatus(c, now) === "live");
+  const live = all.filter((c) => liveSet.has(c.slug));
   const counts = await specialProductCounts();
   return live.map((c) => ({ id: 100000 + c.id, name: c.name, slug: c.slug, count: counts[c.slug] ?? 0, image: c.image || null, primary: false } as Category));
 }
@@ -102,8 +121,9 @@ export async function liveSpecialCategories(): Promise<Category[]> {
 export async function findCategory(slug: string): Promise<Category | undefined> {
   const builtIn = getCategory(slug);
   if (builtIn) return builtIn;
+  if (!(await liveSpecialSlugs()).includes(slug)) return undefined;
   const s = await getSpecialBySlug(slug);
-  if (!s || specialStatus(s) !== "live") return undefined;
+  if (!s) return undefined;
   return { id: 100000 + s.id, name: s.name, slug: s.slug, count: 0, image: s.image || null, primary: false } as Category;
 }
 
@@ -141,6 +161,7 @@ export async function createSpecial(i: SpecialInput): Promise<{ ok: true; specia
     args: [i.kind === "sale" ? "sale" : "special", slug, i.name.trim(), i.description?.trim() ?? "", i.image ?? "", i.startAt ?? null, i.endAt ?? null, i.enabled === false ? 0 : 1, now, now],
   });
   revalidateProducts();
+  bumpSpecials();
   return { ok: true, special: (await getSpecial(Number(r.lastInsertRowid)))! };
 }
 
@@ -159,6 +180,7 @@ export async function updateSpecial(id: number, i: SpecialInput): Promise<{ ok: 
   // Address changed: move the product tags across.
   if (slug !== before.slug) await renameProductTag(before.slug, slug);
   revalidateProducts();
+  bumpSpecials();
   return { ok: true, before, special: (await getSpecial(id))! };
 }
 
@@ -171,6 +193,7 @@ export async function deleteSpecial(id: number): Promise<{ special: SpecialCateg
   await setProductsInSpecial(s.slug, slugs, "remove");
   await libsql.execute({ sql: "DELETE FROM special_categories WHERE id = ?", args: [id] });
   revalidateProducts();
+  bumpSpecials();
   return { special: s, slugs };
 }
 

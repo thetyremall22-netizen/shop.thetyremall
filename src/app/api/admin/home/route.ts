@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/admin-auth";
-import { readHomeRaw, saveHomeContent, HOME_DEFAULTS, MAX_BANNERS, type HomeContent, type Heading, type Banner, type Tile } from "@/lib/home-content";
+import { readHomeRaw, saveHomeContent, HOME_DEFAULTS, MAX_BANNERS, type HomeContent, type Heading, type Banner, type Tile, type ProductSection, type VideoSize, type VideoShape } from "@/lib/home-content";
 import { addAudit, actorName } from "@/lib/audit";
 
 const str = (v: unknown, max = 300) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -18,6 +18,19 @@ const heading = (v: unknown, d: Heading): Heading => {
   const o = (v ?? {}) as Record<string, unknown>;
   return { show: bool(o.show, d.show), eyebrow: str(o.eyebrow, 120), silver: str(o.silver, 40), green: str(o.green, 40) };
 };
+
+const productSection = (v: unknown, d: ProductSection): ProductSection => {
+  const o = (v ?? {}) as Record<string, unknown>;
+  const cats = Array.isArray(o.categories) ? (o.categories as unknown[]).map((c) => str(c, 80)).filter((c) => /^[a-z0-9-]+$/.test(c)).slice(0, 12) : [];
+  return {
+    ...heading(v, d),
+    source: o.source === "categories" && cats.length ? "categories" : "auto",
+    categories: cats,
+    limit: Math.max(4, Math.min(16, Math.round(Number(o.limit) || d.limit))),
+  };
+};
+const SIZES: VideoSize[] = ["full", "large", "medium", "small"];
+const SHAPES: VideoShape[] = ["16:9", "4:3", "1:1", "9:16"];
 
 export async function PUT(req: NextRequest) {
   const actor = await authorize("content.edit");
@@ -47,13 +60,17 @@ export async function PUT(req: NextRequest) {
     hero: { image: image(((b.hero ?? {}) as Record<string, unknown>).image) || D.hero.image },
     tiles: { show: bool(((b.tiles ?? {}) as Record<string, unknown>).show, true), items: tiles },
     reviews: heading(b.reviews, D.reviews),
-    fanFavourites: heading(b.fanFavourites, D.fanFavourites),
+    fanFavourites: productSection(b.fanFavourites, D.fanFavourites),
     happyPay: { show: bool(hp.show, true), heading: str(hp.heading, 80), body: str(hp.body, 400), cta: str(hp.cta, 60) },
-    deals: heading(b.deals, D.deals),
-    mags: heading(b.mags, D.mags),
+    deals: productSection(b.deals, D.deals),
+    mags: productSection(b.mags, D.mags),
     about: { show: bool(((b.about ?? {}) as Record<string, unknown>).show, true) },
     brands: heading(b.brands, D.brands),
-    video: { show: bool(vid.show, false), youtubeId: youtubeId(vid.youtubeId), heading: str(vid.heading, 80), caption: str(vid.caption, 300) },
+    video: {
+      show: bool(vid.show, false), youtubeId: youtubeId(vid.youtubeId), eyebrow: str(vid.eyebrow, 120), heading: str(vid.heading, 80), caption: str(vid.caption, 300),
+      size: SIZES.includes(vid.size as VideoSize) ? (vid.size as VideoSize) : "large",
+      shape: SHAPES.includes(vid.shape as VideoShape) ? (vid.shape as VideoShape) : "16:9",
+    },
   };
   if (next.video.show && !next.video.youtubeId) return NextResponse.json({ error: "Add a YouTube link for the video section, or switch it off." }, { status: 400 });
 

@@ -83,10 +83,11 @@ export function HomeBanners({ slides, mode, intervalSec }: { slides: Slide[]; mo
 }
 
 /** YouTube video that only loads the player when tapped (keeps the page fast). */
-export function LiteYouTube({ id, title }: { id: string; title: string }) {
+export function LiteYouTube({ id, title, shape = "16:9" }: { id: string; title: string; shape?: "16:9" | "4:3" | "1:1" | "9:16" }) {
   const [on, setOn] = useState(false);
+  const aspect = { "16:9": "aspect-video", "4:3": "aspect-[4/3]", "1:1": "aspect-square", "9:16": "aspect-[9/16]" }[shape] ?? "aspect-video";
   return (
-    <div className="relative aspect-video overflow-hidden rounded-2xl border border-line bg-black">
+    <div className={`relative ${aspect} overflow-hidden rounded-2xl border border-line bg-black`}>
       {on ? (
         <iframe className="absolute inset-0 size-full" src={`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`} title={title}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />

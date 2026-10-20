@@ -52,16 +52,14 @@ async function ensureTables() {
   )`);
   await libsql.execute(`CREATE TABLE IF NOT EXISTS review_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')`);
   // seed testimonials once
-  const c = await libsql.execute("SELECT COUNT(*) n FROM reviews");
-  if (Number(c.rows[0].n) === 0) {
-    const now = Date.now();
-    for (let i = 0; i < SEED.length; i++) {
-      await libsql.execute({
-        sql: "INSERT INTO reviews (name, location, rating, quote, source, verified, featured, sort_order, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-        args: [SEED[i].name, "", 5, SEED[i].quote, "google", 1, 1, i, now],
-      });
-    }
-  }
+  // One statement, only while empty — parallel server processes can't double it.
+  const now = Date.now();
+  await libsql.execute({
+    sql: `INSERT INTO reviews (name, location, rating, quote, source, verified, featured, sort_order, created_at)
+          SELECT n, '', 5, q, 'google', 1, 1, s, ? FROM (${SEED.map(() => "SELECT ? AS n, ? AS q, ? AS s").join(" UNION ALL ")})
+          WHERE NOT EXISTS (SELECT 1 FROM reviews)`,
+    args: [now, ...SEED.flatMap((x, i) => [x.name, x.quote, i])],
+  });
   ensured = true;
 }
 

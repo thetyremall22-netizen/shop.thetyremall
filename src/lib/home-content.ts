@@ -12,19 +12,24 @@ export const MAX_BANNERS = 3;
 export interface Banner { src: string; alt: string; href: string }
 export interface Tile { title: string; tags: string; href: string; cta: string; image: string }
 export interface Heading { show: boolean; eyebrow: string; silver: string; green: string }
+/** A home page product row: automatic, or products from chosen categories
+ *  (built-in, special or sale categories). */
+export interface ProductSection extends Heading { source: "auto" | "categories"; categories: string[]; limit: number }
+export type VideoSize = "full" | "large" | "medium" | "small";
+export type VideoShape = "16:9" | "4:3" | "1:1" | "9:16";
 
 export interface HomeContent {
   banners: { show: boolean; mode: "static" | "rotate"; intervalSec: number; slides: Banner[] };
   hero: { image: string };
   tiles: { show: boolean; items: [Tile, Tile] };
   reviews: Heading;
-  fanFavourites: Heading;
+  fanFavourites: ProductSection;
   happyPay: { show: boolean; heading: string; body: string; cta: string };
-  deals: Heading;
-  mags: Heading;
+  deals: ProductSection;
+  mags: ProductSection;
   about: { show: boolean };
   brands: Heading;
-  video: { show: boolean; youtubeId: string; heading: string; caption: string };
+  video: { show: boolean; youtubeId: string; eyebrow: string; heading: string; caption: string; size: VideoSize; shape: VideoShape };
 }
 
 export const HOME_DEFAULTS: HomeContent = {
@@ -45,18 +50,18 @@ export const HOME_DEFAULTS: HomeContent = {
     ],
   },
   reviews: { show: true, eyebrow: "{rating}★ loved across Mzansi", silver: "HAPPY", green: "CUSTOMERS" },
-  fanFavourites: { show: true, eyebrow: "Flying out the door", silver: "FAN", green: "FAVOURITES" },
+  fanFavourites: { show: true, eyebrow: "Flying out the door", silver: "FAN", green: "FAVOURITES", source: "auto", categories: [], limit: 10 },
   happyPay: {
     show: true,
     heading: "BUY NOW\nAND PAY LATER",
     body: "See if you qualify for credit! Drive now and pay in easy monthly instalments — instant approval at checkout, no paperwork, no fuss.",
     cta: "Check if you qualify →",
   },
-  deals: { show: true, eyebrow: "🔥 Limited time only", silver: "MASSIVE", green: "SAVINGS" },
-  mags: { show: true, eyebrow: "Turn heads on every street", silver: "FRESH", green: "MAGS" },
+  deals: { show: true, eyebrow: "🔥 Limited time only", silver: "MASSIVE", green: "SAVINGS", source: "auto", categories: [], limit: 8 },
+  mags: { show: true, eyebrow: "Turn heads on every street", silver: "FRESH", green: "MAGS", source: "auto", categories: [], limit: 10 },
   about: { show: true },
   brands: { show: true, eyebrow: "Stocked & ready to ship", silver: "SHOP BY", green: "BRAND" },
-  video: { show: false, youtubeId: "", heading: "", caption: "" },
+  video: { show: false, youtubeId: "", eyebrow: "", heading: "", caption: "", size: "large", shape: "16:9" },
 };
 
 export const HOME_TAG = "home-content";

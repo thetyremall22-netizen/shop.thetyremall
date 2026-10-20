@@ -7,6 +7,8 @@ import { PagesContentManager } from "@/components/admin/PagesContentManager";
 import { getStoryRaw, getTeamSectionRaw, listStats, listTeam } from "@/lib/site-content";
 import { readHomeRaw, HOME_DEFAULTS } from "@/lib/home-content";
 import { readAllPagesRaw, PAGES } from "@/lib/page-content";
+import { categories as BUILT_IN } from "@/lib/catalogue";
+import { listSpecials, specialStatus } from "@/lib/special-categories";
 
 export const instant = false;
 
@@ -34,7 +36,14 @@ export default async function AdminContent({ searchParams }: { searchParams: Pro
         ))}
       </div>
       <div className="mt-6 max-w-4xl">
-        {tab === "home" && <HomeContentManager initial={await readHomeRaw()} defaults={HOME_DEFAULTS} />}
+        {tab === "home" && await (async () => {
+          const specials = await listSpecials();
+          const categoryOptions = [
+            ...specials.map((s) => ({ slug: s.slug, name: s.name, kind: s.kind, status: specialStatus(s) })),
+            ...BUILT_IN.map((c) => ({ slug: c.slug, name: c.name, kind: "built-in" as const })),
+          ];
+          return <HomeContentManager initial={await readHomeRaw()} defaults={HOME_DEFAULTS} categoryOptions={categoryOptions} />;
+        })()}
         {tab === "story" && await (async () => {
           const [story, teamSection, stats, team] = await Promise.all([getStoryRaw(), getTeamSectionRaw(), listStats(), listTeam()]);
           return <ContentManager story={story} teamSection={teamSection} stats={stats} team={team} />;

@@ -121,3 +121,36 @@ export async function recheckHappyPayOrders(): Promise<{ checked: number; paid: 
   for (const row of r.rows) if ((await recheckHappyPayOrder(String(row.order_id))) === "paid") paid++;
   return { checked: r.rows.length, paid };
 }
+
+// ---- PayFast safety net ---------------------------------------------------------
+// PayFast only returns a customer to the "thank you" page after a successful
+// payment. If PayFast's own confirmation (ITN) hasn't arrived 10 minutes later,
+// put the order on hold and email the shop, so a paid order is never missed.
+
+export async function notePayfastReturn(orderId: string): Promise<void> {
+  await libsql.execute(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')`);
+  await libsql.execute({ sql: "INSERT OR IGNORE INTO meta (key, value) VALUES (?, ?)", args: [`pf_returned:${orderId}`, String(Date.now())] });
+  await addAudit({ entity: "order", entityId: orderId, action: "note", actor: "Customer (website)", summary: "Came back from PayFast to the thank-you page (PayFast only does this after a successful payment) — waiting for PayFast's confirmation" }).catch(() => {});
+}
+
+export async function watchPayfastReturns(): Promise<number> {
+  await libsql.execute(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')`);
+  const r = await libsql.execute({
+    sql: "SELECT key, value FROM meta WHERE key LIKE 'pf_returned:%' AND CAST(value AS INTEGER) < ?",
+    args: [Date.now() - 10 * 60_000],
+  });
+  let alerted = 0;
+  for (const row of r.rows) {
+    const orderId = String(row.key).slice("pf_returned:".length);
+    const order = await getOrder(orderId);
+    if (order && order.status === "pending") {
+      await holdForReview(orderId, {
+        actor: "System (PayFast check)",
+        reason: "The customer came back from PayFast to the thank-you page (PayFast only does this after a successful payment), but PayFast's payment confirmation hasn't reached the website after 10 minutes. Please check this payment in your PayFast account — if it's paid, set the order to Processing.",
+      });
+      alerted++;
+    }
+    await libsql.execute({ sql: "DELETE FROM meta WHERE key = ?", args: [String(row.key)] });
+  }
+  return alerted;
+}

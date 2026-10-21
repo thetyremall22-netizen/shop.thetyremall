@@ -9,6 +9,8 @@ import { cleanVoiceQuery, correctBrands, detectTyreSize } from "@/lib/voice-sear
 import { parseSize, sizeToShopHref } from "@/lib/tyre-size";
 import { MicButton } from "./MicButton";
 import { WhatsAppPanel } from "./WhatsAppPanel";
+import { WhatsAppDetailsForm } from "./WhatsAppGate";
+import { TyroneLeadForm } from "./TyroneLeadForm";
 import { loadSavedContact, type SavedContact } from "@/lib/saved-contact";
 import { validateContact } from "@/lib/validate";
 import { useCart } from "@/lib/cart";
@@ -26,7 +28,11 @@ interface TyroneProduct {
   thumb: string | null;
   size: string;
 }
-type Msg = { from: "bot" | "user"; text: string; products?: TyroneProduct[]; buttons?: string[]; links?: { label: string; href: string }[] };
+type Msg = { from: "bot" | "user"; text: string; products?: TyroneProduct[]; buttons?: string[]; links?: { label: string; href: string }[];
+  /** Show the WhatsApp details form (name, email, mobile) under this message, inside Tyrone. */
+  waForm?: boolean;
+  /** Show "leave your details so the team can get back to you" under this message. */
+  leadForm?: boolean };
 
 interface Rule {
   keys: string[];
@@ -120,6 +126,8 @@ const MENU = {
 };
 const MAIN_MENU = [MENU.size, MENU.vehicle, MENU.wheels, MENU.info, MENU.order, MENU.human];
 const WA_BUTTON = "💬 Chat on WhatsApp";
+/** Menu / quick-reply labels (anything else the visitor sends is a typed question). */
+const BUTTON_LABELS = new Set([...Object.values(MENU), WA_BUTTON, "I'm not sure of my size", "Show all mag wheels"].map((l) => l.toLowerCase()));
 const FOLLOWUPS = [MENU.size, MENU.vehicle, MENU.human];
 
 // Filler words stripped before deciding whether a message is just a broad
@@ -165,7 +173,7 @@ function localFlow(raw: string): Msg | null {
     return { from: "bot", text: "Happy to help track your order 📦. Pop in your order number (it looks like TTM-12345) and I'll check — or I can connect you to the team to sort it fast.", buttons: [MENU.human] };
   }
   if (t === MENU.human.toLowerCase() || /talk to.*(human|someone|agent|sales|person)|speak to.*(human|someone|agent|sales|person)|real person|customer service/.test(t)) {
-    return { from: "bot", text: "Of course — our team's ready to help 💬. WhatsApp or call 078 0088 788 (Mon–Fri 8:00–17:00, Sat 8:00–13:00), or email shop@thetyremall.co.za. Tap below to start a WhatsApp quote.", buttons: [WA_BUTTON, MENU.info] };
+    return { from: "bot", text: "Of course — our team's ready to help 💬. Pop in your details below and WhatsApp opens with your question ready to send. Or call 078 0088 788 (Mon–Fri 8:00–17:00, Sat 8:00–13:00), or email shop@thetyremall.co.za.", waForm: true, buttons: [MENU.info] };
   }
   // Broad category words ("tyres", "wheels", "mags", "I need rims") with no
   // size / brand / vehicle — guide the user instead of the generic fallback.
@@ -289,6 +297,12 @@ export function Tyrone() {
   // Tyrone opens straight away (no details step). If the visitor already gave
   // their details (e.g. in the WhatsApp step), questions are logged with them.
   const [contact, setContact] = useState<SavedContact | null>(null);
+  // Latest values for use inside async handlers.
+  const contactRef = useRef<SavedContact | null>(null);
+  useEffect(() => { contactRef.current = contact; }, [contact]);
+  const pendingQuestion = useRef<string | null>(null);
+  const msgsRef = useRef<Msg[]>([]);
+  useEffect(() => { msgsRef.current = msgs; }, [msgs]);
   useEffect(() => {
     const s = loadSavedContact();
     if (!Object.keys(validateContact(s, { name: true, email: true, phone: true }).errors).length) setContact(s);
@@ -379,10 +393,24 @@ export function Tyrone() {
   }, []);
 
   function onButton(label: string) {
-    // "Chat on WhatsApp" hands off to the existing WhatsApp quote panel.
-    if (label === WA_BUTTON) { setOpen(false); setWaOpen(true); return; }
+    // "Chat on WhatsApp" stays inside Tyrone: he asks for name, email and
+    // mobile right here, then WhatsApp opens (the green WhatsApp bubble is a
+    // separate thing and isn't opened).
+    if (label === WA_BUTTON) {
+      setMsgs((m) => [...m, { from: "user", text: label }]);
+      botReply({ from: "bot", text: "Sure! Pop in your details and WhatsApp opens with your question ready to send. 👇", waForm: true });
+      return;
+    }
     send(label);
   }
+
+  // The WhatsApp message Tyrone prepares: their last typed question (not a
+  // menu button), so the team knows what it's about.
+  const typedQuestions = msgs.filter((m) => m.from === "user" && !BUTTON_LABELS.has(m.text.toLowerCase())).map((m) => m.text);
+  const lastQuestion = typedQuestions[typedQuestions.length - 1];
+  const lastLeadForm = msgs.reduce((last, m, i) => (m.leadForm ? i : last), -1);
+  const waMessage = `Hi The Tyre Mall 👋 I was chatting to Tyrone on your website.${lastQuestion ? `\nMy question: ${lastQuestion}` : ""}`;
+  const lastWaForm = msgs.reduce((last, m, i) => (m.waForm ? i : last), -1);
 
   function botReply(msg: Msg, delay = 350) {
     setTyping(true);
@@ -545,11 +573,25 @@ export function Tyrone() {
     return false;
   }
 
-  async function send(text: string) {
+  async function send(text: string, opts: { resumed?: boolean } = {}) {
     const t = text.trim();
     if (!t) return;
-    setMsgs((m) => [...m, { from: "user", text: t }]);
+    if (!opts.resumed) setMsgs((m) => [...m, { from: "user", text: t }]);
     setInput("");
+
+    // Contact details are required before Tyrone answers (so the team can
+    // always get back to the person). The question waits and is answered as
+    // soon as the details are in. Visitors outside SA can't enquire.
+    if (!contactRef.current && canBuyNow()) {
+      pendingQuestion.current = t;
+      const already = msgsRef.current.some((m) => m.leadForm);
+      if (!already) {
+        botReply({ from: "bot", text: "Happy to help! 🙌 Before I look that up, please pop in your name, email and mobile — so our team can get back to you if we lose signal. 👇", leadForm: true });
+      } else {
+        botReply({ from: "bot", text: "Just pop your details in above and I'll answer straight away. 👆" });
+      }
+      return;
+    }
 
     const low = t.toLowerCase();
 
@@ -651,7 +693,7 @@ export function Tyrone() {
     const wait = Math.max(0, 450 - (Date.now() - started));
     window.setTimeout(() => {
       setTyping(false);
-      setMsgs((m) => (leadReply ? [...m, reply, leadReply] : [...m, reply]));
+      setMsgs((m) => [...m, reply, ...(leadReply ? [leadReply] : [])]);
     }, wait);
   }
 
@@ -748,6 +790,23 @@ export function Tyrone() {
                         <Arrow width={14} height={14} className="shrink-0 text-[#4f7000]" />
                       </Link>
                     ))}
+                  </div>
+                )}
+                {m.from === "bot" && m.waForm && i === lastWaForm && !(stream && stream.idx === i) && (
+                  <div className="mt-2 w-full rounded-2xl bg-surface p-3">
+                    <WhatsAppDetailsForm message={waMessage} lead={{ source: "tyrone" }} submitLabel="Start chatting on WhatsApp" intro={<></>}
+                      onDone={() => { setContact(loadSavedContact()); setMsgs((ms) => [...ms.map((x) => (x.waForm ? { ...x, waForm: false } : x)), { from: "bot", text: "✓ WhatsApp is opening with your message — just press send and the team will reply there. 👍" }]); }} />
+                  </div>
+                )}
+                {m.from === "bot" && m.leadForm && i === lastLeadForm && !(stream && stream.idx === i) && (
+                  <div className="mt-2 w-full rounded-2xl bg-surface p-3">
+                    <TyroneLeadForm questions={typedQuestions}
+                      onSent={(c) => {
+                        setContact(c); contactRef.current = c;
+                        const q = pendingQuestion.current; pendingQuestion.current = null;
+                        setMsgs((ms) => [...ms.map((x) => (x.leadForm ? { ...x, leadForm: false } : x)), { from: "bot", text: `Thanks ${c.name.split(" ")[0]}! 🙌 The team has your details (${c.phone} · ${c.email}).${q ? " Now, about your question…" : " What can I help you with?"}` }]);
+                        if (q) window.setTimeout(() => { void send(q, { resumed: true }); }, 400);
+                      }} />
                   </div>
                 )}
                 {m.from === "bot" && m.links && m.links.length > 0 && !(stream && stream.idx === i) && (

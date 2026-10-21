@@ -8,7 +8,7 @@ import { WhatsApp } from "./icons";
 import { EnquiryNotAvailable, useCanBuy } from "./GeoNotice";
 
 export interface WhatsAppLead {
-  source: "whatsapp-enquiry" | "whatsapp-chat";
+  source: "whatsapp-enquiry" | "whatsapp-chat" | "tyrone";
   productName?: string;
   sku?: string;
   price?: number;

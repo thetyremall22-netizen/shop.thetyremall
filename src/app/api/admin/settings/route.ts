@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/admin-auth";
 import { updateSettings, type SiteSettings } from "@/lib/settings";
+import { BLOCKABLE_COUNTRIES } from "@/lib/geo-countries";
 
 const s = (v: unknown, max = 500) => (typeof v === "string" ? v.trim().slice(0, max) : undefined);
 const n = (v: unknown) => (typeof v === "number" && isFinite(v) ? v : typeof v === "string" && v.trim() !== "" && isFinite(Number(v)) ? Number(v) : undefined);
@@ -74,7 +75,9 @@ export async function PATCH(req: NextRequest) {
     patch.clientZone = clean({ wishlistAlerts: b(cz.wishlistAlerts), supportEmail: s(cz.supportEmail, 160) }) as SiteSettings["clientZone"];
   }
   if (body.access) {
-    patch.access = clean({ southAfricaOnly: b(body.access.southAfricaOnly) }) as SiteSettings["access"];
+    const allowed = new Set(BLOCKABLE_COUNTRIES.map((c) => c.code));
+    const list = Array.isArray(body.access.blockedCountries) ? [...new Set(body.access.blockedCountries.map(String).filter((c) => allowed.has(c)))] : undefined;
+    patch.access = clean({ southAfricaOnly: b(body.access.southAfricaOnly), blockedCountries: list }) as SiteSettings["access"];
   }
   if (body.maintenance) {
     const mt = body.maintenance;

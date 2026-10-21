@@ -18,6 +18,7 @@ import {
   type DeliveryMethod,
 } from "./shop-config";
 import { setDiscountFor } from "./pricing";
+import { canBuyNow, showGeoBlocked } from "@/components/GeoNotice";
 
 export interface CartItem {
   id: number;
@@ -201,6 +202,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const value: CartContextValue = {
     ...state,
     add: (item, qty = 1) => {
+      // Outside South Africa: browsing only (the server refuses checkout too).
+      if (!canBuyNow()) { showGeoBlocked(); return; }
       dispatch({ type: "ADD", item, qty });
       setDrawerOpen(true);
     },

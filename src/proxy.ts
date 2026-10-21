@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { geoVerdict, visitorIp } from "@/lib/geo";
+import { geoVerdict, visitorIp, blockedCountryOf } from "@/lib/geo";
+import { DEFAULT_BLOCKED } from "@/lib/geo-countries";
 import { SHOP_EMAIL, SHOP_PHONE_DISPLAY, SHOP_PHONE_TEL } from "@/lib/shop-config";
 
 // Maintenance / "coming soon" gate. When the admin toggles it on, public
@@ -42,16 +43,24 @@ function maintenanceOn(): boolean {
   return on;
 }
 
-// "South Africa only" (Admin → Settings). Off until it's switched on there
-// (the Settings save writes the flag file).
-let saCache = { on: false, at: 0 };
-function saOnlyOn(): boolean {
-  if (Date.now() - saCache.at < TTL) return saCache.on;
-  let on = false;
-  try { on = fs.readFileSync(flagPath("sa-only.flag"), "utf8").trim() === "1"; } catch { on = false; }
-  saCache = { on, at: Date.now() };
-  return on;
+// Visitor country rules (Admin → Settings → Visitors outside South Africa),
+// mirrored to .data/geo.json by the Settings save. Defaults when that file
+// doesn't exist yet: only South Africans can buy; spam countries fully blocked.
+type GeoCfg = { saOnly: boolean; block: string[] };
+let geoCache: { cfg: GeoCfg; at: number } = { cfg: { saOnly: true, block: DEFAULT_BLOCKED }, at: 0 };
+function geoConfig(): GeoCfg {
+  if (Date.now() - geoCache.at < TTL) return geoCache.cfg;
+  let cfg: GeoCfg = { saOnly: true, block: DEFAULT_BLOCKED };
+  try {
+    const j = JSON.parse(fs.readFileSync(flagPath("geo.json"), "utf8")) as Partial<GeoCfg>;
+    cfg = { saOnly: j.saOnly !== false, block: Array.isArray(j.block) ? j.block.map(String) : DEFAULT_BLOCKED };
+  } catch { /* no file yet → defaults */ }
+  geoCache = { cfg, at: Date.now() };
+  return cfg;
 }
+/** Buying requests refused for visitors outside South Africa. */
+const PURCHASE_API = /^\/api\/checkout(\/|$)/;
+const GEO_COOKIE = "ttm_geo"; // readable: "out" = browse only (buy buttons show a notice)
 
 // Never country-blocked: payment confirmations (PayFast/HappyPay servers),
 // scheduled jobs, and the admin API (it has its own sign-in).
@@ -71,13 +80,22 @@ function isStaffSession(tok: string | undefined): boolean {
   return mac.length === expected.length && crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(expected));
 }
 
+/** Checkout refused for someone outside South Africa (they can still browse). */
+function purchaseRefused(): NextResponse {
+  return NextResponse.json(
+    { error: "Sorry, you're not able to purchase from your country. The Tyre Mall only sells and delivers within South Africa." },
+    { status: 403, headers: { "cache-control": "no-store" } },
+  );
+}
+
+/** Fully blocked country (spam). Crawlers are never sent here. */
 function blockedResponse(api: boolean): NextResponse {
   const headers = { "cache-control": "no-store", "x-robots-tag": "noindex" };
-  if (api) return NextResponse.json({ error: "Sorry — The Tyre Mall only sells and delivers within South Africa." }, { status: 403, headers });
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>South Africa only — The Tyre Mall</title>
+  if (api) return NextResponse.json({ error: "Sorry, we do not allow you to purchase our products as we don't sell to your country." }, { status: 403, headers });
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Not available in your country — The Tyre Mall</title>
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0d10;color:#e7e9ec;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;text-align:center;padding:24px}main{max-width:460px}img{height:56px;width:auto}h1{font-size:28px;margin:22px 0 10px;letter-spacing:.3px}p{color:#a3a9b1;line-height:1.6;margin:0 0 12px}a{color:#8ac53f;font-weight:700;text-decoration:none}small{display:block;margin-top:28px;color:#5d646d;font-size:11px}small a{color:#5d646d;font-weight:400}</style></head>
-<body><main><img src="/brand/logo.png" alt="The Tyre Mall"><h1>We only sell in South Africa</h1>
-<p>The Tyre Mall sells and delivers tyres and mag wheels within South Africa only, so our online shop isn't available in your country.</p>
+<body><main><img src="/brand/logo.png" alt="The Tyre Mall"><h1>&#9888; Not available in your country</h1>
+<p>Sorry, we do not allow you to purchase our products as we don't sell to your country. The Tyre Mall only sells and delivers tyres and mag wheels within South Africa.</p>
 <p>In South Africa but seeing this? Please switch off any VPN or proxy and try again, or contact us on <a href="tel:${SHOP_PHONE_TEL}">${SHOP_PHONE_DISPLAY}</a> or <a href="mailto:${SHOP_EMAIL}">${SHOP_EMAIL}</a>.</p>
 <small><a href="https://db-ip.com" rel="noopener">IP Geolocation by DB-IP</a></small></main></body></html>`;
   return new NextResponse(html, { status: 403, headers: { ...headers, "content-type": "text/html; charset=utf-8" } });
@@ -95,16 +113,35 @@ export async function proxy(req: NextRequest) {
     return new NextResponse("Gone", { status: 410, headers: { "cache-control": "public, max-age=86400" } });
   }
 
-  // South Africa only: everyone else gets a short "we only sell in SA" page
-  // (Google/Bing/AI crawlers and signed-in staff are let through).
+  // Visitor country rules. Crawlers (Google, Bing, AI), South Africa, local
+  // addresses and signed-in staff are never limited.
   const p = req.nextUrl.pathname;
   const api = p.startsWith("/api/");
-  if (!GEO_EXEMPT.test(p) && saOnlyOn() && geoVerdict(visitorIp(req.headers)) === "blocked" && !isStaffSession(req.cookies.get(ADMIN_COOKIE)?.value)) {
-    return blockedResponse(api);
+  let mark: "za" | "out" = "za";
+  if (!GEO_EXEMPT.test(p) && !isStaffSession(req.cookies.get(ADMIN_COOKIE)?.value)) {
+    const ip = visitorIp(req.headers);
+    if (geoVerdict(ip) === "blocked") {
+      const cfg = geoConfig();
+      if (blockedCountryOf(ip, cfg.block)) return blockedResponse(api); // spam countries: nothing at all
+      if (cfg.saOnly) {
+        if (api && PURCHASE_API.test(p)) return purchaseRefused();
+        mark = "out"; // can browse, can't buy
+      }
+    }
   }
   // The coming-soon gate below is for pages only.
   if (api) return NextResponse.next();
+  return markVisitor(req, pageGate(req), mark);
+}
 
+/** Tell the storefront whether this visitor can buy (only sends the cookie when it changes). */
+function markVisitor(req: NextRequest, res: NextResponse, mark: "za" | "out"): NextResponse {
+  if (mark === "out" && req.cookies.get(GEO_COOKIE)?.value !== "out") res.cookies.set(GEO_COOKIE, "out", { path: "/", sameSite: "lax", maxAge: 3600 });
+  else if (mark === "za" && req.cookies.get(GEO_COOKIE)) res.cookies.delete(GEO_COOKIE);
+  return res;
+}
+
+function pageGate(req: NextRequest): NextResponse {
   // Admins preview the real site even while the gate is on. A small readable
   // cookie tells the storefront to show them a "Coming soon is ON" bar.
   if (req.cookies.get(ADMIN_COOKIE)) {

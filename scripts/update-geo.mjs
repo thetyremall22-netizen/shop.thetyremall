@@ -11,7 +11,13 @@ import path from "node:path";
 import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 
-const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "data", "geo-allow.json");
+const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "data");
+const OUT = path.join(DATA, "geo-allow.json");
+// Countries that can be fully blocked from Admin → Settings (address data for
+// these is shipped in src/data/geo-block.json). Keep in sync with
+// BLOCKABLE_COUNTRIES in src/lib/geo-countries.ts.
+const BLOCKABLE = ["CN", "HK", "JP", "TH", "RU", "NG", "ZW", "VN", "IN", "PK", "BD", "ID", "IR", "KP", "BY", "UA", "KH", "MM"];
+const OUT_BLOCK = path.join(DATA, "geo-block.json");
 
 const BOT_LISTS = {
   "Googlebot": "https://developers.google.com/static/search/apis/ipranges/googlebot.json",
@@ -41,20 +47,23 @@ function v6hex(ip) {
   const fill = tail === null ? [] : Array(8 - h.length - t.length).fill("0");
   return [...h, ...fill, ...t].map((g) => g.padStart(4, "0")).join("").toLowerCase();
 }
+// IPv6 is stored as its 64-bit network prefix (first 16 hex digits): every
+// country/crawler range is at least that wide, and it halves the data size.
+const p64 = (hex) => hex.slice(0, 16);
 function cidr(prefix) {
   const [ip, bitsS] = prefix.split("/"); const bits = Number(bitsS);
   if (ip.includes(":")) {
     const hex = v6hex(ip); let bin = [...hex].map((c) => parseInt(c, 16).toString(2).padStart(4, "0")).join("");
     const lo = bin.slice(0, bits).padEnd(128, "0"), hi = bin.slice(0, bits).padEnd(128, "1");
     const toHex = (b) => b.match(/.{4}/g).map((x) => parseInt(x, 2).toString(16)).join("");
-    return { v: 6, s: toHex(lo), e: toHex(hi) };
+    return { v: 6, s: p64(toHex(lo)), e: p64(toHex(hi)) };
   }
   const n = v4(ip), size = 2 ** (32 - bits), s = Math.floor(n / size) * size;
   return { v: 4, s, e: s + size - 1 };
 }
 // Sort + merge overlapping/adjacent ranges.
 function merge(list, v) {
-  const next = (x) => (v === 4 ? x + 1 : (BigInt("0x" + x) + 1n).toString(16).padStart(32, "0"));
+  const next = (x) => (v === 4 ? x + 1 : (BigInt("0x" + x) + 1n).toString(16).padStart(16, "0"));
   const sorted = [...list].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   const out = [];
   for (const r of sorted) {
@@ -81,10 +90,14 @@ async function main() {
   }
   if (!csv) throw new Error("Couldn't download the DB-IP country file.");
   const za4 = [], za6 = [];
+  const blk = Object.fromEntries(BLOCKABLE.map((c) => [c, { v4: [], v6: [] }]));
   for (const line of csv.split("\n")) {
     const [a, b, cc] = line.trim().split(",");
-    if (cc !== "ZA") continue;
-    if (a.includes(":")) za6.push([v6hex(a), v6hex(b)]); else za4.push([v4(a), v4(b)]);
+    if (cc === "ZA") {
+      if (a.includes(":")) za6.push([p64(v6hex(a)), p64(v6hex(b))]); else za4.push([v4(a), v4(b)]);
+    } else if (blk[cc]) {
+      if (a.includes(":")) blk[cc].v6.push([p64(v6hex(a)), p64(v6hex(b))]); else blk[cc].v4.push([v4(a), v4(b)]);
+    }
   }
   const bot4 = [], bot6 = [], sources = {};
   for (const [name, url] of Object.entries(BOT_LISTS)) {
@@ -108,6 +121,9 @@ async function main() {
     bots: { v4: merge(bot4, 4), v6: merge(bot6, 6) },
   };
   fs.writeFileSync(OUT, JSON.stringify(data));
+  const block = { generated: data.generated, countryData: data.countryData, countries: Object.fromEntries(Object.entries(blk).map(([c, r]) => [c, { v4: merge(r.v4, 4), v6: merge(r.v6, 6) }])) };
+  fs.writeFileSync(OUT_BLOCK, JSON.stringify(block));
+  console.log(`Wrote ${path.relative(process.cwd(), OUT_BLOCK)}: ${Object.entries(block.countries).map(([c, r]) => `${c} ${r.v4.length + r.v6.length}`).join(", ")} (${(fs.statSync(OUT_BLOCK).size / 1024 / 1024).toFixed(1)} MB)`);
   console.log(`Wrote ${path.relative(process.cwd(), OUT)}: ZA ${data.za.v4.length} IPv4 + ${data.za.v6.length} IPv6 ranges; bots ${data.bots.v4.length} IPv4 + ${data.bots.v6.length} IPv6 (${(fs.statSync(OUT).size / 1024).toFixed(0)} KB)`);
 }
 

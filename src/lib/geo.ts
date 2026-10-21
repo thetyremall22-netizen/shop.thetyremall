@@ -1,8 +1,10 @@
-// "South Africa only": is this visitor's address allowed to use the shop?
+// Visitor country checks: is this address South African, a verified crawler,
+// or in one of the fully-blocked countries? (see src/proxy.ts)
 // Allowed = a South African IP, a verified search/ads/AI crawler (Google,
 // Bing, ChatGPT…), or a private/local address. Data: src/data/geo-allow.json,
 // refreshed with `node scripts/update-geo.mjs` (country data: DB-IP, CC BY 4.0).
 import data from "@/data/geo-allow.json";
+import blockData from "@/data/geo-block.json";
 
 type R4 = [number, number];
 type R6 = [string, string];
@@ -10,6 +12,7 @@ const ZA4 = data.za.v4 as R4[];
 const ZA6 = data.za.v6 as R6[];
 const BOT4 = data.bots.v4 as R4[];
 const BOT6 = data.bots.v6 as R6[];
+const BLOCK = blockData.countries as unknown as Record<string, { v4: R4[]; v6: R6[] }>;
 
 function v4(ip: string): number | null {
   const p = ip.split(".");
@@ -18,7 +21,8 @@ function v4(ip: string): number | null {
   for (const x of p) { const v = Number(x); if (!/^\d{1,3}$/.test(x) || v > 255) return null; n = n * 256 + v; }
   return n;
 }
-/** IPv6 → 32-char lowercase hex (fixed length, so text comparison = numeric). */
+/** IPv6 → its 64-bit network prefix as 16 lowercase hex digits (fixed length,
+ *  so text comparison = numeric; the data is stored the same way). */
 function v6(ip: string): string | null {
   if (!/^[0-9a-f:.]+$/i.test(ip) || (ip.match(/::/g)?.length ?? 0) > 1) return null;
   const [head, tail] = ip.includes("::") ? ip.split("::") : [ip, null];
@@ -31,7 +35,7 @@ function v6(ip: string): string | null {
   if (tail === null ? h.length !== 8 : missing < 0) return null;
   const groups = [...h, ...(tail === null ? [] : Array(missing).fill("0")), ...t];
   if (groups.some((g) => g.length > 4)) return null;
-  return groups.map((g) => g.padStart(4, "0")).join("").toLowerCase();
+  return groups.map((g) => g.padStart(4, "0")).join("").toLowerCase().slice(0, 16);
 }
 
 function inRanges<T extends number | string>(x: T, list: [T, T][]): boolean {
@@ -73,7 +77,7 @@ export function geoVerdict(ip: string | null | undefined): GeoVerdict {
   }
   const h = v6(s);
   if (h === null) return "local";
-  if (h === "00000000000000000000000000000001" || h.startsWith("fe8") || h.startsWith("fe9") || h.startsWith("fea") || h.startsWith("feb") || h.startsWith("fc") || h.startsWith("fd")) return "local";
+  if (h === "0000000000000000" || h.startsWith("fe8") || h.startsWith("fe9") || h.startsWith("fea") || h.startsWith("feb") || h.startsWith("fc") || h.startsWith("fd")) return "local";
   if (inRanges(h, ZA6)) return "za";
   if (inRanges(h, BOT6)) return "bot";
   return "blocked";
@@ -88,4 +92,22 @@ export function visitorIp(headers: Headers): string {
   const xff = headers.get("x-forwarded-for");
   if (xff) { const parts = xff.split(",").map((p) => p.trim()).filter(Boolean); if (parts.length) return parts[parts.length - 1]; }
   return "";
+}
+
+/** Which country (from the blockable list) an address belongs to, or null. */
+export function blockedCountryOf(ip: string | null | undefined, countries: string[]): string | null {
+  if (!countries.length) return null;
+  const raw = (ip ?? "").trim().replace(/^\[|\]$/g, "").replace(/%.*$/, "");
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(raw);
+  const s = mapped ? mapped[1] : raw;
+  if (s.includes(".") && !s.includes(":")) {
+    const n = v4(s);
+    if (n === null) return null;
+    for (const c of countries) if (BLOCK[c] && inRanges(n, BLOCK[c].v4)) return c;
+    return null;
+  }
+  const h = v6(s);
+  if (h === null) return null;
+  for (const c of countries) if (BLOCK[c] && inRanges(h, BLOCK[c].v6)) return c;
+  return null;
 }

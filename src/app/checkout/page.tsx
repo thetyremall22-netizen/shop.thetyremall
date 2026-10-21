@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useCart } from "@/lib/cart";
 import { useAccount } from "@/lib/account-client";
 import { attributionForOrder } from "@/components/AttributionTracker";
+import { NotAvailableNotice, useCanBuy } from "@/components/GeoNotice";
 import { formatPrice } from "@/lib/format";
 import { FITMENT_CENTRES, PAYMENT_METHODS } from "@/lib/shop-config";
 import { Check, Truck, Pin, Shield, Bolt } from "@/components/icons";
@@ -51,6 +52,7 @@ export default function CheckoutPage() {
   // Signed-in client: fill in their saved details and address (only empty boxes,
   // so anything typed or restored above is kept).
   const { customer } = useAccount();
+  const canBuy = useCanBuy();
   useEffect(() => {
     const form = formRef.current;
     if (!customer || !form || items.length === 0) return;
@@ -182,6 +184,18 @@ export default function CheckoutPage() {
       setError("Network error — please check your connection and try again.");
       setSubmitting(false);
     }
+  }
+
+  if (!canBuy) {
+    return (
+      <div className="container-x grid place-items-center py-24 text-center">
+        <div className="max-w-md">
+          <h1 className="font-display text-4xl">Checkout isn&apos;t available</h1>
+          <NotAvailableNotice className="mt-5 text-left" />
+          <Link href="/shop" className="btn btn-ghost mt-6">Keep browsing</Link>
+        </div>
+      </div>
+    );
   }
 
   if (items.length === 0) {

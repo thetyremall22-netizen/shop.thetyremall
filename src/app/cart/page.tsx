@@ -7,9 +7,11 @@ import { formatPrice } from "@/lib/format";
 import { setDiscountFor } from "@/lib/pricing";
 import { FITMENT_CENTRES, STANDARD_DELIVERY_FEE } from "@/lib/shop-config";
 import { Trash, Plus, Minus, Truck, Pin, Check, Shield, Bolt } from "@/components/icons";
+import { NotAvailableNotice, useCanBuy } from "@/components/GeoNotice";
 
 export default function CartPage() {
   const { items, totals, setQty, remove, toggleHazard, deliveryMethod, setDelivery, fitmentStoreId, setFitment } = useCart();
+  const canBuy = useCanBuy();
 
   if (items.length === 0) {
     return (
@@ -125,7 +127,9 @@ export default function CartPage() {
             </div>
             <div className="mt-1 text-right text-xs text-pay">or 3× {formatPrice(Math.round(totals.total / 3))} with HappyPay</div>
 
-            <Link href="/checkout" className="btn btn-volt mt-5 w-full py-3.5 text-base"><Bolt width={18} height={18} /> Checkout</Link>
+            {canBuy
+              ? <Link href="/checkout" className="btn btn-volt mt-5 w-full py-3.5 text-base"><Bolt width={18} height={18} /> Checkout</Link>
+              : <NotAvailableNotice className="mt-5" />}
             <Link href="/shop" className="btn btn-ghost mt-2 w-full">Continue shopping</Link>
           </div>
         </aside>

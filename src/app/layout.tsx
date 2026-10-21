@@ -10,6 +10,7 @@ import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
 import { FloatingWidgets } from "@/components/FloatingWidgets";
 import { AttributionTracker } from "@/components/AttributionTracker";
+import { GeoBlockedDialog, GeoBanner } from "@/components/GeoNotice";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { GoogleTracking, GoogleTagManagerNoScript } from "@/components/GoogleTracking";
 import { CookieConsent } from "@/components/CookieConsent";
@@ -62,12 +63,14 @@ export default async function RootLayout({
           <CompareProvider>
           <AccountProvider>
             <ScrollToTop />
+            <GeoBanner />
             <Header brands={brands} />
             <main>{children}</main>
             <Footer />
             <CartDrawer />
             <FloatingWidgets />
             <AttributionTracker />
+            <GeoBlockedDialog />
             <CookieConsent />
           </AccountProvider>
           </CompareProvider>

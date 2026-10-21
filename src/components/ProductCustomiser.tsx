@@ -15,6 +15,7 @@ import {
   HAPPYPAY_URL,
 } from "@/lib/shop-config";
 import { Plus, Minus, Truck, Pin, Check, Bolt, Cart, ChevronDown, Shield } from "./icons";
+import { NotAvailableNotice, useCanBuy } from "./GeoNotice";
 
 type Item = Omit<CartItem, "qty" | "roadHazard" | "alignment" | "balanceQty">;
 
@@ -37,6 +38,7 @@ function StepLabel({ n, children }: { n: number; children: React.ReactNode }) {
 
 export function ProductCustomiser({ item, inStock, sku, size }: { item: Item; inStock: boolean; sku?: string; size?: string }) {
   const router = useRouter();
+  const canBuy = useCanBuy();
   const { add, setDelivery, setFitment, setFitmentDate } = useCart();
   const isTyre = item.type === "tyre";
 
@@ -244,10 +246,12 @@ export function ProductCustomiser({ item, inStock, sku, size }: { item: Item; in
       </div>
 
       {/* actions */}
+      {canBuy ? (
       <div className="grid gap-2 sm:grid-cols-2">
         <button disabled={!inStock} onClick={commit} className="btn btn-dark py-3.5 text-base disabled:opacity-50"><Cart width={18} height={18} /> Add to cart</button>
         <button disabled={!inStock} onClick={() => { commit(); router.push("/checkout"); }} className="btn btn-volt py-3.5 text-base disabled:opacity-50"><Bolt width={18} height={18} /> Buy now</button>
       </div>
+      ) : <NotAvailableNotice />}
       <WhatsAppButton
         className="w-full py-3.5 text-base"
         slug={item.slug}

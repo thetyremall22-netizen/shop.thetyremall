@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { SiteSettings } from "@/lib/settings";
 import { TIMEZONE_OPTIONS } from "@/lib/tz";
 import { LinkedText } from "@/components/LinkedText";
+import { BLOCKABLE_COUNTRIES } from "@/lib/geo-countries";
 
 const field = "mt-1 h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt";
 const label = "text-xs font-bold uppercase tracking-wide text-muted";
@@ -79,17 +80,34 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
       <div className="card p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-lg">South Africa only
-              {v.access.southAfricaOnly && <span className="ml-2 badge badge-pay">ON</span>}
-            </h2>
-            <p className="mt-1 max-w-xl text-sm text-muted">When on, only visitors in South Africa can see the shop, register, enquire or buy. Everyone else (e.g. China, Japan, Nigeria, Zimbabwe, Thailand, Russia) gets a short &quot;we only sell in South Africa&quot; page. Google (Search, Ads, Merchant Center), Bing and AI search (ChatGPT, Perplexity, Apple) are still let in, so ads and search keep working. You and your staff can still use the admin from anywhere, and payment confirmations from PayFast / HappyPay always get through.</p>
-            <p className="mt-1 max-w-xl text-xs text-muted">South Africans using a VPN set to another country will see the block page until they switch the VPN off.</p>
+            <h2 className="font-display text-lg">Visitors outside South Africa</h2>
+            <p className="mt-1 max-w-2xl text-sm text-muted">Google (Search, Ads, free listings, Merchant Center), Bing, AI search and Facebook / WhatsApp link previews always see the full shop. You and your staff can use the site and admin from anywhere, and PayFast / HappyPay payment confirmations always get through.</p>
           </div>
-          <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold">
-            <input type="checkbox" checked={v.access.southAfricaOnly} onChange={(e) => up("access", "southAfricaOnly", e.target.checked)} className="size-5 accent-volt" />
-            {v.access.southAfricaOnly ? "On" : "Off"}
-          </label>
         </div>
+        <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-line p-3">
+          <input type="checkbox" checked={v.access.southAfricaOnly} onChange={(e) => up("access", "southAfricaOnly", e.target.checked)} className="mt-0.5 size-5 accent-volt" />
+          <span>
+            <span className="block text-sm font-semibold text-fg">Only visitors in South Africa can buy {v.access.southAfricaOnly && <span className="ml-1 badge badge-pay">ON</span>}</span>
+            <span className="block text-xs text-muted">Everyone else can browse products and prices, but &quot;Add to cart&quot;, &quot;Buy now&quot; and checkout show: &quot;Sorry, we only sell and deliver within South Africa&quot;. Checkout also refuses them on the server.</span>
+          </span>
+        </label>
+        <div className="mt-4">
+          <div className="text-sm font-semibold text-fg">Block these countries completely <span className="text-xs font-normal text-muted">(spam)</span></div>
+          <p className="text-xs text-muted">Visitors from a ticked country can&apos;t see the site at all. They get a short warning: &quot;Sorry, we do not allow you to purchase our products as we don&apos;t sell to your country.&quot;</p>
+          <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
+            {BLOCKABLE_COUNTRIES.map((c) => {
+              const on = v.access.blockedCountries.includes(c.code);
+              return (
+                <label key={c.code} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm ${on ? "border-sale/50 bg-sale/10 text-fg" : "border-line text-muted"}`}>
+                  <input type="checkbox" checked={on} className="size-4 accent-[var(--color-sale)]"
+                    onChange={(e) => up("access", "blockedCountries", e.target.checked ? [...v.access.blockedCountries, c.code] : v.access.blockedCountries.filter((x) => x !== c.code))} />
+                  {c.name}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-muted">Takes effect within about 10 seconds of saving. South Africans using a VPN set to another country are treated as being in that country until they switch it off.</p>
       </div>
 
       <Group title="Site identity">

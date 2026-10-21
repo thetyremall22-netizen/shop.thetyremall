@@ -6,9 +6,11 @@ import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/format";
 import { setDiscountFor } from "@/lib/pricing";
 import { Close, Trash, Plus, Minus, Cart as CartIcon, Check } from "./icons";
+import { NotAvailableNotice, useCanBuy } from "./GeoNotice";
 
 export function CartDrawer() {
   const { items, totals, drawerOpen, setDrawerOpen, setQty, remove } = useCart();
+  const canBuy = useCanBuy();
 
   return (
     <div className={`fixed inset-0 z-50 ${drawerOpen ? "" : "pointer-events-none"}`} aria-hidden={!drawerOpen}>
@@ -143,9 +145,11 @@ export function CartDrawer() {
               <span className="font-semibold">Total</span>
               <span className="font-display text-xl text-volt">{formatPrice(totals.total)}</span>
             </div>
+            {canBuy ? (
             <Link href="/checkout" onClick={() => setDrawerOpen(false)} className="btn btn-volt mt-4 w-full py-3.5 text-base">
               Checkout
             </Link>
+            ) : <NotAvailableNotice className="mt-4" />}
             <Link href="/cart" onClick={() => setDrawerOpen(false)} className="btn btn-ghost mt-2 w-full">
               View cart
             </Link>

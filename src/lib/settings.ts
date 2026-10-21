@@ -4,6 +4,7 @@ import path from "node:path";
 import { cacheTag, cacheLife, revalidateTag } from "next/cache";
 import { db, schema, libsql } from "./db";
 import * as sc from "./shop-config";
+import { DEFAULT_BLOCKED } from "./geo-countries";
 
 // The "coming soon" gate is enforced by the proxy (Node runtime), which reads a
 // plain flag file off disk rather than self-fetching /api/maintenance (that
@@ -17,12 +18,13 @@ function flagPath(name: string): string {
   return path.join(path.dirname(raw) || ".", name);
 }
 const maintenanceFlagPath = () => flagPath("maintenance.flag");
-// "South Africa only" uses the same kind of flag file (read by the proxy).
-function writeSaOnlyFlag(enabled: boolean): void {
+// Visitor country rules are mirrored to .data/geo.json for the proxy (same
+// reason as the maintenance flag: it reads straight off disk).
+function writeGeoConfig(a: SiteSettings["access"]): void {
   try {
-    const p = flagPath("sa-only.flag");
+    const p = flagPath("geo.json");
     fs.mkdirSync(path.dirname(p), { recursive: true });
-    fs.writeFileSync(p, enabled ? "1" : "0");
+    fs.writeFileSync(p, JSON.stringify({ saOnly: a.southAfricaOnly, block: a.blockedCountries }));
   } catch { /* non-fatal */ }
 }
 
@@ -74,8 +76,10 @@ export interface SiteSettings {
     supportEmail: string;    // where new support requests are sent (blank = shop email)
   };
   access: {
-    /** Only visitors in South Africa (plus Google/Bing/AI crawlers) can use the shop. */
+    /** Only visitors in South Africa can buy (everyone can browse). */
     southAfricaOnly: boolean;
+    /** Countries that can't see the site at all (spam). Codes from BLOCKABLE_COUNTRIES. */
+    blockedCountries: string[];
   };
   maintenance: {
     enabled: boolean; // hide the public storefront behind a "coming soon" page
@@ -135,7 +139,8 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     supportEmail: "",
   },
   access: {
-    southAfricaOnly: false, // switched on in Admin → Settings
+    southAfricaOnly: true,
+    blockedCountries: DEFAULT_BLOCKED,
   },
   maintenance: {
     enabled: false,
@@ -220,7 +225,7 @@ export async function updateSettings(patch: Partial<SiteSettings>): Promise<Site
       .onConflictDoUpdate({ target: schema.settings.key, set: { value: JSON.stringify(merged), updatedAt: now } });
     // Mirror the coming-soon flag to disk for the proxy to read (see note above).
     if (g === "maintenance") writeMaintenanceFlag(!!(merged as { enabled?: boolean }).enabled);
-    if (g === "access") writeSaOnlyFlag((merged as { southAfricaOnly?: boolean }).southAfricaOnly === true);
+    if (g === "access") writeGeoConfig(merged as SiteSettings["access"]);
   }
   // On-demand invalidation of the cached settings (footer/header shell etc.).
   revalidateTag(SETTINGS_TAG, "max");

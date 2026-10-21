@@ -40,6 +40,7 @@ export function OrderAttribution({ a, placedAt }: { a: Attribution | null; place
             ["Ad click", adClick(a.touch) ? `Yes (${adClick(a.touch)})` : null],
             ["Came from", a.touch.referrer ? <a href={a.touch.referrer} target="_blank" rel="noreferrer noopener" className="text-volt hover:underline">{hostOf(a.touch.referrer)}</a> : null],
             ["Landing page", a.touch.landing || null],
+            ["Tyrone chat", a.tyrone ? <a href={`/admin/leads/tyrone/${a.tyrone}`} className="font-semibold text-volt hover:underline">Chatted to Tyrone first — see the conversation →</a> : null],
             ["Device", a.device ?? null],
             ["Placed by staff", a.staff ? "Yes (logged in to the admin, so it's marked TEST)" : null],
             ["Pages viewed", a.sessionPages ? `${a.sessionPages} in this visit` : null],

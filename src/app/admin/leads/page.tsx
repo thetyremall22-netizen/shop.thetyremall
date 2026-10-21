@@ -5,6 +5,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { listLeads, leadCounts } from "@/lib/contacts";
 import { listEnquiries } from "@/lib/enquiries";
 import { listCarts } from "@/lib/cart-recovery";
+import { journeyCount } from "@/lib/tyrone-journey";
 import { AdminSearch } from "@/components/admin/AdminSearch";
 
 export const instant = false;
@@ -26,7 +27,7 @@ const SOURCE_TABS = [
   { v: "whatsapp-chat", label: "WhatsApp chat" },
   { v: "tyrone", label: "Tyrone chat" },
 ] as const;
-type TabV = (typeof SOURCE_TABS)[number]["v"] | "tyrone-questions" | "wa-taps" | "calls" | "carts";
+type TabV = (typeof SOURCE_TABS)[number]["v"] | "tyrone-convos" | "tyrone-questions" | "wa-taps" | "calls" | "carts";
 const isSourceTab = (t: string): boolean => SOURCE_TABS.some((s) => s.v === t);
 
 /** Case-insensitive match of a search term against any field of a row. */
@@ -43,11 +44,11 @@ function rowMatches(row: Record<string, unknown>, q: string): boolean {
 export default async function AdminLeadsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   await requireAdmin();
   const sp = await searchParams;
-  const valid: string[] = [...SOURCE_TABS.map((t) => t.v), "tyrone-questions", "wa-taps", "calls", "carts"];
+  const valid: string[] = [...SOURCE_TABS.map((t) => t.v), "tyrone-convos", "tyrone-questions", "wa-taps", "calls", "carts"];
   const tab: TabV = valid.includes(sp.tab ?? "") ? (sp.tab as TabV) : "contact";
   const q = (sp.q ?? "").trim();
 
-  const [counts, cartsAll, enquiries] = await Promise.all([leadCounts(), listCarts({ q, limit: 1000 }), listEnquiries(1000)]);
+  const [counts, cartsAll, enquiries, convoCount] = await Promise.all([leadCounts(), listCarts({ q, limit: 1000 }), listEnquiries(1000), journeyCount()]);
   const byType = (t: string) => enquiries.filter((e) => str(e.type) === t);
   // Each kind of activity on its own tab.
   const questionRows = byType("tyrone").filter((r) => rowMatches(r, q));
@@ -64,6 +65,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
 
   const tabs: { v: TabV; label: string; count: number }[] = [
     ...SOURCE_TABS.map((t) => ({ v: t.v as TabV, label: t.label, count: q ? leadMatchCounts[t.v] ?? 0 : counts[t.v] ?? 0 })),
+    { v: "tyrone-convos", label: "Tyrone conversations →", count: convoCount },
     { v: "tyrone-questions", label: "Tyrone questions", count: questionRows.length },
     { v: "wa-taps", label: "WhatsApp taps (before details step)", count: waTapRows.length },
     { v: "calls", label: "Call taps", count: callRows.length },
@@ -89,7 +91,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
         {tabs.map((t) => {
           const active = tab === t.v;
           return (
-            <Link key={t.v} href={t.v === "carts" ? "/admin/cart-recovery" : tabHref(t.v)}
+            <Link key={t.v} href={t.v === "carts" ? "/admin/cart-recovery" : t.v === "tyrone-convos" ? "/admin/leads/tyrone" : tabHref(t.v)}
               className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${active ? "bg-volt text-volt-ink" : "border border-line text-muted hover:text-fg"}`}>
               {t.label} <span className={active ? "opacity-80" : "opacity-70"}>({t.count})</span>
             </Link>

@@ -11,6 +11,7 @@ import { SA_PROVINCES } from "@/lib/sa-address";
 import { formatPrice } from "@/lib/format";
 import { FITMENT_CENTRES, PAYMENT_METHODS } from "@/lib/shop-config";
 import { Check, Truck, Pin, Shield, Bolt } from "@/components/icons";
+import { trackTyrone } from "@/lib/tyrone-track";
 
 export default function CheckoutPage() {
   const { items, totals, deliveryMethod, fitmentStoreId, fitmentDate } = useCart();
@@ -146,6 +147,7 @@ export default function CheckoutPage() {
       couponCode: coupon?.code,
       attribution: attributionForOrder(),
     };
+    trackTyrone("checkout", { label: `Placed order — ${formatPrice(payTotal)} by ${payment}` });
 
     try {
       const res = await fetch("/api/checkout", {

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { CLICK_KEYS, UTM_KEYS, hostOf, type Attribution, type Touch } from "@/lib/attribution";
+import { trackTyrone, tyroneSid } from "@/lib/tyrone-track";
 
 // Remembers where this visitor came from (Google Ads, search, AI, social…) so
 // the order can show it, like WooCommerce's order attribution. Stored only in
@@ -62,7 +63,8 @@ function track() {
 export function attributionForOrder(): Attribution | null {
   const s = read();
   if (!s) return null;
-  return { touch: s.touch, first: s.first, sessionPages: s.sessionPages, visits: s.visits };
+  const tyrone = tyroneSid();
+  return { touch: s.touch, first: s.first, sessionPages: s.sessionPages, visits: s.visits, ...(tyrone ? { tyrone } : {}) };
 }
 
 export function AttributionTracker() {
@@ -70,6 +72,8 @@ export function AttributionTracker() {
   useEffect(() => {
     if (path?.startsWith("/admin")) return; // staff browsing the admin isn't a visit
     track();
+    // Tyrone conversation journey: shopping pages visited after chatting.
+    if (path && /^\/(product|product-category|shop|cart|checkout|wishlist)(\/|$)/.test(path)) trackTyrone("page_view", { label: path });
   }, [path]);
   return null;
 }

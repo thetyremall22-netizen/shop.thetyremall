@@ -20,6 +20,7 @@ export interface Attribution {
   visits: number;        // number of visits from this browser
   device?: string;       // Mobile / Tablet / Desktop (set by the server)
   staff?: boolean;       // placed while logged in to the admin
+  tyrone?: string;       // Tyrone conversation id, if they chatted to Tyrone first
 }
 
 export const UTM_KEYS = ["source", "medium", "campaign", "term", "content", "id"] as const;
@@ -126,8 +127,9 @@ export function sanitizeAttribution(raw: unknown): Attribution | null {
   const t = touch(r.touch);
   if (!t) return null;
   const first = touch(r.first) ?? undefined;
+  const tyrone = typeof r.tyrone === "string" && /^[a-z0-9-]{8,64}$/i.test(r.tyrone) ? r.tyrone : undefined;
   return {
-    touch: t, first,
+    touch: t, first, ...(tyrone ? { tyrone } : {}),
     sessionPages: Math.max(0, Math.min(10_000, Math.floor(Number(r.sessionPages) || 0))),
     visits: Math.max(0, Math.min(100_000, Math.floor(Number(r.visits) || 0))),
   };

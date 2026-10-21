@@ -16,6 +16,7 @@ import { validateContact } from "@/lib/validate";
 import { useCart } from "@/lib/cart";
 import type { VehicleRecord } from "./VehicleSizeChoice";
 import { canBuyNow } from "./GeoNotice";
+import { trackTyrone } from "@/lib/tyrone-track";
 
 interface TyroneProduct {
   name: string;
@@ -578,6 +579,8 @@ export function Tyrone() {
     if (!t) return;
     if (!opts.resumed) setMsgs((m) => [...m, { from: "user", text: t }]);
     setInput("");
+    // Journey tracking: every question (typed or tapped) starts/continues the conversation.
+    if (!opts.resumed) trackTyrone("question", { label: t }, { start: true, contact: contactRef.current ?? undefined });
 
     // Contact details are required before Tyrone answers (so the team can
     // always get back to the person). The question waits and is answered as
@@ -770,7 +773,7 @@ export function Tyrone() {
                       <Link
                         key={p.slug}
                         href={`/product/${p.slug}`}
-                        onClick={() => setOpen(false)}
+                        onClick={() => { trackTyrone("product_click", { label: p.name, href: `/product/${p.slug}` }); setOpen(false); }}
                         className="flex items-center gap-3 rounded-xl bg-white p-2 ring-1 ring-black/5 transition-transform hover:scale-[1.01]"
                       >
                         <span className="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-white">
@@ -795,7 +798,7 @@ export function Tyrone() {
                 {m.from === "bot" && m.waForm && i === lastWaForm && !(stream && stream.idx === i) && (
                   <div className="mt-2 w-full rounded-2xl bg-surface p-3">
                     <WhatsAppDetailsForm message={waMessage} lead={{ source: "tyrone" }} submitLabel="Start chatting on WhatsApp" intro={<></>}
-                      onDone={() => { setContact(loadSavedContact()); setMsgs((ms) => [...ms.map((x) => (x.waForm ? { ...x, waForm: false } : x)), { from: "bot", text: "✓ WhatsApp is opening with your message — just press send and the team will reply there. 👍" }]); }} />
+                      onDone={() => { const c = loadSavedContact(); setContact(c); trackTyrone("whatsapp", { label: lastQuestion ?? "WhatsApp" }, { contact: c }); setMsgs((ms) => [...ms.map((x) => (x.waForm ? { ...x, waForm: false } : x)), { from: "bot", text: "✓ WhatsApp is opening with your message — just press send and the team will reply there. 👍" }]); }} />
                   </div>
                 )}
                 {m.from === "bot" && m.leadForm && i === lastLeadForm && !(stream && stream.idx === i) && (
@@ -803,6 +806,7 @@ export function Tyrone() {
                     <TyroneLeadForm questions={typedQuestions}
                       onSent={(c) => {
                         setContact(c); contactRef.current = c;
+                        trackTyrone("details", { label: "Shared contact details" }, { contact: c });
                         const q = pendingQuestion.current; pendingQuestion.current = null;
                         setMsgs((ms) => [...ms.map((x) => (x.leadForm ? { ...x, leadForm: false } : x)), { from: "bot", text: `Thanks ${c.name.split(" ")[0]}! 🙌 The team has your details (${c.phone} · ${c.email}).${q ? " Now, about your question…" : " What can I help you with?"}` }]);
                         if (q) window.setTimeout(() => { void send(q, { resumed: true }); }, 400);
@@ -815,7 +819,7 @@ export function Tyrone() {
                       <Link
                         key={l.href}
                         href={l.href}
-                        onClick={() => setOpen(false)}
+                        onClick={() => { trackTyrone("link_click", { label: l.label, href: l.href }); setOpen(false); }}
                         className="btn btn-volt h-10 w-full justify-center px-4 text-xs"
                       >
                         {l.label}

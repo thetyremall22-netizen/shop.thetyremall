@@ -16,7 +16,7 @@ const OUT = path.join(DATA, "geo-allow.json");
 // Countries that can be fully blocked from Admin → Settings (address data for
 // these is shipped in src/data/geo-block.json). Keep in sync with
 // BLOCKABLE_COUNTRIES in src/lib/geo-countries.ts.
-const BLOCKABLE = ["CN", "HK", "JP", "TH", "RU", "NG", "VN", "IN", "PK", "BD", "ID", "IR", "KP", "BY", "UA", "KH", "MM"];
+const BLOCKABLE = ["CN", "HK", "JP", "TH", "RU", "NG", "VN", "BR", "SG", "IN", "PK", "BD", "ID", "IR", "KP", "BY", "UA", "KH", "MM"];
 // Neighbouring countries: can browse AND buy (delivery must still be to a South
 // African address — checked at checkout).
 const NEIGHBOURS = ["ZW", "NA", "BW", "MZ", "LS", "SZ"];

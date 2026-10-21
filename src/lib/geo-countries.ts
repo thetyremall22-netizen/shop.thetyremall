@@ -23,4 +23,4 @@ export const BLOCKABLE_COUNTRIES: { code: string; name: string }[] = [
 ];
 
 /** Fully blocked unless changed in Settings. */
-export const DEFAULT_BLOCKED = ["CN", "HK", "JP", "TH", "RU", "NG", "ZW"];
+export const DEFAULT_BLOCKED = ["CN", "HK", "JP", "TH", "RU", "NG", "ZW", "IN"];

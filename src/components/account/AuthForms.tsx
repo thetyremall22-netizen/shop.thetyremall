@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { PasswordInput } from "@/components/admin/PasswordInput";
-import { useAccount } from "@/lib/account-client";
 
 export const field = "h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt";
 export const lab = "mb-1.5 block text-xs font-semibold text-muted";
@@ -18,9 +17,7 @@ type Mode = "signin" | "register" | "forgot" | "sent" | "reset-sent";
 const safeNext = (n: string | null) => (n && n.startsWith("/") && !n.startsWith("//") ? n : "/account");
 
 export function AuthForms({ initial = "signin" }: { initial?: Mode }) {
-  const router = useRouter();
   const sp = useSearchParams();
-  const { refresh } = useAccount();
   const next = safeNext(sp.get("next"));
   const wish = sp.get("wish");
   const [mode, setMode] = useState<Mode>(initial);
@@ -50,9 +47,8 @@ export function AuthForms({ initial = "signin" }: { initial?: Mode }) {
 
   async function afterSignIn() {
     if (wish) await fetch("/api/account/wishlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: wish }) }).catch(() => {});
-    await refresh();
-    router.replace(wish && next === "/account" ? "/wishlist" : next);
-    router.refresh();
+    // Full page load so a tab opened before a website update can't get stuck.
+    window.location.assign(wish && next === "/account" ? "/wishlist" : next);
   }
 
   async function signIn(e: React.FormEvent<HTMLFormElement>) {

@@ -42,13 +42,13 @@ function maintenanceOn(): boolean {
   return on;
 }
 
-// "South Africa only" (Admin → Settings). ON unless the flag file says "0", so
-// the protection is in place from the first start after deploying.
-let saCache = { on: true, at: 0 };
+// "South Africa only" (Admin → Settings). Off until it's switched on there
+// (the Settings save writes the flag file).
+let saCache = { on: false, at: 0 };
 function saOnlyOn(): boolean {
   if (Date.now() - saCache.at < TTL) return saCache.on;
-  let on = true;
-  try { on = fs.readFileSync(flagPath("sa-only.flag"), "utf8").trim() !== "0"; } catch { on = true; }
+  let on = false;
+  try { on = fs.readFileSync(flagPath("sa-only.flag"), "utf8").trim() === "1"; } catch { on = false; }
   saCache = { on, at: Date.now() };
   return on;
 }

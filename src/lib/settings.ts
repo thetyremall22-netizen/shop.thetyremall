@@ -135,7 +135,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     supportEmail: "",
   },
   access: {
-    southAfricaOnly: true,
+    southAfricaOnly: false, // switched on in Admin → Settings
   },
   maintenance: {
     enabled: false,
@@ -220,7 +220,7 @@ export async function updateSettings(patch: Partial<SiteSettings>): Promise<Site
       .onConflictDoUpdate({ target: schema.settings.key, set: { value: JSON.stringify(merged), updatedAt: now } });
     // Mirror the coming-soon flag to disk for the proxy to read (see note above).
     if (g === "maintenance") writeMaintenanceFlag(!!(merged as { enabled?: boolean }).enabled);
-    if (g === "access") writeSaOnlyFlag((merged as { southAfricaOnly?: boolean }).southAfricaOnly !== false);
+    if (g === "access") writeSaOnlyFlag((merged as { southAfricaOnly?: boolean }).southAfricaOnly === true);
   }
   // On-demand invalidation of the cached settings (footer/header shell etc.).
   revalidateTag(SETTINGS_TAG, "max");

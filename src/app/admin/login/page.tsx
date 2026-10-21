@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { PasswordInput } from "@/components/admin/PasswordInput";
 
 export default function AdminLogin() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [website, setWebsite] = useState(""); // honeypot — must stay empty
@@ -29,8 +27,10 @@ export default function AdminLogin() {
         signal: ctrl.signal,
       });
       if (res.ok) {
-        router.push("/admin");
-        router.refresh();
+        // Full page load (not an in-app move): a tab opened before the last
+        // website update can otherwise sit on "Signing in…" forever.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.assign("/admin");
         return;
       }
       const d = await res.json().catch(() => ({}));

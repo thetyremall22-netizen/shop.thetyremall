@@ -313,16 +313,14 @@ async function syncOrders(s: RecoverySettings): Promise<void> {
   const now = Date.now();
   for (const o of r.rows as Record<string, unknown>[]) {
     const status = String(o.status);
-    // Unpaid orders get the same "abandon" grace period as checkouts.
-    if (status === "pending" && now - Number(o.created_at) < s.abandonMinutes * 60_000) continue;
+    // Unpaid orders get the same "abandon" grace period as checkouts — and a
+    // HappyPay application gets a full day (approvals can take a while).
+    const grace = String(o.payment_method) === "happypay" ? 24 * 60 : s.abandonMinutes;
+    if (status === "pending" && now - Number(o.created_at) < grace * 60_000) continue;
     const cust = safeJson<{ firstName?: string; lastName?: string; email?: string; phone?: string }>(String(o.customer), {});
     if (!cust.email) continue;
-    // Skip if this customer has since paid for an order.
-    const paid = await libsql.execute({
-      sql: `SELECT 1 FROM orders WHERE status IN ('processing','completed') AND LOWER(json_extract(customer,'$.email')) = LOWER(?) AND created_at >= ? LIMIT 1`,
-      args: [cust.email, Number(o.created_at)],
-    });
-    if (paid.rows.length) continue;
+    // Skip if this person (same email or mobile) has since paid for an order.
+    if (await paidOrderFor(cust.email, cust.phone ?? "", Number(o.created_at))) continue;
     const items = safeJson<RecoveryItem[]>(String(o.items), []).map((i) => ({ slug: i.slug, name: i.name, qty: i.qty, price: i.price, roadHazard: i.roadHazard, alignment: i.alignment, balanceQty: i.balanceQty }));
     const delivery = safeJson<{ address?: Address }>(String(o.delivery), {});
     const totals = safeJson<{ total?: number }>(String(o.totals), {});
@@ -346,15 +344,47 @@ async function syncOrders(s: RecoverySettings): Promise<void> {
   }
 }
 
+// A customer is the same person if the email OR the mobile number matches
+// (people often check out with one email and pay with another).
+const DIGITS = (col: string) => `REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${col},' ',''),'+',''),'-',''),'(',''),')','')`;
+const last9 = (phone: string) => (phone || "").replace(/\D/g, "").slice(-9);
+
+/** When this cart's shopping started: the earlier of the row and its last
+ *  activity (an unpaid-order cart is created after its order), less 15 min. */
+const cartSince = (createdAt: number, lastActivityAt: number) => Math.min(createdAt, lastActivityAt > 0 ? lastActivityAt : createdAt) - 15 * 60_000;
+
+/** The newest paid order by this person (email or mobile) placed since a time, or null. */
+async function paidOrderFor(email: string, phone: string, since: number): Promise<{ reference: string; total: number } | null> {
+  const p9 = last9(phone);
+  const r = await libsql.execute({
+    sql: `SELECT reference, json_extract(totals,'$.total') t FROM orders
+          WHERE status IN ('processing','completed') AND created_at >= ?
+            AND (LOWER(json_extract(customer,'$.email')) = LOWER(?)
+                 ${p9.length === 9 ? `OR substr(${DIGITS("json_extract(customer,'$.phone')")}, -9) = ?` : ""})
+          ORDER BY id DESC LIMIT 1`,
+    args: p9.length === 9 ? [since, email, p9] : [since, email],
+  });
+  const row = r.rows[0];
+  return row ? { reference: String(row.reference), total: Number(row.t) || 0 } : null;
+}
+
 /** A customer paid for an order: credit a recovery only if they engaged
  *  (clicked the email link / exit popup); otherwise it's a normal purchase. */
 export async function onOrderPaid(email: string, orderRef?: string, value?: number): Promise<void> {
   if (!email) return;
   try {
     await ensureTables();
+    // The paid order's mobile number, so a cart under another email but the
+    // same number also stops.
+    let p9 = "";
+    if (orderRef) {
+      const o = await libsql.execute({ sql: "SELECT json_extract(customer,'$.phone') p FROM orders WHERE reference = ? ORDER BY id DESC LIMIT 1", args: [orderRef] });
+      p9 = last9(String(o.rows[0]?.p ?? ""));
+    }
     const r = await libsql.execute({
-      sql: `SELECT * FROM cart_recovery WHERE LOWER(email) = LOWER(?) AND status IN ('abandoned','pending','contacted','clicked')`,
-      args: [email],
+      sql: `SELECT * FROM cart_recovery WHERE status IN ('abandoned','pending','contacted','clicked')
+              AND (LOWER(email) = LOWER(?) ${p9.length === 9 ? `OR substr(${DIGITS("phone")}, -9) = ?` : ""})`,
+      args: p9.length === 9 ? [email, p9] : [email],
     });
     const now = Date.now();
     for (const row of (r.rows as Record<string, unknown>[]).map(toCart)) {
@@ -375,14 +405,21 @@ export async function onOrderPaid(email: string, orderRef?: string, value?: numb
 /** Purchases the payment callbacks didn't report (e.g. paid by EFT and marked
  *  paid in Admin): match paid orders to open carts by email. */
 async function detectPurchases(): Promise<void> {
-  const r = await libsql.execute(`SELECT c.id, c.email, c.created_at FROM cart_recovery c WHERE c.status IN ('abandoned','pending','contacted','clicked')`);
+  const r = await libsql.execute(`SELECT c.id, c.email, c.phone, c.created_at, c.last_activity_at FROM cart_recovery c WHERE c.status IN ('abandoned','pending','contacted','clicked')`);
   for (const row of r.rows as Record<string, unknown>[]) {
-    const o = await libsql.execute({
-      sql: `SELECT reference, json_extract(totals,'$.total') t FROM orders WHERE status IN ('processing','completed') AND LOWER(json_extract(customer,'$.email')) = LOWER(?) AND created_at >= ? ORDER BY id DESC LIMIT 1`,
-      args: [String(row.email), Number(row.created_at)],
-    });
-    if (o.rows.length) await onOrderPaid(String(row.email), String(o.rows[0].reference), Number(o.rows[0].t) || undefined);
+    const paid = await paidOrderFor(String(row.email), String(row.phone ?? ""), cartSince(Number(row.created_at), Number(row.last_activity_at)));
+    if (paid) await markCartPurchased(Number(row.id), paid.reference, paid.total);
   }
+}
+
+/** One cart → bought (credited as "recovered" if they'd clicked a recovery link). */
+async function markCartPurchased(id: number, orderRef: string, value: number): Promise<void> {
+  await libsql.execute({
+    sql: `UPDATE cart_recovery SET status = CASE WHEN status = 'clicked' THEN 'recovered' ELSE 'purchased' END,
+            recovered_order_ref = ?, recovered_value = CASE WHEN status = 'clicked' THEN ? ELSE recovered_value END, updated_at = ?
+          WHERE id = ? AND status IN ('abandoned','pending','contacted','clicked')`,
+    args: [orderRef, value, Date.now(), id],
+  });
 }
 
 /** The customer came back (recovery link or exit popup). */
@@ -462,6 +499,9 @@ export async function prepareRun(): Promise<{ settings: RecoverySettings; due: D
     // Never email someone who's still shopping: wait until they've been
     // inactive for the abandon window before the first email.
     if (cart.emailsSent === 0 && cart.lastActivityAt > 0 && now - cart.lastActivityAt < settings.abandonMinutes * 60_000) continue;
+    // Last check right before emailing: never chase someone who has bought.
+    const paid = await paidOrderFor(cart.email, cart.phone, cartSince(cart.createdAt, cart.lastActivityAt));
+    if (paid) { await markCartPurchased(cart.id, paid.reference, paid.total); continue; }
     due.push({ cart, step });
   }
   return { settings, due };

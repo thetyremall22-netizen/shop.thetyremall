@@ -76,6 +76,22 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
         </div>
       </div>
 
+      <div className="card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-lg">South Africa only
+              {v.access.southAfricaOnly && <span className="ml-2 badge badge-pay">ON</span>}
+            </h2>
+            <p className="mt-1 max-w-xl text-sm text-muted">When on, only visitors in South Africa can see the shop, register, enquire or buy. Everyone else (e.g. China, Japan, Nigeria, Zimbabwe, Thailand, Russia) gets a short &quot;we only sell in South Africa&quot; page. Google (Search, Ads, Merchant Center), Bing and AI search (ChatGPT, Perplexity, Apple) are still let in, so ads and search keep working. You and your staff can still use the admin from anywhere, and payment confirmations from PayFast / HappyPay always get through.</p>
+            <p className="mt-1 max-w-xl text-xs text-muted">South Africans using a VPN set to another country will see the block page until they switch the VPN off.</p>
+          </div>
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" checked={v.access.southAfricaOnly} onChange={(e) => up("access", "southAfricaOnly", e.target.checked)} className="size-5 accent-volt" />
+            {v.access.southAfricaOnly ? "On" : "Off"}
+          </label>
+        </div>
+      </div>
+
       <Group title="Site identity">
         <label className="block"><span className={label}>Site name</span>
           <input value={v.site.name} onChange={(e) => up("site", "name", e.target.value)} className={field} /></label>

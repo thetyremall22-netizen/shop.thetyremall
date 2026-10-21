@@ -73,6 +73,9 @@ export async function PATCH(req: NextRequest) {
     const cz = body.clientZone;
     patch.clientZone = clean({ wishlistAlerts: b(cz.wishlistAlerts), supportEmail: s(cz.supportEmail, 160) }) as SiteSettings["clientZone"];
   }
+  if (body.access) {
+    patch.access = clean({ southAfricaOnly: b(body.access.southAfricaOnly) }) as SiteSettings["access"];
+  }
   if (body.maintenance) {
     const mt = body.maintenance;
     patch.maintenance = clean({

@@ -9,13 +9,23 @@ import * as sc from "./shop-config";
 // plain flag file off disk rather than self-fetching /api/maintenance (that
 // round-trip is unreliable behind Nginx Unit). Keep that file in sync here, on
 // every maintenance save, so a toggle takes effect without any network call.
-function maintenanceFlagPath(): string {
+function flagPath(name: string): string {
   const raw = (process.env.DATABASE_URL || "file:.data/ttm.db").replace(/^file:/, "");
   if (raw === ":memory:" || /^[a-z][a-z0-9+.-]*:\/\//i.test(raw)) {
-    return path.join(process.cwd(), ".data", "maintenance.flag");
+    return path.join(process.cwd(), ".data", name);
   }
-  return path.join(path.dirname(raw) || ".", "maintenance.flag");
+  return path.join(path.dirname(raw) || ".", name);
 }
+const maintenanceFlagPath = () => flagPath("maintenance.flag");
+// "South Africa only" uses the same kind of flag file (read by the proxy).
+function writeSaOnlyFlag(enabled: boolean): void {
+  try {
+    const p = flagPath("sa-only.flag");
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, enabled ? "1" : "0");
+  } catch { /* non-fatal */ }
+}
+
 function writeMaintenanceFlag(enabled: boolean): void {
   try {
     const p = maintenanceFlagPath();
@@ -62,6 +72,10 @@ export interface SiteSettings {
   clientZone: {
     wishlistAlerts: boolean; // email clients when a wishlist item goes on sale / is back in stock
     supportEmail: string;    // where new support requests are sent (blank = shop email)
+  };
+  access: {
+    /** Only visitors in South Africa (plus Google/Bing/AI crawlers) can use the shop. */
+    southAfricaOnly: boolean;
   };
   maintenance: {
     enabled: boolean; // hide the public storefront behind a "coming soon" page
@@ -119,6 +133,9 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   clientZone: {
     wishlistAlerts: true,
     supportEmail: "",
+  },
+  access: {
+    southAfricaOnly: true,
   },
   maintenance: {
     enabled: false,
@@ -203,6 +220,7 @@ export async function updateSettings(patch: Partial<SiteSettings>): Promise<Site
       .onConflictDoUpdate({ target: schema.settings.key, set: { value: JSON.stringify(merged), updatedAt: now } });
     // Mirror the coming-soon flag to disk for the proxy to read (see note above).
     if (g === "maintenance") writeMaintenanceFlag(!!(merged as { enabled?: boolean }).enabled);
+    if (g === "access") writeSaOnlyFlag((merged as { southAfricaOnly?: boolean }).southAfricaOnly !== false);
   }
   // On-demand invalidation of the cached settings (footer/header shell etc.).
   revalidateTag(SETTINGS_TAG, "max");

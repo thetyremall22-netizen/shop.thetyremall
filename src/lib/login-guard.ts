@@ -1,6 +1,7 @@
 import "server-only";
 import type { NextRequest } from "next/server";
 import { libsql } from "./db";
+import { visitorIp } from "./geo";
 
 // Brute-force / bot protection for the admin login. Attempts are recorded in
 // the DB (Turso) so the limit holds across serverless instances — an in-memory
@@ -22,11 +23,11 @@ async function ensureTable() {
   ensured = true;
 }
 
-/** Best-effort client IP from proxy headers (Vercel sets x-forwarded-for). */
+/** The visitor's real address. nginx sets X-Real-IP to the connecting address,
+ *  which can't be faked; the FIRST X-Forwarded-For entry can be typed in by the
+ *  visitor (that let attackers dodge the lock-out), so it's never used. */
 export function clientIp(req: NextRequest): string {
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0].trim();
-  return req.headers.get("x-real-ip") || "unknown";
+  return visitorIp(req.headers) || "unknown";
 }
 
 /** How many failed attempts this IP has in the current window, and whether it's locked. */

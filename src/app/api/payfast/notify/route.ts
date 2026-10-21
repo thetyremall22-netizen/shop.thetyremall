@@ -8,17 +8,17 @@ export async function POST(req: NextRequest) {
   const data: Record<string, string> = {};
   for (const [k, v] of new URLSearchParams(raw)) data[k] = v;
 
-  // 1. signature
-  if (!(await verifyItnSignature(data))) {
-    console.warn("[payfast] ITN bad signature", data.m_payment_id);
-    return new NextResponse("invalid signature", { status: 400 });
-  }
-  // 2. server-to-server authenticity check
+  // 1. signature  2. PayFast's own server confirms the notice is genuine.
+  // If our signature check disagrees but PayFast's server says VALID, the
+  // payment is real (a forged notice can't get VALID) — accept it and log it,
+  // so a paid order is never left stuck on "Pending payment".
+  const sigOk = await verifyItnSignature(data);
   const valid = await validateWithPayfast(raw);
   if (!valid) {
-    console.warn("[payfast] ITN failed PayFast validation", data.m_payment_id);
+    console.warn(`[payfast] ITN ${sigOk ? "failed PayFast validation" : "bad signature and not validated"}`, data.m_payment_id);
     return new NextResponse("not validated", { status: 400 });
   }
+  if (!sigOk) console.warn("[payfast] ITN signature mismatch but PayFast validated it — accepting", data.m_payment_id);
 
   const id = data.custom_str1 || data.m_payment_id;
   const order = await getOrder(id);

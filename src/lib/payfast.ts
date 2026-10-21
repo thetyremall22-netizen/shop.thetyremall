@@ -27,12 +27,14 @@ export async function isSandbox(): Promise<boolean> { return (await resolve()).s
 export async function payfastProcessUrl(): Promise<string> { return processUrlFor((await resolve()).sandbox); }
 export async function isConfigured(): Promise<boolean> { const c = await resolve(); return Boolean(c.merchantId && c.merchantKey); }
 
-/** PayFast urlencoding: uppercase hex, spaces as "+", matching their PHP example. */
-function pfEncode(value: string): string {
-  return encodeURIComponent(value.trim()).replace(/%20/g, "+").replace(/[!'()*]/g, (c) =>
+/** PHP urlencode(): uppercase hex, spaces as "+", and !'()*~ escaped too —
+ *  PayFast builds its signatures with PHP. */
+function phpUrlencode(value: string): string {
+  return encodeURIComponent(value).replace(/%20/g, "+").replace(/[!'()*~]/g, (c) =>
     "%" + c.charCodeAt(0).toString(16).toUpperCase()
   );
 }
+const pfEncode = (value: string) => phpUrlencode(value.trim());
 
 /** MD5 signature over fields in insertion order, excluding "signature", passphrase last. */
 export function signature(fields: Record<string, string>, passphrase = ""): string {
@@ -85,11 +87,30 @@ export async function buildPaymentFields(p: PayfastPaymentInput): Promise<Record
   return fields;
 }
 
+/** ITN (payment notification) signature, built the way PayFast builds it:
+ *  EVERY field in the order received — empty ones included — up to the
+ *  "signature" field, PHP-urlencoded, then the passphrase. (The old check
+ *  skipped empty fields, so it never matched and payments weren't confirmed.) */
+export function itnSignature(data: Record<string, string>, passphrase = ""): string {
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(data)) {
+    if (k === "signature") break;
+    parts.push(`${k}=${phpUrlencode(`${v ?? ""}`.trim())}`);
+  }
+  let base = parts.join("&");
+  if (passphrase) base += `&passphrase=${phpUrlencode(passphrase.trim())}`;
+  return crypto.createHash("md5").update(base).digest("hex");
+}
+
 /** Verify the signature on an ITN (notify) payload. */
 export async function verifyItnSignature(data: Record<string, string>): Promise<boolean> {
-  const posted = data.signature ?? "";
-  const calc = signature(data, (await resolve()).passphrase);
-  return posted.length === calc.length && crypto.timingSafeEqual(Buffer.from(posted), Buffer.from(calc));
+  const posted = (data.signature ?? "").toLowerCase();
+  const { passphrase } = await resolve();
+  const ok = (calc: string) => posted.length === calc.length && crypto.timingSafeEqual(Buffer.from(posted), Buffer.from(calc));
+  if (ok(itnSignature(data, passphrase))) return true;
+  if (ok(signature(data, passphrase))) return true; // older style (non-blank fields only)
+  console.warn(`[payfast] ITN signature mismatch — fields: ${Object.keys(data).join(",")}; passphrase set: ${passphrase ? "yes" : "no"}`);
+  return false;
 }
 
 /** Server-to-server confirmation that the ITN genuinely came from PayFast. */

@@ -97,7 +97,7 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
                 {orders.map((o) => (
                   <tr key={o.id} className="border-b border-line last:border-0 hover:bg-surface">
                     <td className="px-4 py-2.5 font-semibold">
-                      <Link href={`/admin/orders/${o.id}`} className="text-volt hover:underline">{o.reference}</Link>
+                      <Link href={`/admin/orders/${o.id}`} className="whitespace-nowrap text-volt hover:underline">{o.reference}</Link>
                       <div className="mt-1 flex flex-wrap gap-1">
                         <TestBadge test={o.test} className="!ml-0" />
                         {o.totals.total === 0 && <span className="badge badge-muted">free</span>}
@@ -114,7 +114,7 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
                     <td className="px-4 py-2.5 text-right font-semibold">{zar(o.totals.total)}</td>
                     <td className="px-4 py-2.5 text-xs text-muted">{new Date(o.createdAt).toLocaleDateString("en-ZA")}</td>
                     <td className="px-4 py-2.5 text-right">
-                      <Link href={`/admin/orders/${o.id}`} className="btn btn-volt-outline h-8 whitespace-nowrap px-3 text-xs">Open / Edit →</Link>
+                      <Link href={`/admin/orders/${o.id}`} className="inline-flex h-7 items-center whitespace-nowrap rounded-md border border-volt/60 px-2 text-[11px] font-bold text-volt hover:bg-volt/10">Open →</Link>
                     </td>
                   </tr>
                 ))}

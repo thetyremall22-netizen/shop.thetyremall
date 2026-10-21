@@ -61,7 +61,9 @@ function classifyTouch(a: Attribution | null | undefined, ownHost: string): Orig
   if (!a) return { type: "Direct", source: "Unknown", label: "Unknown (order placed before tracking)" };
   const t = a.touch;
   const host = hostOf(t.referrer);
-  const internal = !host || host === ownHost || host.endsWith(`.${ownHost}`) || host === "localhost" || host === "127.0.0.1";
+  // Payment pages (PayFast, HappyPay) are part of checkout, never the source.
+  const internal = !host || host === ownHost || host.endsWith(`.${ownHost}`) || host === "localhost" || host === "127.0.0.1"
+    || /(^|\.)(payfast\.io|payfast\.co\.za|happypay\.co\.za)$/i.test(host);
   const refSearch = host ? match(host, SEARCH) : undefined;
 
   // Paid clicks (ad click IDs) win.

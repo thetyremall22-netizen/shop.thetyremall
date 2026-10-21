@@ -10,6 +10,7 @@ import { trackTyrone, tyroneSid } from "@/lib/tyrone-track";
 // this browser; sent with the order at checkout.
 
 const KEY = "ttm-attr-v1";
+const PAYMENT_HOSTS = /(^|\.)(payfast\.io|payfast\.co\.za|happypay\.co\.za)$/i;
 const SESSION_MS = 30 * 60 * 1000;   // a visit ends after 30 minutes idle
 const KEEP_MS = 90 * 86400_000;      // a non-direct source is credited for 90 days
 
@@ -28,7 +29,11 @@ function currentTouch(): Touch {
   for (const k of UTM_KEYS) { const v = u.searchParams.get(`utm_${k}`); if (v) utm[k] = v.slice(0, 150); }
   const clickIds: Touch["clickIds"] = {};
   for (const k of CLICK_KEYS) { const v = u.searchParams.get(k); if (v) clickIds[k] = v.slice(0, 200); }
-  const ref = document.referrer && hostOf(document.referrer) !== window.location.hostname.replace(/^www\./, "") ? document.referrer : "";
+  // Coming back from a payment page (PayFast, HappyPay) isn't a new visit
+  // source — the sale came from wherever they found the shop.
+  const refHost = document.referrer ? hostOf(document.referrer) : "";
+  const external = refHost && refHost !== window.location.hostname.replace(/^www\./, "") && !PAYMENT_HOSTS.test(refHost);
+  const ref = external ? document.referrer : "";
   return { at: Date.now(), referrer: ref.slice(0, 500), landing: `${u.pathname}${u.search}`.slice(0, 500), utm, clickIds };
 }
 const isDirect = (t: Touch) => !t.referrer && !Object.keys(t.utm).length && !Object.keys(t.clickIds).length;

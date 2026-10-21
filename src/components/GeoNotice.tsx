@@ -85,3 +85,14 @@ export function GeoBanner() {
     </div>
   );
 }
+
+/** Shown instead of enquiry forms (WhatsApp, quote, contact) for visitors
+ *  outside South Africa (the server refuses their enquiries too). */
+export function EnquiryNotAvailable({ className = "" }: { className?: string }) {
+  return (
+    <div className={`rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-fg ${className}`}>
+      <b>Sorry, we do not take enquiries from outside South Africa.</b>{" "}
+      <span className="text-muted">The Tyre Mall only sells and delivers tyres and mag wheels within South Africa. In South Africa? Switch off any VPN and refresh the page.</span>
+    </div>
+  );
+}

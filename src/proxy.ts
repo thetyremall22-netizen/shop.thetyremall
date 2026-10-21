@@ -60,6 +60,8 @@ function geoConfig(): GeoCfg {
 }
 /** Buying requests refused for visitors outside South Africa. */
 const PURCHASE_API = /^\/api\/checkout(\/|$)/;
+/** Enquiries (WhatsApp/quote leads, contact form, Tyrone/call logging) refused too. */
+const ENQUIRY_API = /^\/api\/(lead|contact|enquiry)(\/|$)/;
 const GEO_COOKIE = "ttm_geo"; // readable: "out" = browse only; "near" = neighbouring country (SA delivery only)
 
 // Never country-blocked: payment confirmations (PayFast/HappyPay servers),
@@ -84,6 +86,14 @@ function isStaffSession(tok: string | undefined): boolean {
 function purchaseRefused(): NextResponse {
   return NextResponse.json(
     { error: "Sorry, you're not able to purchase from your country. The Tyre Mall only sells and delivers within South Africa." },
+    { status: 403, headers: { "cache-control": "no-store" } },
+  );
+}
+
+/** Enquiry refused for someone outside South Africa. */
+function enquiryRefused(): NextResponse {
+  return NextResponse.json(
+    { error: "Sorry, we do not take enquiries from outside South Africa. The Tyre Mall only sells and delivers within South Africa." },
     { status: 403, headers: { "cache-control": "no-store" } },
   );
 }
@@ -127,6 +137,7 @@ export async function proxy(req: NextRequest) {
       if (blockedCountryOf(ip, cfg.block)) return blockedResponse(api); // spam countries: nothing at all
       if (cfg.saOnly) {
         if (api && PURCHASE_API.test(p)) return purchaseRefused();
+        if (api && ENQUIRY_API.test(p)) return enquiryRefused();
         mark = "out"; // can browse, can't buy
       }
     }

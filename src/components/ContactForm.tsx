@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check } from "./icons";
 import { validateContact, type ContactErrors } from "@/lib/validate";
+import { EnquiryNotAvailable, useCanBuy } from "./GeoNotice";
 
 const REASONS = ["General enquiry", "Help with an order", "Fitment question", "Delivery / returns", "Bulk / fleet pricing"];
 
@@ -11,6 +12,7 @@ export function ContactForm() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErr, setFieldErr] = useState<ContactErrors>({});
+  const canEnquire = useCanBuy(); // outside South Africa: no enquiries
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -42,6 +44,8 @@ export function ContactForm() {
       setSending(false);
     }
   }
+
+  if (!canEnquire) return <EnquiryNotAvailable />;
 
   if (sent) {
     return (

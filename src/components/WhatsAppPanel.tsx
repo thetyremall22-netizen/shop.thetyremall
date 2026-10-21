@@ -5,6 +5,7 @@ import { whatsappHref, SHOP_EMAIL, SHOP_PHONE_DISPLAY } from "@/lib/shop-config"
 import { Close, WhatsApp, Check } from "./icons";
 import { validateContact, type ContactErrors } from "@/lib/validate";
 import { WhatsAppDetailsForm } from "./WhatsAppGate";
+import { EnquiryNotAvailable, useCanBuy } from "./GeoNotice";
 
 type Tab = "quote" | "chat";
 const VEHICLE_TYPES = ["Car / Hatch / Sedan", "SUV", "Bakkie / 4x4", "Commercial / LDV", "Truck / Bus", "Motorbike", "Other"];
@@ -19,6 +20,7 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
   const [consent, setConsent] = useState(true); // POPIA — pre-ticked
   const [f, setF] = useState({ name: "", email: "", phone: "", vehicle: VEHICLE_TYPES[0], tyreSize: "", rimSize: "", message: "" });
 
+  const canEnquire = useCanBuy(); // outside South Africa: no enquiries
   if (!open) return null;
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setErr(null);
@@ -103,7 +105,7 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
 
       {/* body */}
       <div className="flex-1 overflow-y-auto p-4">
-        {tab === "quote" ? (
+        {!canEnquire ? <EnquiryNotAvailable /> : tab === "quote" ? (
           sent ? (
             <div className="grid h-full place-items-center text-center">
               <div>

@@ -5,6 +5,7 @@ import { whatsappHref } from "@/lib/shop-config";
 import { validateContact, type ContactErrors } from "@/lib/validate";
 import { loadSavedContact, storeSavedContact } from "@/lib/saved-contact";
 import { WhatsApp } from "./icons";
+import { EnquiryNotAvailable, useCanBuy } from "./GeoNotice";
 
 export interface WhatsAppLead {
   source: "whatsapp-enquiry" | "whatsapp-chat";
@@ -32,6 +33,7 @@ export function WhatsAppDetailsForm({
   const [phone, setPhone] = useState("");
   const [errors, setErrors] = useState<ContactErrors>({});
 
+  const canEnquire = useCanBuy(); // outside South Africa: no enquiries
   // A returning visitor's details are remembered on their device.
   useEffect(() => {
     const s = loadSavedContact();
@@ -63,6 +65,7 @@ export function WhatsAppDetailsForm({
     onDone?.();
   }
 
+  if (!canEnquire) return <EnquiryNotAvailable className="text-left" />;
   return (
     <form onSubmit={submit} noValidate className="text-left">
       {intro ?? (

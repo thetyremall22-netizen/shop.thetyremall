@@ -13,6 +13,7 @@ import { loadSavedContact, type SavedContact } from "@/lib/saved-contact";
 import { validateContact } from "@/lib/validate";
 import { useCart } from "@/lib/cart";
 import type { VehicleRecord } from "./VehicleSizeChoice";
+import { canBuyNow } from "./GeoNotice";
 
 interface TyroneProduct {
   name: string;
@@ -634,7 +635,9 @@ export function Tyrone() {
     // so the team can follow up even if they drop off before buying.
     const hasContact = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(t) || /(?:\+?27|0)\s?\d{2}[\s-]?\d{3}[\s-]?\d{4}/.test(t);
     let leadReply: Msg | null = null;
-    if (hasContact) {
+    if (hasContact && !canBuyNow()) {
+      leadReply = { from: "bot", text: "Sorry, we do not take enquiries from outside South Africa. The Tyre Mall only sells and delivers within South Africa. 🇿🇦" };
+    } else if (hasContact) {
       fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

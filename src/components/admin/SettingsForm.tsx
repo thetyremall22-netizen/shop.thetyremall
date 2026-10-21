@@ -87,8 +87,8 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
         <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-line p-3">
           <input type="checkbox" checked={v.access.southAfricaOnly} onChange={(e) => up("access", "southAfricaOnly", e.target.checked)} className="mt-0.5 size-5 accent-volt" />
           <span>
-            <span className="block text-sm font-semibold text-fg">Only visitors in South Africa can buy {v.access.southAfricaOnly && <span className="ml-1 badge badge-pay">ON</span>}</span>
-            <span className="block text-xs text-muted">Everyone else can browse products and prices, but &quot;Add to cart&quot;, &quot;Buy now&quot; and checkout show: &quot;Sorry, we only sell and deliver within South Africa&quot;. Checkout also refuses them on the server.</span>
+            <span className="block text-sm font-semibold text-fg">Only visitors in South Africa (and neighbouring countries) can buy or send enquiries {v.access.southAfricaOnly && <span className="ml-1 badge badge-pay">ON</span>}</span>
+            <span className="block text-xs text-muted">Everyone else can browse products and prices, but &quot;Add to cart&quot;, &quot;Buy now&quot; and checkout show &quot;Sorry, we only sell and deliver within South Africa&quot;, and the WhatsApp, quote and contact forms show &quot;Sorry, we do not take enquiries from outside South Africa&quot;. The server refuses their orders and enquiries too.</span>
           </span>
         </label>
         <div className="mt-4">

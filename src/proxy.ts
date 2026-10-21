@@ -60,7 +60,7 @@ function geoConfig(): GeoCfg {
 }
 /** Buying requests refused for visitors outside South Africa. */
 const PURCHASE_API = /^\/api\/checkout(\/|$)/;
-const GEO_COOKIE = "ttm_geo"; // readable: "out" = browse only (buy buttons show a notice)
+const GEO_COOKIE = "ttm_geo"; // readable: "out" = browse only; "near" = neighbouring country (SA delivery only)
 
 // Never country-blocked: payment confirmations (PayFast/HappyPay servers),
 // scheduled jobs, and the admin API (it has its own sign-in).
@@ -117,10 +117,12 @@ export async function proxy(req: NextRequest) {
   // addresses and signed-in staff are never limited.
   const p = req.nextUrl.pathname;
   const api = p.startsWith("/api/");
-  let mark: "za" | "out" = "za";
+  let mark: "za" | "near" | "out" = "za";
   if (!GEO_EXEMPT.test(p) && !isStaffSession(req.cookies.get(ADMIN_COOKIE)?.value)) {
     const ip = visitorIp(req.headers);
-    if (geoVerdict(ip) === "blocked") {
+    const verdict = geoVerdict(ip);
+    if (verdict === "near") mark = "near"; // neighbouring country: can buy, SA delivery only
+    if (verdict === "blocked") {
       const cfg = geoConfig();
       if (blockedCountryOf(ip, cfg.block)) return blockedResponse(api); // spam countries: nothing at all
       if (cfg.saOnly) {
@@ -135,8 +137,8 @@ export async function proxy(req: NextRequest) {
 }
 
 /** Tell the storefront whether this visitor can buy (only sends the cookie when it changes). */
-function markVisitor(req: NextRequest, res: NextResponse, mark: "za" | "out"): NextResponse {
-  if (mark === "out" && req.cookies.get(GEO_COOKIE)?.value !== "out") res.cookies.set(GEO_COOKIE, "out", { path: "/", sameSite: "lax", maxAge: 3600 });
+function markVisitor(req: NextRequest, res: NextResponse, mark: "za" | "near" | "out"): NextResponse {
+  if (mark !== "za" && req.cookies.get(GEO_COOKIE)?.value !== mark) res.cookies.set(GEO_COOKIE, mark, { path: "/", sameSite: "lax", maxAge: 3600 });
   else if (mark === "za" && req.cookies.get(GEO_COOKIE)) res.cookies.delete(GEO_COOKIE);
   return res;
 }

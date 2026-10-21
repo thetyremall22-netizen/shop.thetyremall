@@ -6,7 +6,8 @@ import Image from "next/image";
 import { useCart } from "@/lib/cart";
 import { useAccount } from "@/lib/account-client";
 import { attributionForOrder } from "@/components/AttributionTracker";
-import { NotAvailableNotice, useCanBuy } from "@/components/GeoNotice";
+import { NotAvailableNotice, useCanBuy, useIsNeighbour } from "@/components/GeoNotice";
+import { SA_PROVINCES } from "@/lib/sa-address";
 import { formatPrice } from "@/lib/format";
 import { FITMENT_CENTRES, PAYMENT_METHODS } from "@/lib/shop-config";
 import { Check, Truck, Pin, Shield, Bolt } from "@/components/icons";
@@ -53,6 +54,7 @@ export default function CheckoutPage() {
   // so anything typed or restored above is kept).
   const { customer } = useAccount();
   const canBuy = useCanBuy();
+  const isNeighbour = useIsNeighbour();
   useEffect(() => {
     const form = formRef.current;
     if (!customer || !form || items.length === 0) return;
@@ -242,11 +244,28 @@ export default function CheckoutPage() {
               </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
+                {isNeighbour ? (
+                  <p className="sm:col-span-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-sm text-fg">
+                    🇿🇦 Ordering from outside South Africa? No problem, but <b>we only deliver within South Africa</b>. Please use a South African delivery address (e.g. your project site, a friend or a courier depot in South Africa).
+                  </p>
+                ) : (
+                  <p className="sm:col-span-2 text-xs text-muted">We deliver within South Africa only.</p>
+                )}
                 <div className="sm:col-span-2"><Field name="street" label="Street address" required /></div>
                 <Field name="suburb" label="Suburb" required />
                 <Field name="city" label="City" required />
-                <Field name="province" label="Province" required />
-                <Field name="postalCode" label="Postal code" required />
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-semibold text-muted">Province (South Africa)<span className="text-sale"> *</span></span>
+                  <select name="province" required defaultValue="" className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt">
+                    <option value="" disabled>Choose a province…</option>
+                    {SA_PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-semibold text-muted">Postal code<span className="text-sale"> *</span></span>
+                  <input name="postalCode" required inputMode="numeric" maxLength={4} pattern="\d{4}" title="A 4-digit South African postal code, e.g. 2091"
+                    placeholder="e.g. 2091" className="h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" />
+                </label>
               </div>
             )}
           </Section>

@@ -27,6 +27,16 @@ export function useCanBuy(): boolean {
   return ok;
 }
 
+/** True for visitors in a neighbouring country (they can buy, SA delivery only). */
+export function useIsNeighbour(): boolean {
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setNear(/(?:^|;\s*)ttm_geo=near(?:;|$)/.test(document.cookie)), 0);
+    return () => clearTimeout(t);
+  }, []);
+  return near;
+}
+
 /** Tell the visitor (pop-up) — used by the cart when an add is refused. */
 export function showGeoBlocked() {
   window.dispatchEvent(new Event(GEO_BLOCKED_EVENT));

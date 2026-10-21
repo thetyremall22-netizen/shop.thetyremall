@@ -8,7 +8,6 @@ export const BLOCKABLE_COUNTRIES: { code: string; name: string }[] = [
   { code: "TH", name: "Thailand" },
   { code: "RU", name: "Russia" },
   { code: "NG", name: "Nigeria" },
-  { code: "ZW", name: "Zimbabwe" },
   { code: "VN", name: "Vietnam" },
   { code: "IN", name: "India" },
   { code: "PK", name: "Pakistan" },
@@ -23,4 +22,7 @@ export const BLOCKABLE_COUNTRIES: { code: string; name: string }[] = [
 ];
 
 /** Fully blocked unless changed in Settings. */
-export const DEFAULT_BLOCKED = ["CN", "HK", "JP", "TH", "RU", "NG", "ZW", "IN"];
+export const DEFAULT_BLOCKED = ["CN", "HK", "JP", "TH", "RU", "NG", "IN"];
+
+/** Neighbouring countries: can browse and buy, delivery to a South African address only. */
+export const NEIGHBOUR_COUNTRIES = ["Zimbabwe", "Namibia", "Botswana", "Mozambique", "Lesotho", "Eswatini"];

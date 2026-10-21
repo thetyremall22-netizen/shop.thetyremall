@@ -12,6 +12,10 @@ const ZA4 = data.za.v4 as R4[];
 const ZA6 = data.za.v6 as R6[];
 const BOT4 = data.bots.v4 as R4[];
 const BOT6 = data.bots.v6 as R6[];
+// Neighbouring countries (Zimbabwe, Namibia, Botswana, Mozambique, Lesotho,
+// Eswatini): can browse and buy, delivery to a South African address only.
+const NEAR4 = data.near.v4 as R4[];
+const NEAR6 = data.near.v6 as R6[];
 const BLOCK = blockData.countries as unknown as Record<string, { v4: R4[]; v6: R6[] }>;
 
 function v4(ip: string): number | null {
@@ -57,7 +61,7 @@ function isPrivate4(n: number): boolean {
     || (n >= 0x64400000 && n <= 0x647fffff);   // 100.64/10 (carrier NAT)
 }
 
-export type GeoVerdict = "za" | "bot" | "local" | "blocked";
+export type GeoVerdict = "za" | "near" | "bot" | "local" | "blocked";
 
 /** Classify one visitor address. Anything we can't read is allowed (fail open,
  *  so a header problem never locks real customers out). */
@@ -73,6 +77,7 @@ export function geoVerdict(ip: string | null | undefined): GeoVerdict {
     if (isPrivate4(n)) return "local";
     if (inRanges(n, ZA4)) return "za";
     if (inRanges(n, BOT4)) return "bot";
+    if (inRanges(n, NEAR4)) return "near";
     return "blocked";
   }
   const h = v6(s);
@@ -80,6 +85,7 @@ export function geoVerdict(ip: string | null | undefined): GeoVerdict {
   if (h === "0000000000000000" || h.startsWith("fe8") || h.startsWith("fe9") || h.startsWith("fea") || h.startsWith("feb") || h.startsWith("fc") || h.startsWith("fd")) return "local";
   if (inRanges(h, ZA6)) return "za";
   if (inRanges(h, BOT6)) return "bot";
+  if (inRanges(h, NEAR6)) return "near";
   return "blocked";
 }
 

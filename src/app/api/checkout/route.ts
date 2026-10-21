@@ -12,6 +12,7 @@ import { completePaidOrder } from "@/lib/order-payment";
 import { getSettings } from "@/lib/settings";
 import { addAudit } from "@/lib/audit";
 import type { DeliveryMethod } from "@/lib/shop-config";
+import { saProvince, isSaPostalCode, SA_DELIVERY_ERROR } from "@/lib/sa-address";
 
 interface Body {
   customer: { firstName: string; lastName: string; email: string; phone: string };
@@ -70,6 +71,17 @@ export async function POST(req: NextRequest) {
   }
 
   const method: DeliveryMethod = delivery?.method === "fitment" ? "fitment" : "delivery";
+
+  // We only deliver within South Africa (customers in neighbouring countries
+  // can buy, but the delivery address must be South African).
+  if (method === "delivery") {
+    const a = delivery?.address;
+    const province = saProvince(a?.province);
+    if (!a || !a.street?.trim() || !a.city?.trim() || !province || !isSaPostalCode(a.postalCode)) {
+      return NextResponse.json({ error: SA_DELIVERY_ERROR }, { status: 400 });
+    }
+    delivery.address = { ...a, province, postalCode: a.postalCode.trim() };
+  }
 
   // Re-validate any coupon server-side (never trust a client-sent discount).
   let coupon: { code: string; discount: number } | undefined;

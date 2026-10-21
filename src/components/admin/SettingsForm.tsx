@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { SiteSettings } from "@/lib/settings";
 import { TIMEZONE_OPTIONS } from "@/lib/tz";
 import { LinkedText } from "@/components/LinkedText";
-import { BLOCKABLE_COUNTRIES } from "@/lib/geo-countries";
+import { BLOCKABLE_COUNTRIES, NEIGHBOUR_COUNTRIES } from "@/lib/geo-countries";
 
 const field = "mt-1 h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt";
 const label = "text-xs font-bold uppercase tracking-wide text-muted";
@@ -81,7 +81,7 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-display text-lg">Visitors outside South Africa</h2>
-            <p className="mt-1 max-w-2xl text-sm text-muted">Google (Search, Ads, free listings, Merchant Center), Bing, AI search and Facebook / WhatsApp link previews always see the full shop. You and your staff can use the site and admin from anywhere, and PayFast / HappyPay payment confirmations always get through.</p>
+            <p className="mt-1 max-w-2xl text-sm text-muted">Neighbouring countries ({NEIGHBOUR_COUNTRIES.join(", ")}) can browse and buy, but delivery must be to a South African address (checkout only accepts SA provinces and postal codes). Google (Search, Ads, free listings, Merchant Center), Bing, AI search and Facebook / WhatsApp link previews always see the full shop. You and your staff can use the site and admin from anywhere, and PayFast / HappyPay payment confirmations always get through.</p>
           </div>
         </div>
         <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-line p-3">

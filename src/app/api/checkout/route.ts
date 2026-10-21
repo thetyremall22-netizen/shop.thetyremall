@@ -9,7 +9,7 @@ import { createHappyPayOrder, isEnabled as happyPayEnabled } from "@/lib/happypa
 import { getLive } from "@/lib/db/queries";
 import { validateCoupon } from "@/lib/coupons";
 import { completePaidOrder } from "@/lib/order-payment";
-import { getSettings } from "@/lib/settings";
+import { getSettingsFresh } from "@/lib/settings";
 import { addAudit } from "@/lib/audit";
 import type { DeliveryMethod } from "@/lib/shop-config";
 import { saProvince, isSaPostalCode, SA_DELIVERY_ERROR } from "@/lib/sa-address";
@@ -26,7 +26,7 @@ interface Body {
 export async function POST(req: NextRequest) {
   // Block all orders while the store is in maintenance / "coming soon" mode.
   try {
-    const s = await getSettings();
+    const s = await getSettingsFresh(); // live value, never a cached copy
     // Logged-in staff can still place (TEST) orders to check checkout.
     if (s.maintenance.enabled && !(await isAdmin())) {
       return NextResponse.json({ error: "Our store is not taking orders just yet — please check back soon." }, { status: 503 });

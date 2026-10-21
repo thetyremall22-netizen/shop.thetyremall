@@ -2,13 +2,13 @@ import { requirePermission } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { CouponsManager } from "@/components/admin/CouponsManager";
 import { listCoupons } from "@/lib/coupons";
-import { getSettings } from "@/lib/settings";
+import { getSettingsFresh } from "@/lib/settings";
 
 export const instant = false;
 
 export default async function AdminCoupons() {
   await requirePermission("deals.manage");
-  const [coupons, settings] = await Promise.all([listCoupons(), getSettings()]);
+  const [coupons, settings] = await Promise.all([listCoupons(), getSettingsFresh()]);
   return (
     <AdminShell>
       <h1 className="font-display text-3xl">Coupons</h1>

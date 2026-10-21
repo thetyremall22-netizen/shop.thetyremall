@@ -6,6 +6,7 @@ import type { SiteSettings } from "@/lib/settings";
 import { TIMEZONE_OPTIONS } from "@/lib/tz";
 import { LinkedText } from "@/components/LinkedText";
 import { BLOCKABLE_COUNTRIES, NEIGHBOUR_COUNTRIES } from "@/lib/geo-countries";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 const field = "mt-1 h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt";
 const label = "text-xs font-bold uppercase tracking-wide text-muted";
@@ -22,6 +23,9 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 export function SettingsForm({ initial }: { initial: SiteSettings }) {
   const router = useRouter();
   const [v, setV] = useState<SiteSettings>(initial);
+  // What's saved right now — Save only sends the sections that differ from it.
+  const [saved, setSaved] = useState<SiteSettings>(initial);
+  const [confirmGate, setConfirmGate] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,13 +39,21 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
     if (busy) return;
     setBusy(true); setDone(false); setError(null);
     try {
+      // Only the sections that were changed, so an untouched section (e.g.
+      // coming-soon mode) is never re-saved by accident.
+      const changed = Object.fromEntries(
+        (Object.keys(v) as (keyof SiteSettings)[])
+          .filter((g) => JSON.stringify(v[g]) !== JSON.stringify(saved[g]))
+          .map((g) => [g, v[g]]),
+      );
+      if (!Object.keys(changed).length) { setDone(true); setBusy(false); return; }
       const res = await fetch("/api/admin/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(v),
+        body: JSON.stringify(changed),
       });
       const d = await res.json().catch(() => ({}));
-      if (res.ok) { setDone(true); if (d.settings) setV(d.settings); router.refresh(); }
+      if (res.ok) { setDone(true); if (d.settings) { setV(d.settings); setSaved(d.settings); } router.refresh(); }
       else setError(d.error ?? "Couldn't save.");
     } catch (e) {
       setError((e as Error).message);
@@ -54,6 +66,12 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
 
   return (
     <div className="space-y-5">
+      <ConfirmDialog open={confirmGate} danger onNo={() => setConfirmGate(false)}
+        onYes={() => { up("maintenance", "enabled", true); setConfirmGate(false); }}
+        title="Are you sure you want to put the shop in coming-soon mode?" yesLabel="Yes, turn coming soon on">
+        <p>Visitors won&apos;t be able to see the shop or place any orders. They&apos;ll only see the &quot;coming soon&quot; page until you turn it off again. (You and your staff still see the real site while logged in.)</p>
+        <p className="mt-2 font-semibold">It takes effect when you press &quot;Save settings&quot;.</p>
+      </ConfirmDialog>
       <div className={`card p-5 ${v.maintenance.enabled ? "border-amber-500/50" : ""}`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -63,7 +81,8 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
             <p className="mt-1 max-w-xl text-sm text-muted">When on, the public storefront is replaced by a &quot;coming soon&quot; page and no orders can be placed. The admin panel stays open, and you (while logged in) still see the real site.</p>
           </div>
           <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold">
-            <input type="checkbox" checked={v.maintenance.enabled} onChange={(e) => up("maintenance", "enabled", e.target.checked)} className="size-5 accent-volt" />
+            <input type="checkbox" checked={v.maintenance.enabled}
+              onChange={(e) => (e.target.checked ? setConfirmGate(true) : up("maintenance", "enabled", false))} className="size-5 accent-volt" />
             {v.maintenance.enabled ? "On" : "Off"}
           </label>
         </div>

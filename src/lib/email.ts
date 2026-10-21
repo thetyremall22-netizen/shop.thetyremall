@@ -5,7 +5,6 @@ import { logEmail, type EmailType } from "./email-log";
 import { libsql } from "./db";
 import type { SiteSettings } from "./settings";
 import { getProduct } from "./catalogue";
-import { getSettings } from "./settings";
 import { getOrIssueInvoice, type InvoiceInfo } from "./invoices";
 import { TOPIC_LABEL, type SupportRequest } from "./support";
 import type { WishlistChange } from "./wishlist";
@@ -451,7 +450,7 @@ function tOnHoldCustomer(o: Order): Tmpl {
 
 /** Tax invoice for an order (sent from Admin → Orders). */
 async function tInvoice(o: Order, inv0: InvoiceInfo): Promise<Tmpl> {
-  const st = await getSettings();
+  const st = await getSettingsFresh(); // live invoice details, never a cached copy
   const inv = st.invoice;
   const vatRate = st.commerce.vatRate || 0;
   const t = o.totals;

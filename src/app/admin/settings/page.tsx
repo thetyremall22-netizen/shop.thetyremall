@@ -1,14 +1,16 @@
 import { requirePermission } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { SettingsForm } from "@/components/admin/SettingsForm";
-import { getSettings } from "@/lib/settings";
+import { getSettingsFresh } from "@/lib/settings";
 import { listBackups } from "@/lib/db-backup";
 
 export const instant = false;
 
 export default async function AdminSettings() {
   await requirePermission("settings.manage");
-  const settings = await getSettings();
+  // Always the live values (never a cached copy): a stale copy once showed
+  // "coming soon" as ticked, and saving then switched the shop off.
+  const settings = await getSettingsFresh();
   const backups = listBackups();
 
   return (

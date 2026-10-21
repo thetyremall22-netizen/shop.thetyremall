@@ -22,10 +22,16 @@ export async function POST(req: NextRequest) {
 
   // Always respond the same way (no account enumeration).
   const generic = NextResponse.json({ ok: true });
-  if (honeypot || !email) return generic;
+  if (!email) return generic;
+  // The hidden "website" box catches bots, but browser autofill can fill it
+  // too — that silently swallowed real staff requests. A reset only ever goes
+  // to an existing staff account (and requests are rate-limited), so a filled
+  // box is just noted, not a reason to ignore the request.
+  const masked = email.trim().toLowerCase().replace(/^(.{3}).*(@.*)$/, "$1…$2");
 
   const created = await createResetToken(email);
   await recordAttempt(ip, false); // throttle repeated requests from one IP
+  console.log(`[forgot] reset requested for ${masked}${honeypot ? " (hidden box was filled)" : ""} → ${created ? "staff account found, emailing link" : "no active staff account with that email"}`);
   if (!created) return generic;
 
   const base = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;

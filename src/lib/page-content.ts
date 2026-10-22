@@ -60,6 +60,10 @@ export const PAGES: PageDef[] = [
     eyebrow: "12-month road hazard cover", silver: "RADAR", green: "PROTECT",
     intro: "Selected Radar tyres from The Tyre Mall include Radar Protect — extra peace of mind if your eligible Radar tyre is damaged by everyday road hazards. Offered by Radar Tyres and their authorised distributors.",
     seoTitle: "Radar Protect — 12-Month Road Hazard Protection", seoDescription: "" } },
+  { key: "how-to-apply-for-credit-online", path: "/how-to-apply-for-credit-online/", label: "How to apply for credit (HappyPay)", defaults: {
+    eyebrow: "How to apply for credit online with HappyPay", silver: "BUY NOW,", green: "PAY LATER",
+    intro: "Get your tyres and mag wheels today and pay in two interest-free payments over your next two paydays — no deposit, and an instant decision at checkout with HappyPay.",
+    seoTitle: "How to Apply for Credit Online — Buy Now, Pay Later with HappyPay", seoDescription: "" } },
   { key: "returns", path: "/returns", label: "Returns & refunds", defaults: {
     eyebrow: "Your rights under the CPA", silver: "RETURNS &", green: "REFUNDS",
     intro: "Changed your mind or received a faulty tyre? Here's exactly how returns, cancellations and refunds work — always contact us first so we can guide you through it.",

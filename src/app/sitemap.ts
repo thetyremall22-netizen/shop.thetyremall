@@ -16,6 +16,7 @@ const STATIC_PATHS: { path: string; priority: number; changeFrequency: MetadataR
   { path: "/mag-wheels", priority: 0.9, changeFrequency: "weekly" },
   { path: "/vehicle-search", priority: 0.8, changeFrequency: "weekly" },
   { path: "/radar-protect", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/how-to-apply-for-credit-online/", priority: 0.6, changeFrequency: "monthly" },
   { path: "/delivery-areas", priority: 0.6, changeFrequency: "monthly" },
   { path: "/stores", priority: 0.6, changeFrequency: "monthly" },
   { path: "/about", priority: 0.5, changeFrequency: "monthly" },

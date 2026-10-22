@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getProducts, categories } from "@/lib/catalogue";
 import { categoryPath, brandPath } from "@/lib/shop-url";
-import { filterBrands } from "@/lib/brand-registry";
+import { filterBrands, getBrandDirectory } from "@/lib/brand-registry";
 import { BLOG_POSTS } from "@/data/blog";
 
 const BASE = "https://thetyremall.co.za";
@@ -69,6 +69,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let brandEntries: MetadataRoute.Sitemap = [];
   try {
     brandEntries = (await filterBrands()).map((b) => ({ url: `${BASE}${brandPath(b.name)}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.7 }));
+    // Brand landing pages (/brand/<slug>/), mag wheel brands included.
+    brandEntries.push(...(await getBrandDirectory()).filter((b) => b.count > 0 && b.slug !== "tyre-mall")
+      .map((b) => ({ url: `${BASE}/brand/${b.slug}/`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.7 })));
   } catch { /* leave brands out rather than fail */ }
 
   return [...staticEntries, ...categoryEntries, ...brandEntries, ...productEntries, ...blogEntries];

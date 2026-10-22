@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { queryProducts, meta } from "@/lib/catalogue";
 import { findCategory, shopCategories } from "@/lib/special-categories";
-import { filterBrands } from "@/lib/brand-registry";
+import { filterBrands, brandLogoMap } from "@/lib/brand-registry";
+import Image from "next/image";
 import { detectTyreSize } from "@/lib/voice-search";
 import { findVehicle, factorySizes } from "@/lib/vehicles";
 import { canonicalSize } from "@/lib/tyre-size";
@@ -13,7 +14,7 @@ import { SortSelect } from "@/components/SortSelect";
 import { ShopPromo } from "@/components/ShopPromo";
 import { Chevron, Truck } from "@/components/icons";
 
-import { shopHref } from "@/lib/shop-url";
+import { shopHref, brandPageSlug } from "@/lib/shop-url";
 
 type SP = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
@@ -69,7 +70,11 @@ export async function ShopListing({ sp }: { sp: SP }) {
     perPage: 24,
   });
 
-  const [cat, categories, brands] = await Promise.all([category ? findCategory(category) : undefined, shopCategories(), filterBrands()]);
+  const [cat, categories, brands, logos] = await Promise.all([category ? findCategory(category) : undefined, shopCategories(), filterBrands(), brandLogoMap()]);
+  // A brand's own listing (no search / category): show its logo and link to its /brand/ page.
+  const brandOnly = !q && !cat && !vehicle && !vehicleCtx && one(sp.brand) ? one(sp.brand)! : null;
+  const brandSlugOnly = brandOnly ? brandPageSlug(brandOnly) : null;
+  const brandLogo = brandSlugOnly ? logos[brandSlugOnly] : undefined;
   const heading = vehicle
     ? `Tyres for your ${vehicle.make} ${vehicle.model}`
     : vehicleCtx
@@ -114,9 +119,19 @@ export async function ShopListing({ sp }: { sp: SP }) {
         {!cat && one(sp.brand) && (<><Chevron width={12} height={12} /><span className="text-fg">{one(sp.brand)}</span></>)}
       </nav>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl sm:text-4xl">{heading}</h1>
-          <p className="mt-1 text-sm text-muted">{result.total.toLocaleString()} products</p>
+        <div className="flex items-center gap-4">
+          {brandLogo && (
+            <Link href={`/brand/${brandSlugOnly}/`} aria-label={`About ${brandOnly}`} className="flex h-16 w-28 shrink-0 items-center justify-center rounded-xl bg-white p-2 ring-1 ring-black/5">
+              <Image src={brandLogo} alt={`${brandOnly} logo`} width={112} height={56} unoptimized={!brandLogo.startsWith("/brand/")} className="h-auto max-h-full w-auto max-w-full object-contain" />
+            </Link>
+          )}
+          <div>
+            <h1 className="font-display text-3xl sm:text-4xl">{heading}</h1>
+            <p className="mt-1 text-sm text-muted">
+              {result.total.toLocaleString()} products
+              {brandSlugOnly && brandSlugOnly !== "tyre-mall" && (<> · <Link href={`/brand/${brandSlugOnly}/`} className="font-semibold text-volt hover:underline">About {brandOnly} →</Link></>)}
+            </p>
+          </div>
         </div>
         <div className="hidden lg:block"><SortSelect search={searchStr} /></div>
       </div>

@@ -7,6 +7,8 @@ import { Pin, Truck } from "@/components/icons";
 const BASE_META: Metadata = {
   title: "Contact us",
   description: "Get in touch with The Tyre Mall — call, WhatsApp or email. Nationwide delivery and Johannesburg fitment.",
+  // Same address as the old site (Google Ads link here); /contact forwards here.
+  alternates: { canonical: "/contact-us/" },
 };
 
 export async function generateMetadata(): Promise<Metadata> {

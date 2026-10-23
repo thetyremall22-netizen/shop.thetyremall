@@ -119,6 +119,13 @@ function blockedResponse(api: boolean): NextResponse {
 const LEGACY_WP = /^\/(wp-json|wp-admin|wp-includes|wp-content|wp-login|wp-cron|wp-config|wordpress|xmlrpc)/i;
 
 export async function proxy(req: NextRequest) {
+  // The contact page lives at the old site's address, /contact-us/ (Google Ads
+  // link there); the short /contact forwards to it permanently.
+  if (/^\/contact\/?$/.test(req.nextUrl.pathname)) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/contact-us/";
+    return NextResponse.redirect(url, 308);
+  }
   if (LEGACY_WP.test(req.nextUrl.pathname) || req.nextUrl.pathname.startsWith("/wp-")) {
     return new NextResponse("Gone", { status: 410, headers: { "cache-control": "public, max-age=86400" } });
   }

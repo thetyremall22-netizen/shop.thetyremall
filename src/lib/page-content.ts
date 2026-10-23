@@ -41,7 +41,7 @@ export const PAGES: PageDef[] = [
     eyebrow: "Backed by the Trump Tyre Group · B-BBEE Level 1", silver: "ABOUT", green: "THE TYRE MALL",
     intro: "Your premier online destination for tyres and wheels in South Africa. Backed by the heritage of the Trump Tyre Group, we've built our reputation on quality, value and service.",
     seoTitle: "About Us — The Tyre Mall", seoDescription: "" } },
-  { key: "contact", path: "/contact", label: "Contact us", defaults: {
+  { key: "contact", path: "/contact-us/", label: "Contact us", defaults: {
     eyebrow: "We're here to help", silver: "GET IN", green: "TOUCH",
     intro: "Questions about tyres, fitment, delivery or an existing order? Our team answers fast — call, WhatsApp, email or drop us a message below.",
     seoTitle: "Contact us", seoDescription: "Get in touch with The Tyre Mall — call, WhatsApp or email. Nationwide delivery and Johannesburg fitment." } },

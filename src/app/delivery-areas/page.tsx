@@ -108,7 +108,7 @@ export default function DeliveryAreasPage() {
 
       <div className="mt-8 flex flex-wrap gap-3">
         <Link href="/shop" className="btn btn-volt h-12 px-6">Shop tyres now</Link>
-        <Link href="/contact" className="btn btn-ghost h-12 px-6">Ask about your area</Link>
+        <Link href="/contact-us/" className="btn btn-ghost h-12 px-6">Ask about your area</Link>
       </div>
       <PageExtras page="delivery-areas" position="bottom" className="mt-10" />
     </div>

@@ -243,7 +243,7 @@ export default async function BrandLandingPage({ params, searchParams }: { param
             {!wheels && <li className="flex items-start gap-2"><span className="text-volt">✓</span> <span>Free delivery anywhere in South Africa when you buy 2 or more tyres</span></li>}
             <li className="flex items-start gap-2"><span className="text-volt">✓</span> <span>Buy now, pay later in 2 interest-free payments with <Link href="/how-to-apply-for-credit-online/" className="font-semibold text-volt hover:underline">HappyPay</Link></span></li>
             <li className="flex items-start gap-2"><span className="text-volt">✓</span> <span>Secure checkout with card or instant EFT through PayFast</span></li>
-            <li className="flex items-start gap-2"><span className="text-volt">✓</span> <span>Not sure of your size? <Link href="/vehicle-search" className="font-semibold text-volt hover:underline">Search by vehicle</Link> or <Link href="/contact" className="font-semibold text-volt hover:underline">ask our team</Link></span></li>
+            <li className="flex items-start gap-2"><span className="text-volt">✓</span> <span>Not sure of your size? <Link href="/vehicle-search" className="font-semibold text-volt hover:underline">Search by vehicle</Link> or <Link href="/contact-us/" className="font-semibold text-volt hover:underline">ask our team</Link></span></li>
           </ul>
           {wheels && stats.pcds.length > 0 && (
             <p className="mt-4 text-xs text-muted">Stud patterns (PCD) in stock: {stats.pcds.slice(0, 12).join(", ")}{stats.pcds.length > 12 ? "…" : ""}</p>

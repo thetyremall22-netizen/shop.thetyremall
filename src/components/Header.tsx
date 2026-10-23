@@ -17,7 +17,7 @@ const NAV = [
   { label: "Tyre Mall", href: "/product-category/tyres" },
   { label: "Wheel Mall", href: "/product-category/mag-wheel" },
   { label: "Find by Vehicle", href: "/vehicle-search" },
-  { label: "Contact us", href: "/contact" },
+  { label: "Contact us", href: "/contact-us/" },
 ];
 
 

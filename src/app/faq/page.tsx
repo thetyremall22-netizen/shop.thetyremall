@@ -55,7 +55,7 @@ export default function FaqPage() {
 
       <PageHeader page="faq" eyebrow={`${total} answers · tyres, fitment & orders`} silver="TYRE" green="FAQ"
         intro={<>Everything you need to know about buying, fitting and caring for your tyres. Can&apos;t find your
-          answer? <Link href="/contact" className="font-semibold text-volt hover:underline">Ask our team</Link>.</>} />
+          answer? <Link href="/contact-us/" className="font-semibold text-volt hover:underline">Ask our team</Link>.</>} />
       <PageExtras page="faq" position="top" />
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[220px_1fr]">
@@ -84,7 +84,7 @@ export default function FaqPage() {
           Send us your vehicle details or a photo of your tyre sidewall and we&apos;ll confirm the right fit.
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-3">
-          <Link href="/contact" className="btn btn-volt h-12 px-6">Contact us</Link>
+          <Link href="/contact-us/" className="btn btn-volt h-12 px-6">Contact us</Link>
           <Link href="/shop" className="btn btn-ghost h-12 px-6">Shop tyres</Link>
         </div>
       </div>

@@ -34,7 +34,7 @@ export default function WheelShopPage() {
           <PageHeader page="mag-wheels" className="" eyebrow="The Wheel Shop" silver="MAG" green="WHEELS"
             h1Class="skew-italic mt-1 font-display text-6xl leading-[0.85] sm:text-8xl" introClass="mt-4 max-w-md text-base font-semibold text-fg drop-shadow sm:text-lg"
             intro={<>15&quot; to 20&quot; · bakkie, 4×4 &amp; replica designs. Turn heads on every street.</>} />
-          <Link href="/contact?reason=wheels" className="btn btn-volt mt-6 px-7 py-3.5 text-base">
+          <Link href="/contact-us/?reason=wheels" className="btn btn-volt mt-6 px-7 py-3.5 text-base">
             Request a wheel quote <Arrow width={18} height={18} />
           </Link>
         </div>
@@ -47,7 +47,7 @@ export default function WheelShopPage() {
           <h2 className="skew-italic font-display text-3xl sm:text-4xl"><span className="text-chrome">SHOP BY</span> <span className="text-volt-grad">SIZE</span></h2>
           <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-5">
             {SIZES.map((s) => (
-              <Link key={s} href="/contact?reason=wheels" className="glow-hover grid aspect-square place-items-center rounded-2xl border border-line bg-surface text-center transition-transform hover:scale-[1.03]">
+              <Link key={s} href="/contact-us/?reason=wheels" className="glow-hover grid aspect-square place-items-center rounded-2xl border border-line bg-surface text-center transition-transform hover:scale-[1.03]">
                 <div>
                   <div className="font-display text-4xl text-volt">{s}</div>
                   <div className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted">Mag wheels</div>
@@ -85,7 +85,7 @@ export default function WheelShopPage() {
             with nationwide delivery and fitment at our Johannesburg partners.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/contact?reason=wheels" className="btn btn-volt px-7 py-3.5 text-base"><Bolt width={18} height={18} /> Request a quote</Link>
+            <Link href="/contact-us/?reason=wheels" className="btn btn-volt px-7 py-3.5 text-base"><Bolt width={18} height={18} /> Request a quote</Link>
             <a href="https://wa.link/k33vfb" target="_blank" rel="noopener noreferrer" className="btn btn-ghost px-7 py-3.5 text-base">WhatsApp us</a>
           </div>
           <div className="mt-5 inline-flex items-center gap-2 text-sm text-muted"><Truck width={15} height={15} className="text-volt" /> Free nationwide delivery on qualifying orders</div>

@@ -71,7 +71,7 @@ export async function Footer() {
             <li><Link href="/radar-protect" className="hover:text-volt">Radar Protect</Link></li>
             <li><Link href="/how-to-apply-for-credit-online/" className="hover:text-volt">Buy now, pay later (HappyPay)</Link></li>
             <li><Link href="/compare" className="hover:text-volt">Compare tyres</Link></li>
-            <li><Link href="/contact" className="hover:text-volt">Contact us</Link></li>
+            <li><Link href="/contact-us/" className="hover:text-volt">Contact us</Link></li>
           </ul>
         </div>
 

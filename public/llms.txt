@@ -22,7 +22,7 @@ The Tyre Mall is an e-commerce store serving customers across South Africa. Pric
 
 - [About The Tyre Mall](https://thetyremall.co.za/about): Who we are and how the store works.
 - [Stores & contact](https://thetyremall.co.za/stores): Physical store locations and contact details.
-- [Contact us](https://thetyremall.co.za/contact): Get in touch with the sales and support team.
+- [Contact us](https://thetyremall.co.za/contact-us/): Get in touch with the sales and support team.
 - [Blog](https://thetyremall.co.za/blog): Tyre news, brand info and buying guides.
 
 ## Optional

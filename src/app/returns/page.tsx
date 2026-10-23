@@ -34,7 +34,7 @@ export default function ReturnsPage() {
       <PageHeader page="returns" eyebrow="Your rights under the CPA" silver="RETURNS &" green="REFUNDS"
         h1Class="skew-italic mt-1 font-display text-4xl leading-[0.95] sm:text-6xl"
         intro={<>Changed your mind or received a faulty tyre? Here&apos;s exactly how returns, cancellations and
-          refunds work — always <Link href="/contact" className="font-semibold text-volt hover:underline">contact us first</Link> so
+          refunds work — always <Link href="/contact-us/" className="font-semibold text-volt hover:underline">contact us first</Link> so
           we can guide you through it.</>} />
       <PageExtras page="returns" position="top" />
 

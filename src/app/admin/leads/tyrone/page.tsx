@@ -57,24 +57,30 @@ export default async function TyroneConversations({ searchParams }: { searchPara
       </div>
 
       <div className="mt-4 overflow-x-auto rounded-xl border border-line">
-        <table className="w-full min-w-[860px] text-sm">
+        <table className="w-full min-w-[720px] text-sm">
           <thead><tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
-            <th className="px-3 py-2.5">Last activity</th><th className="px-3 py-2.5">Customer</th><th className="px-3 py-2.5">First question</th><th className="px-3 py-2.5">Journey</th><th className="px-3 py-2.5">Outcome</th><th className="px-3 py-2.5" />
+            <th className="px-3 py-2.5">Last activity</th><th className="px-3 py-2.5">Customer</th><th className="min-w-[200px] px-3 py-2.5">First question</th><th className="px-3 py-2.5">Journey</th><th className="px-3 py-2.5">Outcome</th>
           </tr></thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={6} className="px-3 py-6 text-center text-muted">{q || f ? "No matches." : "No Tyrone conversations yet. They appear here from the first question."}</td></tr>
+              <tr><td colSpan={5} className="px-3 py-6 text-center text-muted">{q || f ? "No matches." : "No Tyrone conversations yet. They appear here from the first question."}</td></tr>
             ) : rows.map((j) => (
               <tr key={j.sid} className="border-b border-line align-top last:border-0 hover:bg-surface">
                 <td className="px-3 py-2.5 whitespace-nowrap text-muted">{when(j.lastAt)}</td>
                 <td className="px-3 py-2.5">
-                  {j.name || j.email ? <><div className="font-semibold text-fg">{j.name || "—"}<TestBadge test={j.test} /></div><div className="text-xs text-muted">{j.email}</div><div className="text-xs text-muted">{j.phone}</div></>
+                  {j.name || j.email ? <><Link href={`/admin/leads/tyrone/${j.sid}`} className="font-semibold text-fg hover:text-volt">{j.name || "—"}</Link><TestBadge test={j.test} /><div className="text-xs text-muted">{j.email}</div><div className="text-xs text-muted">{j.phone}</div></>
                     : <span className="text-xs text-muted">Left before sharing details<TestBadge test={j.test} /></span>}
                 </td>
                 <td className="px-3 py-2.5 text-fg">{cut(j.firstQuestion || "—", 70)}</td>
-                <td className="px-3 py-2.5 whitespace-nowrap text-xs text-muted">{j.questions} question{j.questions === 1 ? "" : "s"} · {j.productClicks} product click{j.productClicks === 1 ? "" : "s"} · {j.pageViews} page{j.pageViews === 1 ? "" : "s"}{j.addToCart ? ` · ${j.addToCart} add to cart` : ""}</td>
-                <td className="px-3 py-2.5"><JourneyOutcomeBadge outcome={j.outcome} />{j.outcome.total ? <div className="mt-1 text-xs font-semibold text-fg">{zar(j.outcome.total)}</div> : null}</td>
-                <td className="px-3 py-2.5 text-right"><Link href={`/admin/leads/tyrone/${j.sid}`} className="text-xs font-bold text-volt hover:underline">Open →</Link></td>
+                <td className="px-3 py-2.5 text-xs text-muted">
+                  <div>{j.questions} question{j.questions === 1 ? "" : "s"}</div>
+                  <div>{j.productClicks} product click{j.productClicks === 1 ? "" : "s"}</div>
+                  <div>{j.pageViews} page{j.pageViews === 1 ? "" : "s"}{j.addToCart ? ` · ${j.addToCart} add to cart` : ""}</div>
+                </td>
+                <td className="px-3 py-2.5">
+                  <JourneyOutcomeBadge outcome={j.outcome} />{j.outcome.total ? <div className="mt-1 text-xs font-semibold text-fg">{zar(j.outcome.total)}</div> : null}
+                  <div className="mt-1.5"><Link href={`/admin/leads/tyrone/${j.sid}`} className="text-xs font-bold text-volt hover:underline">Open →</Link></div>
+                </td>
               </tr>
             ))}
           </tbody>

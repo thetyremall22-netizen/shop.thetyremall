@@ -96,7 +96,8 @@ export function classifyHappyPayStatus(status: string | null | undefined): "paid
 /** Ask HappyPay about one order and finish it if HappyPay says it's paid/approved. */
 export async function recheckHappyPayOrder(orderId: string, actor = "HappyPay (status check)"): Promise<"paid" | "not_paid" | "unknown" | "skipped"> {
   const order = await getOrder(orderId);
-  if (!order || order.paymentMethod !== "happypay" || !["pending", "on-hold"].includes(order.status)) return "skipped";
+  if (!order || order.paymentMethod !== "happypay") return "skipped";
+  if (!["pending", "on-hold"].includes(order.status) && !(order.status === "cancelled" && (await wasAutoCancelled(orderId)))) return "skipped";
   const hp = await fetchHappyPayStatus(orderId);
   const verdict = classifyHappyPayStatus(hp?.status);
   if (verdict === "paid") {
@@ -113,7 +114,8 @@ export async function recheckHappyPayOrders(): Promise<{ checked: number; paid: 
   await libsql.execute({ sql: "INSERT OR IGNORE INTO meta (key, value) VALUES ('hp_recheck_since', ?)", args: [String(Date.now())] });
   const since = Number((await libsql.execute("SELECT value FROM meta WHERE key = 'hp_recheck_since'")).rows[0]?.value) || Date.now();
   const r = await libsql.execute({
-    sql: `SELECT order_id FROM orders WHERE payment_method = 'happypay' AND status IN ('pending', 'on-hold')
+    sql: `SELECT order_id FROM orders WHERE payment_method = 'happypay'
+          AND (status IN ('pending', 'on-hold') OR (status = 'cancelled' AND order_id IN (SELECT substr(key, 16) FROM meta WHERE key LIKE 'auto_cancelled:%')))
           AND created_at >= ? AND created_at >= ? ORDER BY id LIMIT 50`,
     args: [since, Date.now() - 3 * 86400_000],
   });
@@ -153,4 +155,50 @@ export async function watchPayfastReturns(): Promise<number> {
     await libsql.execute({ sql: "DELETE FROM meta WHERE key = ?", args: [String(row.key)] });
   }
   return alerted;
+}
+
+// ---- Unpaid orders: cancelled automatically -----------------------------------
+// Like the old site's "hold stock" timer: an order still waiting for payment is
+// cancelled after 1 hour (PayFast) or 24 hours (HappyPay — approvals can take a
+// while). Stock is only ever taken off once an order is paid, so there's nothing
+// to put back. No email goes to the customer; the order history gets a note.
+// Only orders placed after this was switched on are touched. Orders "On hold"
+// (waiting for someone to check a payment) are never cancelled automatically.
+// If the payment does arrive later, the order still goes to Processing as normal.
+
+const UNPAID_LIMIT_MIN: Record<string, number> = { payfast: 60, happypay: 24 * 60 };
+
+async function wasAutoCancelled(orderId: string): Promise<boolean> {
+  await libsql.execute(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')`);
+  const r = await libsql.execute({ sql: "SELECT 1 FROM meta WHERE key = ?", args: [`auto_cancelled:${orderId}`] });
+  return r.rows.length > 0;
+}
+
+export async function cancelUnpaidOrders(): Promise<number> {
+  await libsql.execute(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')`);
+  await libsql.execute({ sql: "INSERT OR IGNORE INTO meta (key, value) VALUES ('auto_cancel_since', ?)", args: [String(Date.now())] });
+  const since = Number((await libsql.execute("SELECT value FROM meta WHERE key = 'auto_cancel_since'")).rows[0]?.value) || Date.now();
+  const r = await libsql.execute({
+    sql: "SELECT order_id, payment_method, created_at FROM orders WHERE status = 'pending' AND created_at >= ? ORDER BY id LIMIT 200",
+    args: [since],
+  });
+  let cancelled = 0;
+  for (const row of r.rows) {
+    const orderId = String(row.order_id);
+    const method = String(row.payment_method ?? "");
+    const limit = UNPAID_LIMIT_MIN[method] ?? 60;
+    if (Date.now() - Number(row.created_at) < limit * 60_000) continue;
+    // HappyPay: one last check first, in case it was approved and the notice was missed.
+    if (method === "happypay" && (await recheckHappyPayOrder(orderId, "HappyPay (final check before cancelling)")) === "paid") continue;
+    const order = await getOrder(orderId);
+    if (!order || order.status !== "pending") continue;
+    const hours = limit >= 60 ? `${limit / 60} hour${limit === 60 ? "" : "s"}` : `${limit} minutes`;
+    await updateOrder(orderId, { status: "cancelled" }, {
+      actor: "System (unpaid order timer)",
+      note: `Cancelled automatically — not paid within ${hours} of being placed${method ? ` (${method === "payfast" ? "PayFast" : method === "happypay" ? "HappyPay" : method})` : ""}. If the payment still comes through, the order will move to Processing automatically.`,
+    });
+    await libsql.execute({ sql: "INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", args: [`auto_cancelled:${orderId}`, String(Date.now())] });
+    cancelled++;
+  }
+  return cancelled;
 }

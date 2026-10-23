@@ -11,4 +11,6 @@ export async function register() {
   startWeeklyDigest();
   const { startPaymentChecks } = await import("./lib/payment-check-scheduler");
   startPaymentChecks();
+  const { refreshContentAfterStart } = await import("./lib/startup-refresh");
+  refreshContentAfterStart();
 }

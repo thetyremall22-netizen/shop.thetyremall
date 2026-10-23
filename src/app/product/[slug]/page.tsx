@@ -20,6 +20,9 @@ import type { Product } from "@/lib/types";
 import { YouMayLike } from "@/components/YouMayLike";
 import { TyreSizeExplainer } from "@/components/TyreSizeExplainer";
 import { OnPageCompare } from "@/components/OnPageCompare";
+import { RetiredProduct } from "@/components/RetiredProduct";
+import { findRetired, wantedFrom } from "@/lib/retired-products";
+import { productJsonLd } from "@/lib/merchant";
 import { Chevron, Check, Truck, Shield, Bolt, Star } from "@/components/icons";
 
 export const instant = false;
@@ -76,14 +79,27 @@ function brandLogoSrc(brand: string): string | null {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const p = await getProduct(slug);
-  if (!p) return { title: "Product not found" };
+  if (!p) {
+    // An old product we no longer list: helpful page, kept out of Google's index.
+    const r = findRetired(slug);
+    const w = await wantedFrom(slug, r?.title);
+    if (r || w) return { title: `${r?.title ?? w?.label ?? "Product"} — currently unavailable`, robots: { index: false, follow: true } };
+    return { title: "Product not found" };
+  }
   return { title: p.name, description: p.shortDescription };
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const p = await getProduct(slug);
-  if (!p) notFound();
+  if (!p) {
+    // Old addresses (e.g. products from the old WooCommerce site that Google
+    // Shopping still links to) get similar products instead of a dead end.
+    const r = findRetired(slug);
+    const wanted = await wantedFrom(slug, r?.title);
+    if (r || wanted) return <RetiredProduct wanted={wanted ?? { kind: "tyre", label: r!.title }} />;
+    notFound();
+  }
 
   // Stock + price come from the cached catalogue (PRODUCTS_TAG) — refreshed the
   // moment a product is edited or an order changes stock — so the page needs no
@@ -162,6 +178,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="container-x py-6 lg:py-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd(selfProduct)).replace(/</g, "\\u003c") }} />
       <nav className="flex items-center gap-1.5 text-xs text-muted">
         <Link href="/" className="hover:text-volt">Home</Link>
         <Chevron width={12} height={12} />

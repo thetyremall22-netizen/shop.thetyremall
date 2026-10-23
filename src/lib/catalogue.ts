@@ -121,6 +121,12 @@ async function loadFromDb(): Promise<Product[] | null> {
  *  safety refresh — instead of rebuilding the whole 4,000+ product array every
  *  minute, which churned memory and briefly blocked the single synchronous
  *  worker. Falls back to the static snapshot when the DB is empty. */
+/** Straight from the database, no cache (for the Merchant Center feed, which
+ *  must never serve a stale or build-time copy of prices and stock). */
+export async function getProductsFresh(): Promise<Product[]> {
+  return (await loadFromDb()) ?? (await getSnapshot());
+}
+
 export async function getProducts(): Promise<Product[]> {
   "use cache";
   cacheTag(PRODUCTS_TAG);

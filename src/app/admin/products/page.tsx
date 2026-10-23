@@ -80,6 +80,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
       </div>
       <div className="mt-2 flex flex-wrap gap-2">
         <Link href="/admin/products/brands" className="inline-flex rounded-full border border-volt/50 px-3.5 py-1.5 text-sm font-semibold text-volt hover:bg-volt/10">🏷 Brands &amp; logos →</Link>
+        <Link href="/admin/products/google-merchant" className="inline-flex rounded-full border border-volt/50 px-3.5 py-1.5 text-sm font-semibold text-volt hover:bg-volt/10">🛍 Google Merchant feed →</Link>
         <Link href="/admin/products/specials" className="inline-flex rounded-full border border-volt/50 px-3.5 py-1.5 text-sm font-semibold text-volt hover:bg-volt/10">★ Special categories →</Link>
         <Link href="/admin/products/specials?kind=sale" className="inline-flex rounded-full border border-volt/50 px-3.5 py-1.5 text-sm font-semibold text-volt hover:bg-volt/10">% Sale categories →</Link>
       </div>

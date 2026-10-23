@@ -23,6 +23,7 @@ import { OnPageCompare } from "@/components/OnPageCompare";
 import { RetiredProduct } from "@/components/RetiredProduct";
 import { findRetired, wantedFrom } from "@/lib/retired-products";
 import { productJsonLd } from "@/lib/merchant";
+import { TrackViewItem } from "@/components/TrackViewItem";
 import { Chevron, Check, Truck, Shield, Bolt, Star } from "@/components/icons";
 
 export const instant = false;
@@ -178,6 +179,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="container-x py-6 lg:py-10">
+      <TrackViewItem item={{ id: p.id, name: p.name, brand: p.brand, price, type: p.type }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd(selfProduct)).replace(/</g, "\\u003c") }} />
       <nav className="flex items-center gap-1.5 text-xs text-muted">
         <Link href="/" className="hover:text-volt">Home</Link>

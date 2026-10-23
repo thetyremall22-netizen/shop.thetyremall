@@ -20,6 +20,7 @@ import {
 import { setDiscountFor } from "./pricing";
 import { canBuyNow, showGeoBlocked } from "@/components/GeoNotice";
 import { trackTyrone } from "./tyrone-track";
+import { trackAddToCart } from "./ecommerce-tracking";
 
 export interface CartItem {
   id: number;
@@ -206,6 +207,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Outside South Africa: browsing only (the server refuses checkout too).
       if (!canBuyNow()) { showGeoBlocked(); return; }
       trackTyrone("add_to_cart", { label: `${qty}× ${item.name}`, href: `/product/${item.slug}` });
+      trackAddToCart(item, qty);
       dispatch({ type: "ADD", item, qty });
       setDrawerOpen(true);
     },

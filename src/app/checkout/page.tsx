@@ -12,6 +12,7 @@ import { formatPrice } from "@/lib/format";
 import { FITMENT_CENTRES, PAYMENT_METHODS } from "@/lib/shop-config";
 import { Check, Truck, Pin, Shield, Bolt } from "@/components/icons";
 import { trackTyrone } from "@/lib/tyrone-track";
+import { trackBeginCheckout, savePendingPurchase } from "@/lib/ecommerce-tracking";
 
 export default function CheckoutPage() {
   const { items, totals, deliveryMethod, fitmentStoreId, fitmentDate } = useCart();
@@ -25,6 +26,14 @@ export default function CheckoutPage() {
   const formRef = useRef<HTMLFormElement>(null);
   const centre = FITMENT_CENTRES.find((f) => f.id === fitmentStoreId) ?? FITMENT_CENTRES[0];
   const payTotal = Math.max(0, totals.total - (coupon?.discount ?? 0));
+
+  // Google Analytics / Ads: "checkout started", once the cart has loaded.
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutTracked.current || items.length === 0) return;
+    checkoutTracked.current = true;
+    trackBeginCheckout(items, totals.total);
+  }, [items, totals.total]);
 
   // Restore the customer details + applied coupon after a round-trip to the
   // payment gateway (or an accidental refresh). Runs once the cart has hydrated
@@ -165,6 +174,15 @@ export default function CheckoutPage() {
         setError(data.message ?? "That payment method isn't available yet. Please choose PayFast.");
         setSubmitting(false);
         return;
+      }
+      // Remember what was ordered, so the thank-you page can report the sale to
+      // Google Ads / Analytics once the payment is confirmed.
+      if (data.reference) {
+        savePendingPurchase({
+          ref: String(data.reference), items,
+          email: body.customer.email, phone: body.customer.phone, firstName: body.customer.firstName, lastName: body.customer.lastName,
+          ...(body.delivery.method === "delivery" ? { city: body.delivery.address.city, province: body.delivery.address.province, postalCode: body.delivery.address.postalCode } : {}),
+        });
       }
       // HappyPay (and other redirect-based gateways): go to the provider.
       if (data.redirectUrl) {

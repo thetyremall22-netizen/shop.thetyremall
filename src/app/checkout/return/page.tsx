@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCart } from "@/lib/cart";
 import { Check } from "@/components/icons";
+import { readPendingPurchase, trackPurchase } from "@/lib/ecommerce-tracking";
 
 function ReturnInner() {
   const ref = useSearchParams().get("ref");
@@ -20,6 +21,30 @@ function ReturnInner() {
   // Back from HappyPay: ask the site to confirm the approval now (no-op for other payments).
   useEffect(() => {
     if (ref) fetch("/api/checkout/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ref }) }).catch(() => {});
+  }, [ref]);
+
+  // Google Ads / Analytics: report the sale once the payment is confirmed.
+  // PayFast only sends shoppers back here after a successful payment, so a
+  // PayFast order counts straight away; HappyPay is counted once approved
+  // (checked for up to 3 minutes). Never more than once per order.
+  useEffect(() => {
+    if (!ref) return;
+    const pending = readPendingPurchase(ref);
+    if (!pending) return;
+    let stop = false, tries = 0;
+    const check = async () => {
+      if (stop) return;
+      tries++;
+      try {
+        const res = await fetch("/api/checkout/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ref, email: pending.email }) });
+        const s = (await res.json()) as { state: string; method?: string; total?: number };
+        if (s.state === "paid" || (s.state === "pending" && s.method === "payfast")) { trackPurchase(pending, s.total ?? 0); return; }
+        if (s.state === "not_paid" || s.state === "unknown") return;
+      } catch { /* try again */ }
+      if (tries < 36) setTimeout(check, 5000);
+    };
+    const t = setTimeout(check, 1500);
+    return () => { stop = true; clearTimeout(t); };
   }, [ref]);
 
   return (

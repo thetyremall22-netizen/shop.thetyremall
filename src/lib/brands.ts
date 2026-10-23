@@ -16,7 +16,7 @@ const LOGO_SLUGS = new Set([
   "bridgestone", "pirelli", "goodyear", "dunlop", "continental", "michelin",
   "radar", "yokohama", "bfgoodrich", "firestone", "general", "sumitomo",
   "falken", "landsail", "windforce", "tracmax", "kapsen", "firemax",
-  "annaite", "landspider", "anchee", "timax", "sava", "roadking",
+  "annaite", "landspider", "anchee", "timax", "sava", "roadking", "nexen",
 ]);
 
 export const hasBrandLogo = (b: string) => LOGO_SLUGS.has(brandSlug(b));

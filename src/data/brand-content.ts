@@ -5,6 +5,8 @@
 // gets a page, with a write-up built from the stock (see src/app/brand/[slug]).
 
 export interface BrandCopy {
+  /** Display name, when it isn't just the slug capitalised (e.g. "CEAT"). */
+  name?: string;
   /** Short line under the heading. */
   tagline: string;
   /** "About <brand>" paragraphs. */
@@ -135,6 +137,7 @@ export const BRAND_CONTENT: Record<string, BrandCopy> = {
     ],
   },
   "bfgoodrich": {
+    name: "BFGoodrich",
     tagline: "Legendary off-road tyres — the original All-Terrain T/A.",
     about: [
       "BFGoodrich traces its roots back to 1870 in the United States and has been part of the Michelin group since 1990. It's famous for off-road tyres, proven over decades of desert and off-road racing.",
@@ -197,21 +200,22 @@ export const BRAND_CONTENT: Record<string, BrandCopy> = {
     tagline: "Japanese tyre maker since 1917.",
     about: [
       "Yokohama Rubber was founded in Japan in 1917 and is known around the world for quality road, performance and 4x4 tyres, including its ADVAN and Geolandar ranges.",
-      "We stock selected Yokohama sizes — browse what's available on this page, or contact us if you're looking for a specific Yokohama tyre.",
+      "Looking for a specific Yokohama tyre? Ask us about sizes, availability and pricing — we'll help you find the right one.",
     ],
   },
   nexen: {
     tagline: "Korean tyre maker with modern, good-value tyres.",
     about: [
       "Nexen Tire is a South Korean tyre manufacturer that supplies tyres to car makers and drivers around the world, offering modern designs at a competitive price.",
-      "We stock selected Nexen sizes — browse what's available on this page, or contact us if you're looking for a specific Nexen tyre.",
+      "Looking for a specific Nexen tyre? Ask us about sizes, availability and pricing — we'll help you find the right one.",
     ],
   },
   ceat: {
+    name: "CEAT",
     tagline: "Tough, good-value tyres from India's CEAT.",
     about: [
       "CEAT is one of India's leading tyre manufacturers, making tyres for cars, commercial vehicles and motorcycles that are sold in many countries.",
-      "We stock selected CEAT sizes — browse what's available on this page, or contact us if you're looking for a specific CEAT tyre.",
+      "Looking for a specific CEAT tyre? Ask us about sizes, availability and pricing — we'll help you find the right one.",
     ],
   },
   tracmax: {
@@ -264,6 +268,7 @@ export const BRAND_CONTENT: Record<string, BrandCopy> = {
     ],
   },
   "a-line": {
+    name: "A-Line",
     wheels: true,
     tagline: "Stylish mag wheels for cars, SUVs and bakkies — sold as sets of four.",
     about: [

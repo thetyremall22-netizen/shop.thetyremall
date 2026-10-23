@@ -24,7 +24,7 @@ function toCompareItem(p: Product): CompareItem {
 const LOGO_BRANDS = new Set([
   "bridgestone", "pirelli", "goodyear", "dunlop", "radar", "michelin", "continental",
   "landsail", "windforce", "tracmax", "bfgoodrich", "firestone", "sumitomo", "general",
-  "sava", "yokohama", "kapsen", "timax", "anchee", "roadking",
+  "sava", "yokohama", "kapsen", "timax", "anchee", "roadking", "nexen",
 ]);
 const brandSlug = (b: string) => b.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 const brandLogoSrc = (b: string) => {

@@ -2,13 +2,16 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProducts, queryProducts, primaryCategories } from "@/lib/catalogue";
+import { getProducts, queryProducts, primaryCategories, dealProducts } from "@/lib/catalogue";
 import { getBrandDirectory, type BrandInfo } from "@/lib/brand-registry";
 import { brandPath, shopHref } from "@/lib/shop-url";
 import { formatPrice } from "@/lib/format";
 import { ProductCard } from "@/components/ProductCard";
 import { Bolt, Chevron, Shield, Truck } from "@/components/icons";
 import { BRAND_CONTENT, type BrandCopy } from "@/data/brand-content";
+import { hasBrandLogo, brandLogoPath } from "@/lib/brands";
+import { WhatsAppGateButton } from "@/components/WhatsAppGate";
+import { WhatsApp } from "@/components/icons";
 import type { Product } from "@/lib/types";
 
 // Brand landing pages at the old site's addresses: /brand/<brand-slug>/
@@ -20,11 +23,18 @@ export const instant = false;
 const PER_PAGE = 24;
 const pagePath = (slug: string) => `/brand/${slug}/`;
 
-/** A brand with products, by its slug. */
+/** A brand by its slug: one we stock, or one we know (write-up or logo) even
+ *  when nothing is in stock right now — that page says so and offers to help,
+ *  instead of "not found". */
 async function findBrand(slug: string): Promise<BrandInfo | undefined> {
   const s = decodeURIComponent(slug).toLowerCase();
   if (s === "tyre-mall") return undefined;
-  return (await getBrandDirectory()).find((b) => b.slug === s && b.count > 0);
+  const known = (await getBrandDirectory()).find((b) => b.slug === s);
+  if (known && (known.count > 0 || known.registered || BRAND_CONTENT[s] || known.logo)) return known;
+  const copy = BRAND_CONTENT[s];
+  if (!copy && !hasBrandLogo(s)) return undefined;
+  const name = copy?.name ?? s.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("-");
+  return { name, slug: s, count: 0, logo: hasBrandLogo(s) ? brandLogoPath(s) : null, uploadedLogo: "", showInMenu: false, registered: false };
 }
 
 interface Stats {
@@ -51,7 +61,9 @@ function fallbackCopy(name: string, s: Stats): BrandCopy {
   const rimText = s.rims.length > 1 ? `${s.rims[0]}" to ${s.rims[s.rims.length - 1]}"` : s.rims.length ? `${s.rims[0]}"` : "";
   return {
     tagline: `Affordable ${name} ${what}, delivered across South Africa.`,
-    about: [
+    about: s.total === 0 ? [
+      `${name} ${what} aren't in stock at The Tyre Mall right now. Ask us and we'll check availability and pricing for your size, or have a look at the alternatives on this page.`,
+    ] : [
       `${name} is a value ${s.wheels ? "wheel" : "tyre"} brand — a good option when you want new ${what} without paying premium-brand prices.`,
       `We currently stock ${s.total} ${name} ${s.total === 1 ? "product" : "products"}${kinds ? ` (${kinds})` : ""}${rimText ? ` in ${rimText} rim sizes` : ""}. Browse them on this page, or contact us if you're looking for a size you can't see.`,
     ],
@@ -88,6 +100,14 @@ export default async function BrandLandingPage({ params, searchParams }: { param
   const noun = wheels ? "Mag Wheels" : "Tyres";
   const result = await queryProducts({ brand: b.name, page, perPage: PER_PAGE });
   const listing = brandPath(b.name);
+  const none = stats.total === 0;
+  const alternatives = none ? (await dealProducts(40)).filter((p) => p.inStock && p.type === (wheels ? "wheel" : "tyre")).slice(0, 8) : [];
+  const askUs = (
+    <WhatsAppGateButton message={`Hi The Tyre Mall! I'm looking for ${b.name} ${noun.toLowerCase()}. Can you help?`}
+      lead={{ source: "whatsapp-enquiry", productName: `${b.name} ${noun.toLowerCase()}` }} className="btn btn-volt h-12 px-6">
+      <WhatsApp width={18} height={18} /> Ask us about {b.name}
+    </WhatsAppGateButton>
+  );
   const pageHref = (p: number) => (p === 1 ? pagePath(b.slug) : `${pagePath(b.slug)}?page=${p}`) + "#shop";
 
   const ld = {
@@ -132,15 +152,22 @@ export default async function BrandLandingPage({ params, searchParams }: { param
             <h1 className="skew-italic font-display text-4xl leading-[0.95] sm:text-5xl">{b.name} {noun}</h1>
             <p className="mt-3 max-w-2xl text-base text-muted">{copy.tagline}</p>
             <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
-              <span className="rounded-full bg-volt/15 px-3 py-1 text-volt ring-1 ring-volt/30">{stats.total.toLocaleString()} {stats.total === 1 ? "product" : "products"}</span>
+              {none
+                ? <span className="rounded-full border border-line bg-surface px-3 py-1 text-fg">Not in stock right now — ask us</span>
+                : <span className="rounded-full bg-volt/15 px-3 py-1 text-volt ring-1 ring-volt/30">{stats.total.toLocaleString()} {stats.total === 1 ? "product" : "products"}</span>}
               {stats.rims.length > 0 && (
                 <span className="rounded-full border border-line bg-surface px-3 py-1 text-fg">{stats.rims.length > 1 ? `${stats.rims[0]}" – ${stats.rims[stats.rims.length - 1]}" rims` : `${stats.rims[0]}" rims`}</span>
               )}
               {stats.fromPrice != null && <span className="rounded-full border border-line bg-surface px-3 py-1 text-fg">From {formatPrice(stats.fromPrice)}</span>}
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
-              <a href="#shop" className="btn btn-volt h-12 px-6">Shop {b.name} {noun.toLowerCase()}</a>
-              <Link href={listing} className="btn btn-ghost h-12 px-6">Filter by size</Link>
+              {none ? (<>
+                {askUs}
+                <Link href={wheels ? "/product-category/mag-wheel" : "/product-category/tyres"} className="btn btn-ghost h-12 px-6">Shop all {noun.toLowerCase()}</Link>
+              </>) : (<>
+                <a href="#shop" className="btn btn-volt h-12 px-6">Shop {b.name} {noun.toLowerCase()}</a>
+                <Link href={listing} className="btn btn-ghost h-12 px-6">Filter by size</Link>
+              </>)}
             </div>
           </div>
         </div>
@@ -188,8 +215,27 @@ export default async function BrandLandingPage({ params, searchParams }: { param
         </div>
       )}
 
+      {/* nothing in stock: say so, offer help and alternatives */}
+      {none && (
+        <section id="shop" className="scroll-mt-40">
+          <div className="mt-10 card p-6 sm:p-8">
+            <h2 className="font-display text-3xl">No {b.name} {noun.toLowerCase()} in stock right now</h2>
+            <p className="mt-2 max-w-2xl text-sm text-muted">Tell us your size and we&apos;ll check availability and pricing for you — or choose from the popular {noun.toLowerCase()} below, all in stock and ready to ship.</p>
+            <div className="mt-5">{askUs}</div>
+          </div>
+          {alternatives.length > 0 && (
+            <>
+              <h2 className="mt-10 font-display text-3xl">Popular {noun.toLowerCase()} in stock</h2>
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {alternatives.map((p) => <ProductCard key={p.id} p={p} />)}
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
       {/* products */}
-      <section id="shop" className="scroll-mt-40">
+      {!none && <section id="shop" className="scroll-mt-40">
         <div className="mt-10 flex flex-wrap items-end justify-between gap-3">
           <h2 className="font-display text-3xl">Shop {b.name} {noun.toLowerCase()}</h2>
           <Link href={listing} className="text-sm font-bold text-volt hover:underline">Filter by size, price &amp; more →</Link>
@@ -213,7 +259,7 @@ export default async function BrandLandingPage({ params, searchParams }: { param
             {page < result.pages && <Link href={pageHref(page + 1)} className="btn btn-dark px-3">Next</Link>}
           </div>
         )}
-      </section>
+      </section>}
 
       {/* about the brand */}
       <section className="mt-12 grid gap-6 lg:grid-cols-[1fr_380px]">
@@ -239,7 +285,7 @@ export default async function BrandLandingPage({ params, searchParams }: { param
         <aside className="card h-fit p-6">
           <h2 className="font-display text-2xl">Why buy {b.name} from The Tyre Mall?</h2>
           <ul className="mt-4 space-y-3 text-sm text-fg">
-            <li className="flex items-start gap-2"><span className="text-volt">✓</span> <span>{stats.total.toLocaleString()} {b.name} {stats.total === 1 ? "product" : "products"} to choose from{stats.categories.length ? `, including ${listJoin(stats.categories.slice(0, 3).map((c) => c.name))}` : ""}</span></li>
+            {!none && <li className="flex items-start gap-2"><span className="text-volt">✓</span> <span>{stats.total.toLocaleString()} {b.name} {stats.total === 1 ? "product" : "products"} to choose from{stats.categories.length ? `, including ${listJoin(stats.categories.slice(0, 3).map((c) => c.name))}` : ""}</span></li>}
             {!wheels && <li className="flex items-start gap-2"><span className="text-volt">✓</span> <span>Free delivery anywhere in South Africa when you buy 2 or more tyres</span></li>}
             <li className="flex items-start gap-2"><span className="text-volt">✓</span> <span>Buy now, pay later in 2 interest-free payments with <Link href="/how-to-apply-for-credit-online/" className="font-semibold text-volt hover:underline">HappyPay</Link></span></li>
             <li className="flex items-start gap-2"><span className="text-volt">✓</span> <span>Secure checkout with card or instant EFT through PayFast</span></li>
@@ -248,7 +294,9 @@ export default async function BrandLandingPage({ params, searchParams }: { param
           {wheels && stats.pcds.length > 0 && (
             <p className="mt-4 text-xs text-muted">Stud patterns (PCD) in stock: {stats.pcds.slice(0, 12).join(", ")}{stats.pcds.length > 12 ? "…" : ""}</p>
           )}
-          <Link href={listing} className="btn btn-volt mt-6 h-11 w-full">Find my {b.name} size</Link>
+          {none
+            ? <Link href="/vehicle-search" className="btn btn-volt mt-6 h-11 w-full">Find tyres for my vehicle</Link>
+            : <Link href={listing} className="btn btn-volt mt-6 h-11 w-full">Find my {b.name} size</Link>}
         </aside>
       </section>
     </div>

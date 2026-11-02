@@ -122,8 +122,12 @@ export async function proxy(req: NextRequest) {
   // One address for the shop: www.thetyremall.co.za → thetyremall.co.za, keeping
   // the path and every tag (gclid, utm_…). Browsers keep visit history, carts and
   // sign-ins per address, so a split loses where a sale came from.
+  // Page visits only (GET/HEAD): background requests (/api/…) and form posts are
+  // answered on whichever address the page is on — a redirect to the other
+  // address would drop the sign-in cookie and be blocked by the browser.
+  // (Admin pages on www are sent across by app/admin/layout.tsx.)
   const host = (req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "").split(",")[0].trim().split(":")[0].toLowerCase();
-  if (host === "www.thetyremall.co.za") {
+  if (host === "www.thetyremall.co.za" && (req.method === "GET" || req.method === "HEAD") && !req.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.redirect(`https://thetyremall.co.za${req.nextUrl.pathname}${req.nextUrl.search}`, 308);
   }
   // The contact page lives at the old site's address, /contact-us/ (Google Ads

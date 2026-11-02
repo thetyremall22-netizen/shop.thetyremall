@@ -51,7 +51,7 @@ export function productJsonLd(p: Product) {
     name: p.name,
     sku: p.sku || undefined,
     productID: merchantId(p),
-    image: p.image ? [absUrl(p.image)] : undefined,
+    image: p.image && !/placeholder/i.test(p.image) ? [absUrl(p.image)] : undefined,
     description: merchantDescription(p),
     brand: { "@type": "Brand", name: merchantBrand(p) },
     category: googleCategory(p),

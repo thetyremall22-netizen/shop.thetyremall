@@ -59,6 +59,12 @@ export default async function RootLayout({
             __html: `try{if(localStorage.getItem('ttm-theme')==='light')document.documentElement.dataset.theme='light';if(localStorage.getItem('ttm-consent'))document.documentElement.dataset.consent='1';}catch(e){}`,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            // A product photo whose link is broken shows "Image coming soon" instead of an empty box.
+            __html: `document.addEventListener('error',function(e){var i=e.target;if(!i||i.tagName!=='IMG'||i.dataset.comingSoon)return;var s=i.getAttribute('src')||'';if(!/\\/products\\/|\\/api\\/media\\/|\\/wp-content\\/|^https?:/.test(s)||/\\/brand\\/|ytimg|googleusercontent/.test(s)||i.getAttribute('width')==='2000')return;i.dataset.comingSoon='1';i.removeAttribute('srcset');i.src='/brand/placeholder-coming-soon.svg';},true);`,
+          }}
+        />
         {themeVars && <style id="ttm-theme" dangerouslySetInnerHTML={{ __html: themeVars }} />}
         <GoogleTracking />
       </head>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="800">
+  <rect width="800" height="800" fill="#ffffff"/>
+  <g transform="translate(400 330)" fill="none" stroke="#c9ced3">
+    <circle r="170" stroke-width="44"/>
+    <circle r="170" stroke-width="44" stroke="#dfe3e6" stroke-dasharray="14 18"/>
+    <circle r="112" stroke-width="6"/>
+    <circle r="62" stroke-width="20"/>
+    <g stroke-width="14" stroke-linecap="round">
+      <line x1="0" y1="-62" x2="0" y2="-108"/>
+      <line x1="59" y1="-19" x2="103" y2="-33"/>
+      <line x1="36" y1="50" x2="63" y2="87"/>
+      <line x1="-36" y1="50" x2="-63" y2="87"/>
+      <line x1="-59" y1="-19" x2="-103" y2="-33"/>
+    </g>
+    <circle r="16" fill="#c9ced3" stroke="none"/>
+  </g>
+  <text x="400" y="610" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="46" font-weight="700" letter-spacing="3" fill="#8a9299">IMAGE COMING SOON</text>
+  <text x="400" y="660" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="28" fill="#a7aeb4">Photo on its way</text>
+</svg>

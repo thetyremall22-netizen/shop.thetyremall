@@ -92,6 +92,12 @@ function parseSearch(raw: string): { size: string | null; terms: string[] } {
 
 // ---- live product source (DB, cached) with snapshot fallback ----------------
 type Row = typeof schema.products.$inferSelect;
+/** Shown until the shop uploads a photo (no photo, the old blank placeholder,
+ *  or a dead link to the old WordPress site). Broken links are also swapped in
+ *  the browser — see the inline script in app/layout.tsx. */
+export const COMING_SOON_IMAGE = "/brand/placeholder-coming-soon.svg";
+const productImage = (img: string | null | undefined) =>
+  !img?.trim() || /placeholder-tyre|\/wp-content\//.test(img) ? COMING_SOON_IMAGE : img;
 function rowToProduct(r: Row): Product {
   let cats: string[] = [], specs: Product["specs"] = {};
   try { cats = JSON.parse(r.categories); } catch {}
@@ -100,7 +106,7 @@ function rowToProduct(r: Row): Product {
     id: r.id, name: r.name, slug: r.slug, sku: r.sku, brand: r.brand,
     type: r.type as ProductType,
     price: r.price, regularPrice: r.regularPrice, salePrice: r.salePrice, onSale: r.onSale,
-    image: r.image, thumb: r.image,
+    image: productImage(r.image), thumb: productImage(r.image),
     shortDescription: r.shortDescription, description: r.description,
     categories: cats, specs, inStock: r.stockQty > 0, stockQty: r.stockQty,
     rating: 0, reviews: 0,

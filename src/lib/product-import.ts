@@ -99,11 +99,11 @@ function parseRow(r: Record<string, string>): Parsed {
   const vis = bool(g("visible") ?? g("status")); if (vis !== undefined) { p.visible = vis; p.provided.add("visible"); }
   const cats = g("categories", "category"); if (cats !== undefined) { p.categories = splitList(cats); p.provided.add("categories"); }
   const sd = g("short_description"); if (sd !== undefined) { p.shortDescription = sd; p.provided.add("shortDescription"); }
-  const desc = g("description"); if (desc !== undefined) { p.description = desc; p.provided.add("description"); }
+  const desc = g("long_description", "description"); if (desc !== undefined) { p.description = desc; p.provided.add("description"); }
   const img = g("image", "image_urls"); if (img) { p.image = img.split("|")[0].trim() || undefined; p.provided.add("image"); }
 
   const specs: Record<string, string> = {};
-  for (const [k, col] of [["width", "width_mm,width"], ["profile", "profile_pct,profile"], ["rim", "rim_inch,rim"], ["pcd", "pcd"]] as const) {
+  for (const [k, col] of [["width", "width_mm,width"], ["profile", "profile_pct,profile"], ["rim", "rim_inch,rim"], ["pcd", "pcd"], ["size", "tyre_size,size"]] as const) {
     const v = val(r, ...col.split(","));
     if (v) specs[k] = v;
   }
@@ -128,7 +128,21 @@ async function ensureBatchTable() {
 }
 
 type Op = { slug: string; action: "create" | "update"; before?: Record<string, unknown> };
-type ExistingProduct = { slug: string; name: string; regularPrice: number; salePrice: number; onSale: boolean; specs: string };
+type ExistingProduct = NonNullable<Awaited<ReturnType<typeof getProductRow>>>;
+
+/** "245/70R16" for a tyre, '18"' for a wheel — from width / profile / rim. */
+function sizeFrom(s: Record<string, string>, type: string): string | undefined {
+  if (type === "wheel") return s.rim ? `${s.rim}"` : undefined;
+  if (!s.width || !s.rim) return undefined;
+  return s.profile ? `${s.width}/${s.profile}R${s.rim}` : `${s.width}R${s.rim}`;
+}
+/** Merge uploaded specs over the current ones; work out the size if width/profile/rim changed but no size was given. */
+function mergeSpecs(current: Record<string, string>, given: Record<string, string>, type: string): Record<string, string> {
+  const out = { ...current, ...given };
+  if (!given.size && (given.width || given.profile || given.rim)) { const s = sizeFrom(out, type); if (s) out.size = s; }
+  return out;
+}
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 // ---- plan + commit ----------------------------------------------------------
 export async function runImport(csvText: string, mode: ImportMode, commit: boolean): Promise<ImportReport> {
@@ -149,8 +163,8 @@ export async function runImport(csvText: string, mode: ImportMode, commit: boole
     if (!p.slug && !p.sku) { report.errors.push({ line, msg: "Row has no slug or sku to match on." }); continue; }
 
     // resolve existing (by slug, then sku)
-    let existing: ExistingProduct | null = p.slug ? (await getProductRow(p.slug)) as unknown as ExistingProduct | null : null;
-    if (!existing && p.sku) existing = await getProductBySku(p.sku);
+    let existing: ExistingProduct | null = p.slug ? await getProductRow(p.slug) : null;
+    if (!existing && p.sku) { const bySku = await getProductBySku(p.sku); if (bySku) existing = await getProductRow(bySku.slug); }
     const key = p.slug || p.sku || String(line);
     if (seen.has(key)) { report.errors.push({ line, msg: `Duplicate ${p.slug ? "slug" : "sku"} "${key}" earlier in file.` }); continue; }
     seen.add(key);
@@ -159,22 +173,33 @@ export async function runImport(csvText: string, mode: ImportMode, commit: boole
       if (mode === "create") { report.skips.push({ line, reason: `"${existing.name}" already exists (create-only mode).` }); continue; }
       const patch: ProductPatch = {};
       const changed: string[] = [];
-      const set = <K extends keyof ProductPatch>(k: K, v: ProductPatch[K], label: string) => { if (v !== undefined) { patch[k] = v; changed.push(label); } };
+      // Only real changes count (re-uploading a downloaded file changes nothing).
+      const cur = existing as unknown as Record<string, unknown>;
+      const set = <K extends keyof ProductPatch>(k: K, v: ProductPatch[K], label: string) => {
+        if (v === undefined) return;
+        const was = cur[k];
+        if (v === was || (v === null && (was === null || was === "")) || (typeof v === "string" && typeof was === "string" && v.trim() === was.trim())) return;
+        patch[k] = v; changed.push(label);
+      };
       if (p.provided.has("name")) set("name", p.name, "name");
       if (p.provided.has("brand")) set("brand", p.brand, "brand");
       if (p.provided.has("type")) set("type", p.type, "type");
-      if (p.sku) set("sku", p.sku, "sku");
+      if (p.sku && p.sku !== existing.sku) set("sku", p.sku, "sku");
       if (p.provided.has("regularPrice")) set("regularPrice", p.regularPrice, "price");
       if (p.provided.has("salePrice")) set("salePrice", p.salePrice, "sale price");
       if (p.provided.has("onSale")) set("onSale", p.onSale, "on sale");
       if (p.provided.has("stockQty")) set("stockQty", p.stockQty, "stock");
       if (p.provided.has("lowStockThreshold")) set("lowStockThreshold", p.lowStockThreshold, "low-stock");
       if (p.provided.has("visible")) set("visible", p.visible, "visible");
-      if (p.provided.has("categories")) set("categories", JSON.stringify(p.categories), "categories");
+      if (p.provided.has("categories") && !sameJson(p.categories, safeList(existing.categories))) set("categories", JSON.stringify(p.categories), "categories");
       if (p.provided.has("image")) set("image", p.image ?? null, "image");
       if (p.provided.has("shortDescription")) set("shortDescription", p.shortDescription, "short desc");
       if (p.provided.has("description")) set("description", p.description, "description");
-      if (p.provided.has("specs")) set("specs", JSON.stringify({ ...(safeJson(existing.specs) ?? {}), ...p.specs }), "specs");
+      if (p.provided.has("specs")) {
+        const before = safeJson(existing.specs) ?? {};
+        const after = mergeSpecs(before, p.specs ?? {}, patch.type ?? existing.type);
+        if (!sameJson(after, before)) set("specs", JSON.stringify(after), "size/specs");
+      }
       // keep price consistent with sale state
       const reg = patch.regularPrice ?? existing.regularPrice;
       const sale = patch.salePrice ?? existing.salePrice;
@@ -194,7 +219,7 @@ export async function runImport(csvText: string, mode: ImportMode, commit: boole
         slug, name: p.name, brand: p.brand ?? "", type: p.type ?? "tyre", sku: p.sku ?? "",
         regularPrice: p.regularPrice, salePrice: p.salePrice, onSale,
         stockQty: p.stockQty ?? 0, lowStockThreshold: p.lowStockThreshold ?? 4,
-        image: p.image ?? null, categories: p.categories ?? [], specs: p.specs ?? {},
+        image: p.image ?? null, categories: p.categories ?? [], specs: mergeSpecs({}, p.specs ?? {}, p.type ?? "tyre"),
         shortDescription: p.shortDescription ?? "", description: p.description ?? "", visible: p.visible ?? true,
       };
       createPlans.push({ line, product });
@@ -292,3 +317,4 @@ async function getProductBySku(sku: string) {
   } catch { return null; }
 }
 function safeJson(s: string): Record<string, string> | null { try { return JSON.parse(s); } catch { return null; } }
+function safeList(s: string): string[] { try { const v = JSON.parse(s); return Array.isArray(v) ? v : []; } catch { return []; } }

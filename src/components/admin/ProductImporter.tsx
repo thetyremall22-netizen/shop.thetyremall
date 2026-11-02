@@ -18,7 +18,7 @@ const MODE_HELP: Record<string, string> = {
   update: "Only update existing products. New rows are skipped (nothing created).",
 };
 
-const TEMPLATE = "slug,sku,name,brand,brand_logo,type,regular_price,sale_price,on_sale,stock,low_stock_threshold,visible,categories,short_description,description,image\n";
+const TEMPLATE = "slug,sku,name,brand,brand_logo,type,regular_price,sale_price,on_sale,stock,low_stock_threshold,visible,categories,image,short_description,long_description,tyre_size,width,profile,rim,pcd\n";
 
 export function ProductImporter() {
   const router = useRouter();
@@ -97,6 +97,7 @@ export function ProductImporter() {
           {error && <span className="text-sm font-semibold text-sale">{error}</span>}
         </div>
         <p className="mt-2 text-xs text-muted">Prices in <code>regular_price</code>/<code>sale_price</code> are in cents (matches Export CSV); <code>price_retail</code>/<code>price_sale</code> are in Rand. Nothing is written until you review the preview and click Import.</p>
+        <p className="mt-1 text-xs text-muted">The Export CSV download has the same columns, so you can edit it and upload it back: <code>image</code> (e.g. /products/name.webp), <code>short_description</code>, <code>long_description</code>, <code>tyre_size</code> (e.g. 245/70R16), <code>width</code>, <code>profile</code>, <code>rim</code> and <code>pcd</code> (wheels). If you change width, profile or rim and leave <code>tyre_size</code> blank, the size is worked out for you. A blank cell leaves that detail as it is; only rows that actually change are updated.</p>
         <p className="mt-1 text-xs text-muted">New brand? Just type it in the <code>brand</code> column and it appears on the site automatically. Optionally add a <code>brand_logo</code> column with a link to the logo image (https://…). For a perfectly sized logo, upload it in Products → Brands &amp; logos instead: uploads are fitted to the standard 640 × 416 px tile automatically.</p>
       </div>
 

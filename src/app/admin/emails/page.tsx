@@ -13,7 +13,10 @@ const STATUS_FILTERS = [
   { v: "skipped", label: "Not sent" },
 ];
 
-const TABS = [{ v: "", label: "All emails" }, ...EMAIL_TABS];
+// Emails to the shop inbox and staff have their own tab; every other tab
+// lists only emails sent to customers.
+const SHOP_TAB = { v: "shop", label: "Sent to shop & staff", types: [] as string[] };
+const TABS = [{ v: "", label: "All emails" }, ...EMAIL_TABS, SHOP_TAB];
 
 function statusBadge(s: string) {
   if (s === "sent") return "badge-pay";
@@ -26,19 +29,17 @@ export default async function AdminEmails({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page) || 1);
   const status = sp.status || undefined;
-  const tab = EMAIL_TABS.find((t) => t.v === sp.tab);
+  const tab = [...EMAIL_TABS, SHOP_TAB].find((t) => t.v === sp.tab);
+  const audience: EmailAudience = tab?.v === "shop" ? "shop" : "customers";
   const q = (sp.q ?? "").trim();
-  // Two separate lists: emails sent to customers, and emails sent to the shop & staff.
-  const audience: EmailAudience = sp.to === "shop" ? "shop" : "customers";
   const [{ rows, total, perPage }, counts] = await Promise.all([
-    listEmails({ page, perPage: 40, status, types: tab?.types, q, audience }),
-    emailTabCounts(audience),
+    listEmails({ page, perPage: 40, status, types: tab?.types?.length ? tab.types : undefined, q, audience }),
+    emailTabCounts("customers"),
   ]);
   const pages = Math.max(1, Math.ceil(total / perPage));
 
   const qs = (next: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams();
-    if (audience === "shop") p.set("to", "shop");
     if (status) p.set("status", status);
     if (tab) p.set("tab", tab.v);
     if (q) p.set("q", q);
@@ -55,34 +56,15 @@ export default async function AdminEmails({ searchParams }: { searchParams: Prom
       </div>
       <p className="mt-1 text-sm text-muted">Every email the site sends — order confirmations, failures, cancellations, refunds, enquiries and abandoned-cart nudges. Open one to read, resend, or edit &amp; resend.</p>
 
-      {/* customers vs shop & staff */}
-      <div className="mt-4 flex flex-wrap gap-1 border-b border-line">
-        {([["customers", "📨 Sent to customers"], ["shop", "🏪 Sent to the shop & staff"]] as const).map(([v, label]) => {
-          const active = audience === v;
-          const href = v === "shop" ? "/admin/emails?to=shop" : "/admin/emails";
-          return (
-            <Link key={v} href={href}
-              className={`-mb-px rounded-t-lg border px-4 py-2 text-sm font-bold transition-colors ${active ? "border-line border-b-ink-2 bg-ink-2 text-fg" : "border-transparent text-muted hover:text-fg"}`}>
-              {label} <span className="font-semibold opacity-70">({(counts[`audience:${v}`] ?? 0).toLocaleString()})</span>
-            </Link>
-          );
-        })}
-      </div>
-      <p className="mt-2 text-xs text-muted">
-        {audience === "shop"
-          ? "Emails sent to the shop inbox (shop@thetyremall.co.za), other @thetyremall.co.za addresses and staff logins — new-order alerts, enquiries, payment checks and staff account emails."
-          : "Emails sent to customers — order confirmations, invoices, abandoned-cart reminders, enquiry replies, support replies and wishlist alerts."}
-      </p>
-
       <AdminSearch className="mt-4 max-w-xl" placeholder="Search recipient, subject or order no.…" />
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {TABS.filter((f) => !f.v || (counts[f.v] ?? 0) > 0 || tab?.v === f.v).map((f) => {
+        {TABS.map((f) => {
           const active = (tab?.v ?? "") === f.v;
           return (
             <Link key={f.label} href={qs({ tab: f.v, page: undefined })}
               className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${active ? "bg-volt text-volt-ink" : "border border-line text-muted hover:text-fg"}`}>
-              {f.label} <span className="opacity-70">({counts[f.v || "all"] ?? 0})</span>
+              {f.label} <span className="opacity-70">({(f.v === "shop" ? counts["audience:shop"] : counts[f.v || "all"]) ?? 0})</span>
             </Link>
           );
         })}

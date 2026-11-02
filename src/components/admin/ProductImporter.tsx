@@ -2,8 +2,9 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ConfirmDialog } from "./ConfirmDialog";
 
-interface RowPlan { line: number; slug: string; name: string; action: string; priceDisplay?: string; changed?: string[] }
+interface RowPlan { line: number; slug: string; name: string; action: string; priceDisplay?: string; changed?: string[]; sku?: string; matchedBy?: string; details?: string[] }
 interface Report {
   mode: string; total: number;
   creates: RowPlan[]; updates: RowPlan[];
@@ -31,6 +32,8 @@ export function ProductImporter() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<Report | null>(null);
   const [undone, setUndone] = useState<string | null>(null);
+  // Safety net: importing over EXISTING products needs a second "yes".
+  const [confirmUpdates, setConfirmUpdates] = useState(false);
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -141,12 +144,42 @@ export function ProductImporter() {
 
           {!hasErrors && (report.creates.length > 0 || report.updates.length > 0) && (
             <div className="mt-4 flex items-center gap-3">
-              <button onClick={() => run(true)} disabled={busy} className="btn btn-volt h-10 px-5 text-sm disabled:opacity-50">{busy ? "Importing…" : `Import ${report.creates.length + report.updates.length} change(s)`}</button>
+              <button onClick={() => (report.updates.length ? setConfirmUpdates(true) : run(true))} disabled={busy} className="btn btn-volt h-10 px-5 text-sm disabled:opacity-50">{busy ? "Importing…" : `Import ${report.creates.length + report.updates.length} change(s)`}</button>
               <span className="text-xs text-muted">You can undo this right after.</span>
             </div>
           )}
           {!hasErrors && report.creates.length === 0 && report.updates.length === 0 && <p className="mt-4 text-sm text-muted">Nothing to import — every row was skipped (see counts above).</p>}
         </div>
+      )}
+
+      {report && (
+        <ConfirmDialog
+          open={confirmUpdates}
+          busy={busy}
+          danger
+          wide
+          title={`It looks like you're about to update ${report.updates.length} existing product${report.updates.length === 1 ? "" : "s"} with new information. Is that OK?`}
+          yesLabel={`Yes, update ${report.updates.length === 1 ? "this product" : `these ${report.updates.length} products`}`}
+          noLabel="No, cancel"
+          onNo={() => setConfirmUpdates(false)}
+          onYes={() => { setConfirmUpdates(false); void run(true); }}
+        >
+          <p className="text-sm text-muted">These products are already live in the shop. Their current details will be replaced by what&apos;s in your file{report.creates.length ? ` (and ${report.creates.length} new product${report.creates.length === 1 ? "" : "s"} will be added)` : ""}. If you meant to add <b>new</b> products (e.g. a Black Friday deal), click No and give them their own SKU and slug.</p>
+          <div className="mt-3 max-h-80 overflow-auto rounded-lg border border-line">
+            <table className="w-full text-left text-xs">
+              <thead><tr className="border-b border-line uppercase tracking-wide text-muted"><th className="px-2.5 py-2">SKU</th><th className="px-2.5 py-2">Product</th><th className="px-2.5 py-2">What changes</th></tr></thead>
+              <tbody>
+                {report.updates.map((u) => (
+                  <tr key={u.line} className="border-b border-line align-top last:border-0">
+                    <td className="whitespace-nowrap px-2.5 py-2 font-semibold text-fg">{u.sku || "—"}</td>
+                    <td className="px-2.5 py-2 text-fg">{u.name}<div className="text-muted">/{u.slug} · line {u.line}{u.matchedBy === "sku" ? " · matched by SKU" : ""}</div></td>
+                    <td className="px-2.5 py-2 text-muted">{(u.details?.length ? u.details : u.changed ?? []).map((d, i) => <div key={i}>{d}</div>)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ConfirmDialog>
       )}
 
       {done && (

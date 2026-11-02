@@ -50,7 +50,11 @@ const splitList = (v?: string) => (v ? v.split(/[|,]/).map((s) => s.trim()).filt
 const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2 });
 
 // ---- report types -----------------------------------------------------------
-export interface ImportRowPlan { line: number; slug: string; name: string; action: "create" | "update"; priceDisplay?: string; changed?: string[] }
+export interface ImportRowPlan {
+  line: number; slug: string; name: string; action: "create" | "update"; priceDisplay?: string; changed?: string[];
+  /** Existing products only: their SKU, how the row matched them, and what changes (from → to). */
+  sku?: string; matchedBy?: "slug" | "sku"; details?: string[];
+}
 export interface ImportReport {
   mode: ImportMode;
   total: number;
@@ -164,7 +168,8 @@ export async function runImport(csvText: string, mode: ImportMode, commit: boole
 
     // resolve existing (by slug, then sku)
     let existing: ExistingProduct | null = p.slug ? await getProductRow(p.slug) : null;
-    if (!existing && p.sku) { const bySku = await getProductBySku(p.sku); if (bySku) existing = await getProductRow(bySku.slug); }
+    let matchedBy: "slug" | "sku" = "slug";
+    if (!existing && p.sku) { const bySku = await getProductBySku(p.sku); if (bySku) { existing = await getProductRow(bySku.slug); matchedBy = "sku"; } }
     const key = p.slug || p.sku || String(line);
     if (seen.has(key)) { report.errors.push({ line, msg: `Duplicate ${p.slug ? "slug" : "sku"} "${key}" earlier in file.` }); continue; }
     seen.add(key);
@@ -207,7 +212,16 @@ export async function runImport(csvText: string, mode: ImportMode, commit: boole
       patch.price = onSale && sale > 0 && sale < reg ? sale : reg;
       if (!changed.length) { report.skips.push({ line, reason: `No changes for "${existing.name}".` }); continue; }
       updatePlans.push({ line, slug: existing.slug, name: existing.name, patch, changed });
-      report.updates.push({ line, slug: existing.slug, name: existing.name, action: "update", changed, priceDisplay: zar(patch.price) });
+      // From → to, for the "are you sure?" check before importing.
+      const details: string[] = [];
+      if (patch.name !== undefined) details.push(`Name: “${existing.name}” → “${patch.name}”`);
+      if (patch.price !== existing.price) details.push(`Price: ${zar(existing.price)} → ${zar(patch.price)}`);
+      if (patch.salePrice !== undefined) details.push(`Sale price: ${zar(existing.salePrice)} → ${zar(patch.salePrice)}`);
+      if (patch.stockQty !== undefined) details.push(`Stock: ${existing.stockQty} → ${patch.stockQty}`);
+      for (const [k, label] of [["brand", "Brand"], ["image", "Photo"], ["shortDescription", "Short description"], ["description", "Long description"], ["specs", "Tyre size / specs"], ["categories", "Categories"], ["visible", "Shown in shop"], ["onSale", "On sale"], ["type", "Type"], ["sku", "SKU"]] as const) {
+        if (patch[k] !== undefined) details.push(`${label} changed`);
+      }
+      report.updates.push({ line, slug: existing.slug, name: existing.name, action: "update", changed, priceDisplay: zar(patch.price), sku: existing.sku, matchedBy, details });
     } else {
       if (mode === "update") { report.skips.push({ line, reason: `No existing product for ${p.slug || p.sku} (update-only mode).` }); continue; }
       // create: need a name and a price

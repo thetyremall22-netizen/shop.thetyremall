@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 /** "Are you sure?" pop-up used before every admin change. */
 export function ConfirmDialog({
   open, title = "Are you sure you want to change this?", children, yesLabel = "Yes, save", noLabel = "No",
-  danger = false, busy = false, onYes, onNo,
+  danger = false, busy = false, wide = false, onYes, onNo,
 }: {
   open: boolean;
   title?: string;
@@ -14,6 +14,8 @@ export function ConfirmDialog({
   noLabel?: string;
   danger?: boolean;
   busy?: boolean;
+  /** Wider box, for a list or table of items. */
+  wide?: boolean;
   onYes: () => void;
   onNo: () => void;
 }) {
@@ -29,7 +31,7 @@ export function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
       <div className="absolute inset-0 bg-black/70" onClick={busy ? undefined : onNo} />
-      <div className="relative w-full max-w-md rounded-2xl border border-line bg-ink-2 p-5 shadow-2xl">
+      <div className={`relative w-full ${wide ? "max-w-3xl" : "max-w-md"} rounded-2xl border border-line bg-ink-2 p-5 shadow-2xl`}>
         <h3 id="confirm-title" className="font-display text-lg text-fg">{title}</h3>
         {children && <div className="mt-2 text-sm text-muted">{children}</div>}
         <div className="mt-5 flex justify-end gap-2">

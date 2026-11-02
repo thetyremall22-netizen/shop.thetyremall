@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ShopListing } from "@/components/ShopListing";
-import { findCategory } from "@/lib/special-categories";
+import { findCategory, getSpecialBySlug } from "@/lib/special-categories";
+import { SpecialEnded } from "@/components/SpecialEnded";
 import { categoryPath, brandPath, FILTER_PAGES } from "@/lib/shop-url";
 import { getBrandDirectory } from "@/lib/brand-registry";
 
@@ -37,6 +38,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
   const c = await findCategory(slug);
   if (!c) {
+    // A special/sale that isn't running: keep the page (no 404), out of Google.
+    const s = await getSpecialBySlug(slug);
+    if (s) return { title: s.name, robots: { index: false, follow: true } };
     const b = await findBrand(slug);
     if (b) return {
       title: `${b.name} tyres`,
@@ -64,6 +68,9 @@ export default async function ProductCategoryPage({ params, searchParams }: { pa
   // An old link to a category that no longer exists still lands somewhere
   // useful: a search for its words (e.g. "womens-month-specials").
   if (!c) {
+    // A special or sale that has ended (or not started): say so and show deals.
+    const s = await getSpecialBySlug(slug);
+    if (s) return <div className="container-x py-6 lg:py-10"><SpecialEnded special={s} limit={12} /></div>;
     // A brand page, e.g. /product-category/bridgestone.
     const b = await findBrand(slug);
     if (b) return <ShopListing sp={{ ...sp, brand: b.name, ...pageSp }} />;

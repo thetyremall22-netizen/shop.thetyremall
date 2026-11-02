@@ -41,6 +41,8 @@ export interface Category {
   primary: boolean;
   /** Set on special / sale categories made in Admin (Black Friday Sale…). */
   kind?: "special" | "sale";
+  /** A special's description (Admin → Products → Special categories). */
+  description?: string;
 }
 
 export interface CatalogueMeta {

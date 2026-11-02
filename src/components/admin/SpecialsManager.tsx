@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog, ChangeList, UndoBar } from "./ConfirmDialog";
 import { ImagePicker } from "./ImagePicker";
+import { BANNER_CANVAS, canvasHint } from "./image-compress";
 
 export interface SpecialRow {
   id: number; slug: string; name: string; description: string; image: string;
@@ -44,7 +45,7 @@ function SpecialForm({ f, set, slugEdited, setSlugEdited, example = "Father's Da
       </div>
       <label className="block"><span className={lab}>Short description (optional)</span>
         <input className={field} value={f.description} onChange={(e) => set({ ...f, description: e.target.value })} /></label>
-      <ImagePicker value={f.image} onChange={(image) => set({ ...f, image })} label="Image (optional)" />
+      <ImagePicker value={f.image} onChange={(image) => set({ ...f, image })} label="Banner image (optional) — shown at the top of this special's page" fit={BANNER_CANVAS} previewClass="h-14 w-40" hint={canvasHint(BANNER_CANVAS, "The same size as the home page banners.")} />
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.enabled} onChange={(e) => set({ ...f, enabled: e.target.checked })} className="size-4 accent-[var(--color-volt)]" />
         <b className="text-fg">Switched on</b> <span className="text-muted">(untick to hide it straight away, whatever the dates)</span></label>
     </div>

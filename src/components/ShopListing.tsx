@@ -108,7 +108,12 @@ export async function ShopListing({ sp }: { sp: SP }) {
 
   return (
     <div className="container-x py-6 lg:py-8">
-      <ShopPromo />
+      {cat?.kind && cat.image ? (
+        // A special/sale's own banner (Admin → Products → Special categories), 3:1 like the home banners.
+        <div className="relative aspect-[3/1] overflow-hidden rounded-2xl border border-line">
+          <Image src={cat.image} alt={cat.name} fill priority unoptimized={!cat.image.startsWith("/")} sizes="(min-width: 1280px) 1240px, 100vw" className="object-cover" />
+        </div>
+      ) : <ShopPromo />}
 
       {/* breadcrumb + heading */}
       <nav className="mt-7 flex items-center gap-1.5 text-xs text-muted">

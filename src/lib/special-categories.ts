@@ -81,7 +81,7 @@ export async function getSpecial(id: number): Promise<SpecialCategory | null> {
   return r.rows.length ? toSpecial(r.rows[0] as Record<string, unknown>) : null;
 }
 
-async function getSpecialBySlug(slug: string): Promise<SpecialCategory | null> {
+export async function getSpecialBySlug(slug: string): Promise<SpecialCategory | null> {
   try {
     await ensureTable();
     const r = await libsql.execute({ sql: "SELECT * FROM special_categories WHERE slug = ?", args: [slug] });
@@ -135,7 +135,7 @@ export async function findCategory(slug: string): Promise<Category | undefined> 
   if (!(await liveSpecialSlugs()).includes(slug)) return undefined;
   const s = await getSpecialBySlug(slug);
   if (!s) return undefined;
-  return { id: 100000 + s.id, name: s.name, slug: s.slug, count: 0, image: s.image || null, primary: false } as Category;
+  return { id: 100000 + s.id, name: s.name, slug: s.slug, count: 0, image: s.image || null, primary: false, kind: s.kind, description: s.description } as Category;
 }
 
 /** All categories for the shop filters: built-in + live specials. */

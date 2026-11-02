@@ -5,6 +5,7 @@ import { NewCategoryInline } from "./CategoryPicker";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePicker } from "./ImagePicker";
+import { HERO_CANVAS, canvasHint } from "./image-compress";
 import { ConfirmDialog } from "./ConfirmDialog";
 
 type SectionType = "text" | "image" | "video" | "products";
@@ -91,7 +92,7 @@ export function LandingPageEditor({ initial }: { initial: Page }) {
           <Field label="Address — thetyremall.co.za/…"><input value={p.slug} onChange={(e) => set("slug", slugify(e.target.value))} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" /></Field>
         </div>
         <Field label="Subtitle"><textarea value={p.subtitle} onChange={(e) => set("subtitle", e.target.value)} rows={2} className="w-full py-2 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" /></Field>
-        <ImagePicker label="Banner image (optional — shown faintly behind the title)" value={p.heroImage} onChange={(v) => set("heroImage", v)} />
+        <ImagePicker label="Banner image (optional — shown faintly behind the title)" value={p.heroImage} onChange={(v) => set("heroImage", v)} fit={HERO_CANVAS} previewClass="h-16 w-36" hint={canvasHint(HERO_CANVAS)} />
         <div className="flex flex-wrap items-center gap-6 border-t border-line pt-4">
           <Toggle label={p.published ? "Published — visible on the website" : "Draft — hidden from visitors"} checked={p.published} onChange={(v) => set("published", v)} />
         </div>

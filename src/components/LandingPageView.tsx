@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { queryProducts } from "@/lib/catalogue";
-import { findCategory } from "@/lib/special-categories";
+import { findCategory, getSpecialBySlug } from "@/lib/special-categories";
+import { SpecialEnded } from "@/components/SpecialEnded";
 import { categoryPath } from "@/lib/shop-url";
 import { videoSource, type LandingPage, type PageSection } from "@/lib/landing-pages";
 import { ProductCard } from "@/components/ProductCard";
@@ -91,6 +92,9 @@ async function Section({ s }: { s: PageSection }) {
   const cat = await findCategory(s.category);
   const heading = s.heading || cat?.name || "Shop the specials";
   if (!cat) {
+    // The special/sale has ended (or not started): say so and show current deals.
+    const special = await getSpecialBySlug(s.category);
+    if (special) return <SpecialEnded special={special} limit={s.limit ?? 8} heading={s.heading || special.name} />;
     return (
       <section className="card p-6 sm:p-8">
         <Heading text={heading} />

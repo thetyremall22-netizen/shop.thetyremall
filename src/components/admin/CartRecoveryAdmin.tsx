@@ -86,7 +86,13 @@ export function CartsTable({ rows, canAct, canDelete }: { rows: CartRow[]; canAc
       {msg && <p className={`mb-3 text-sm font-semibold ${msg.ok ? "text-pay" : "text-sale"}`}>{msg.text}</p>}
       {rows.length === 0 ? <p className="text-sm text-muted">No carts here yet.</p> : (
         <div className="overflow-x-auto rounded-xl border border-line">
-          <table className="w-full min-w-[880px] text-sm">
+          {/* Fixed column shares: long statuses, names or dates wrap inside their
+              column instead of pushing Actions off the right-hand edge. */}
+          <table className="w-full min-w-[760px] table-fixed text-sm">
+            <colgroup>
+              <col className="w-[9%]" /><col className="w-[19%]" /><col className="w-[19%]" /><col className="w-[10%]" />
+              <col className="w-[16%]" /><col className="w-[16%]" /><col className="w-[11%]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
                 <th className="px-3 py-2.5">Cart</th><th className="px-3 py-2.5">Customer</th>
@@ -104,32 +110,32 @@ export function CartsTable({ rows, canAct, canDelete }: { rows: CartRow[]; canAc
                     <td className="px-3 py-2.5"><Link href={`/admin/cart-recovery/${r.id}`} className="font-semibold text-volt hover:underline">#{r.id}</Link><TestBadge test={r.test} />
                       {r.orderRef && <div className="text-xs text-muted">{r.orderRef}</div>}
                       <div className="mt-0.5 text-[11px] leading-tight text-muted">{SOURCE[r.source] ?? r.source}</div></td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-3 py-2.5 break-words">
                       {sameCustomer ? <span className="text-xs text-muted">↳ same customer</span> : (
                         <>
                           <div className="font-semibold text-fg">{`${r.firstName} ${r.lastName}`.trim() || "—"}</div>
-                          <div className="text-xs text-muted">{r.email}</div>
+                          <div className="text-xs text-muted break-all">{r.email}</div>
                           {r.phone && <div className="text-xs text-muted">{r.phone}</div>}
                         </>
                       )}
                     </td>
-                    <td className="min-w-[170px] px-3 py-2.5 text-xs">{r.items.map((i, k) => <div key={k}>{i.qty}× {i.name}</div>)}</td>
+                    <td className="px-3 py-2.5 text-xs break-words">{r.items.map((i, k) => <div key={k}>{i.qty}× {i.name}</div>)}</td>
                     <td className="px-3 py-2.5 text-right font-semibold whitespace-nowrap">{zar(r.total)}</td>
                     <td className="px-3 py-2.5">
                       {canAct ? (
                         <select value={r.status} autoComplete="off" onChange={(e) => setPending({ kind: "status", row: r, status: e.target.value })}
-                          className="h-8 rounded-lg border border-line bg-surface-2 px-2 text-xs text-fg outline-none focus:border-volt">
+                          className="h-8 w-full rounded-lg border border-line bg-surface-2 px-1.5 text-xs text-fg outline-none focus:border-volt">
                           {STATUS_OPTS.map((s) => <option key={s.v} value={s.v}>{s.label}</option>)}
                         </select>
                       ) : <span className={`badge ${badge}`}>{label(r.status)}</span>}
                       {r.recoveredOrderRef && <div className="mt-1 text-xs text-muted">Order {r.recoveredOrderRef}</div>}
                     </td>
-                    <td className="px-3 py-2.5 text-xs text-muted whitespace-nowrap">
+                    <td className="px-3 py-2.5 text-xs text-muted">
                       <b className="text-fg">{r.emailsSent}/3 sent</b>
                       {r.lastEmailAt ? <div>Last: {when(r.lastEmailAt)}</div> : null}
                       <div>Activity: {when(r.updatedAt)}</div>
                     </td>
-                    <td className="w-[104px] px-3 py-2.5 whitespace-nowrap">
+                    <td className="px-3 py-2.5">
                       <div className="flex flex-col items-end gap-1 text-xs font-semibold">
                         <Link href={`/admin/cart-recovery/${r.id}`} className="text-volt hover:underline">Open →</Link>
                         {canAct && <button onClick={() => setPending({ kind: "resend", row: r })} className="text-muted hover:text-volt">Resend</button>}

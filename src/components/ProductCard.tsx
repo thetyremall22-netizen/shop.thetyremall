@@ -42,7 +42,8 @@ function BrandMark({ brand, logo }: { brand: string; logo?: string }) {
   return <span className="font-display text-base uppercase tracking-wider text-[#14171a]/75">{brand}</span>;
 }
 
-export async function ProductCard({ p }: { p: Product }) {
+/** `eager`: one of the first cards on screen, so load its picture straight away (page-speed). */
+export async function ProductCard({ p, eager = false }: { p: Product; eager?: boolean }) {
   const pct = discountPct(p.regularPrice, p.salePrice);
   const payLater = formatPriceShort(Math.round(p.price / 2));
   const [s, logos] = await Promise.all([getStrings(), brandLogoMap()]);
@@ -60,6 +61,7 @@ export async function ProductCard({ p }: { p: Product }) {
               alt={p.name}
               fill
               sizes="(max-width:768px) 50vw, 25vw"
+              {...(eager ? { loading: "eager" as const, fetchPriority: "high" as const } : {})}
               className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
             />
           ) : (

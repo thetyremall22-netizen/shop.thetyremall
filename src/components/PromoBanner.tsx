@@ -25,7 +25,8 @@ export function PromoBanner({
         alt={alt}
         width={2000}
         height={668}
-        priority={priority}
+        fetchPriority={priority ? "high" : undefined}
+        loading={priority ? "eager" : undefined}
         sizes="(max-width:1280px) 100vw, 1216px"
         className="h-auto w-full transition-transform duration-700 group-hover:scale-[1.02]"
       />

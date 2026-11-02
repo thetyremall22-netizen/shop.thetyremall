@@ -36,15 +36,19 @@ function applyConsent(choice: Choice) {
   ]);
 }
 
+// The notice is in the page's HTML from the start, so on a first visit it shows
+// with the rest of the page instead of popping in once the scripts have run (a
+// late, large text block that Google counted as the page's main content and
+// scored as slow). Visitors who already answered get <html data-consent> from
+// the inline script in the layout, and CSS hides it before anything is drawn.
 export function CookieConsent() {
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(true);
 
   useEffect(() => {
-    if (!ANALYTICS_ENABLED) return;
     try {
-      if (!localStorage.getItem(STORAGE_KEY)) setShow(true);
+      if (localStorage.getItem(STORAGE_KEY)) setShow(false);
     } catch {
-      setShow(true);
+      /* no storage: keep asking */
     }
   }, []);
 
@@ -55,17 +59,18 @@ export function CookieConsent() {
       /* private mode — honour the choice for this page view regardless */
     }
     applyConsent(choice);
+    document.documentElement.dataset.consent = "1";
     setShow(false);
   }
 
-  if (!show) return null;
+  if (!ANALYTICS_ENABLED || !show) return null;
 
   return (
     <div
       role="dialog"
       aria-live="polite"
       aria-label="Cookie consent"
-      className="fixed inset-x-0 bottom-0 z-[9998] px-4 pb-4"
+      className="cookie-consent fixed inset-x-0 bottom-0 z-[9998] px-4 pb-4"
     >
       <div className="mx-auto flex max-w-4xl flex-col gap-4 rounded-2xl border border-line bg-surface-2/95 p-5 shadow-2xl backdrop-blur sm:flex-row sm:items-center">
         <p className="flex-1 text-sm leading-relaxed text-muted">

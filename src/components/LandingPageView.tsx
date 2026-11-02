@@ -21,7 +21,7 @@ export function LandingPageView({ page }: { page: LandingPage }) {
 
       <div className="relative mt-4 overflow-hidden rounded-3xl border border-volt/30 bg-gradient-to-br from-volt/10 via-ink-2 to-ink-2">
         {page.heroImage && (
-          <Image src={page.heroImage} alt="" fill priority unoptimized={!page.heroImage.startsWith("/")} sizes="100vw" className="object-cover opacity-35" />
+          <Image src={page.heroImage} alt="" fill fetchPriority="high" loading="eager" unoptimized={!page.heroImage.startsWith("/")} sizes="100vw" className="object-cover opacity-35" />
         )}
         <div className="relative p-8 sm:p-12">
           <h1 className="skew-italic font-display text-4xl leading-[0.95] sm:text-6xl">{page.title}</h1>

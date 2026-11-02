@@ -875,3 +875,6 @@ body::before {
 @media (prefers-reduced-motion: reduce) {
   .headline-in > span, .headline-out { animation: none; opacity: 1; }
 }
+
+/* Cookie notice: hidden before the first paint for visitors who already answered (see CookieConsent). */
+html[data-consent] .cookie-consent { display: none; }

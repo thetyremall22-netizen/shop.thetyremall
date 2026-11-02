@@ -111,7 +111,7 @@ export async function ShopListing({ sp }: { sp: SP }) {
       {cat?.kind && cat.image ? (
         // A special/sale's own banner (Admin → Products → Special categories), 3:1 like the home banners.
         <div className="relative aspect-[3/1] overflow-hidden rounded-2xl border border-line">
-          <Image src={cat.image} alt={cat.name} fill priority unoptimized={!cat.image.startsWith("/")} sizes="(min-width: 1280px) 1240px, 100vw" className="object-cover" />
+          <Image src={cat.image} alt={cat.name} fill fetchPriority="high" loading="eager" unoptimized={!cat.image.startsWith("/")} sizes="(min-width: 1280px) 1240px, 100vw" className="object-cover" />
         </div>
       ) : <ShopPromo />}
 
@@ -203,8 +203,8 @@ export async function ShopListing({ sp }: { sp: SP }) {
             <NoResultsHelp query={q || (vehicle ? `${vehicle.make} ${vehicle.model}` : "")} />
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-              {result.items.map((p) => (
-                <ProductCard key={p.id} p={p} />
+              {result.items.map((p, i) => (
+                <ProductCard key={p.id} p={p} eager={i < 2} />
               ))}
             </div>
           )}

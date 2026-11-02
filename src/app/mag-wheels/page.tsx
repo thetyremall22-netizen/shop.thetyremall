@@ -28,7 +28,7 @@ export default function WheelShopPage() {
     <div>
       {/* hero */}
       <section className="relative flex min-h-[340px] items-center overflow-hidden bg-ink">
-        <Image src="/brand/tile-wheels.webp" alt="" fill priority sizes="100vw" className="object-cover object-center opacity-70" />
+        <Image src="/brand/tile-wheels.webp" alt="" fill fetchPriority="high" loading="eager" sizes="100vw" className="object-cover object-center opacity-70" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,#0a0b0d_0%,rgba(10,11,13,0.8)_38%,rgba(10,11,13,0.25)_72%,transparent_100%)]" />
         <div className="container-x relative z-10 py-14">
           <PageHeader page="mag-wheels" className="" eyebrow="The Wheel Shop" silver="MAG" green="WHEELS"

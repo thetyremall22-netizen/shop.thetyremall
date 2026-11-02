@@ -55,7 +55,8 @@ export default async function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{if(localStorage.getItem('ttm-theme')==='light')document.documentElement.dataset.theme='light';}catch(e){}`,
+            // Also marks visitors who already answered the cookie notice, so it's hidden before the first paint.
+            __html: `try{if(localStorage.getItem('ttm-theme')==='light')document.documentElement.dataset.theme='light';if(localStorage.getItem('ttm-consent'))document.documentElement.dataset.consent='1';}catch(e){}`,
           }}
         />
         {themeVars && <style id="ttm-theme" dangerouslySetInnerHTML={{ __html: themeVars }} />}

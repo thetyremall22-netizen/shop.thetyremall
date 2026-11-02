@@ -23,17 +23,26 @@ export function Hero({ image = "/brand/hero-bg.webp" }: { image?: string }) {
   return (
     <section className="relative flex min-h-[560px] items-center overflow-hidden bg-ink lg:min-h-[660px]">
       {/* full-bleed cinematic background */}
-      <Image
-        src={image}
-        alt=""
-        fill
-        priority
-        // Library uploads are already compressed; skip the optimiser for them.
-        unoptimized={!image.startsWith("/brand/")}
-        sizes="100vw"
-        className="z-0 object-cover object-center"
-        aria-hidden
-      />
+      {image === "/brand/hero-bg.webp" ? (
+        // Phones get a 760px crop of the centre (what a phone shows anyway): 72 KB instead of 202 KB.
+        <picture>
+          <source media="(max-width: 767px)" srcSet="/brand/hero-bg-mobile.webp" />
+          <img src={image} alt="" aria-hidden fetchPriority="high" loading="eager" decoding="async" className="absolute inset-0 z-0 size-full object-cover object-center" />
+        </picture>
+      ) : (
+        <Image
+          src={image}
+          alt=""
+          fill
+          fetchPriority="high"
+          loading="eager"
+          // Library uploads are already compressed; skip the optimiser for them.
+          unoptimized={!image.startsWith("/brand/")}
+          sizes="100vw"
+          className="z-0 object-cover object-center"
+          aria-hidden
+        />
+      )}
       {/* legibility gradient (dark on the left where the text sits) */}
       <div className="absolute inset-0 bg-[linear-gradient(90deg,#0a0b0d_0%,rgba(10,11,13,0.85)_26%,rgba(10,11,13,0.4)_52%,transparent_78%)]" />
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-ink to-transparent" />

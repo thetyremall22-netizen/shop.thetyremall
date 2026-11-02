@@ -6,10 +6,10 @@ export function Logo({ className = "", priority = false }: { className?: string;
   return (
     <Link href="/" aria-label="The Tyre Mall home" className={`ttm-logo inline-flex items-center ${className}`}>
       <Image
-        src="/brand/logo-real.webp"
+        src="/brand/logo-real-sm.webp"
         alt="The Tyre Mall"
-        width={1500}
-        height={827}
+        width={480}
+        height={265}
         priority={priority}
         className="h-14 w-auto lg:h-[76px]"
       />

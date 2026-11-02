@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getProducts, categories } from "@/lib/catalogue";
+import { allDealSlugs } from "@/lib/deal-products";
 import { categoryPath, brandPath } from "@/lib/shop-url";
 import { filterBrands, getBrandDirectory } from "@/lib/brand-registry";
 import { BLOG_POSTS } from "@/data/blog";
@@ -41,8 +42,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Products — best effort; never let a DB hiccup produce an invalid sitemap.
   let productEntries: MetadataRoute.Sitemap = [];
   try {
-    const products = await getProducts();
-    productEntries = products.map((p) => ({
+    const [products, dealSlugs] = await Promise.all([getProducts(), allDealSlugs()]);
+    productEntries = products.filter((p) => !dealSlugs.has(p.slug)).map((p) => ({
       url: `${BASE}/product/${p.slug}`,
       lastModified: now,
       changeFrequency: "weekly",

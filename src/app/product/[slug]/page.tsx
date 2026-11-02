@@ -25,6 +25,11 @@ import { findRetired, wantedFrom } from "@/lib/retired-products";
 import { productJsonLd } from "@/lib/merchant";
 import { TrackViewItem } from "@/components/TrackViewItem";
 import { Chevron, Check, Truck, Shield, Bolt, Star } from "@/components/icons";
+import { liveDeals, dealsForCategories } from "@/lib/special-categories";
+import { bestDeal, dealLabel, dealPrice, priceForQty } from "@/lib/deals";
+import { categoryPath } from "@/lib/shop-url";
+import { dealProductInfo } from "@/lib/deal-products";
+import { DealProductEnded } from "@/components/SpecialEnded";
 
 export const instant = false;
 
@@ -80,6 +85,8 @@ function brandLogoSrc(brand: string): string | null {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const p = await getProduct(slug);
+  const dealInfo = await dealProductInfo(slug);
+  if (!p && dealInfo) return { title: `${dealInfo.specialName} deal has ended`, robots: { index: false, follow: true } };
   if (!p) {
     // An old product we no longer list: helpful page, kept out of Google's index.
     const r = findRetired(slug);
@@ -87,6 +94,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     if (r || w) return { title: `${r?.title ?? w?.label ?? "Product"} — currently unavailable`, robots: { index: false, follow: true } };
     return { title: "Product not found" };
   }
+  // Special / sale deal products are temporary: kept out of Google, pointing it at the normal product.
+  if (dealInfo) return { title: p.name, description: p.shortDescription, robots: { index: false, follow: true }, ...(dealInfo.originalSlug ? { alternates: { canonical: `/product/${dealInfo.originalSlug}` } } : {}) };
   return { title: p.name, description: p.shortDescription };
 }
 
@@ -94,6 +103,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const p = await getProduct(slug);
   if (!p) {
+    // A special / sale deal product whose sale has ended (or is switched off).
+    const dealInfo = await dealProductInfo(slug);
+    if (dealInfo) {
+      const orig = dealInfo.originalSlug ? await getProduct(dealInfo.originalSlug) : undefined;
+      return <DealProductEnded specialName={dealInfo.specialName} original={orig ? { slug: orig.slug, name: orig.name } : null} />;
+    }
     // Old addresses (e.g. products from the old WooCommerce site that Google
     // Shopping still links to) get similar products instead of a dead end.
     const r = findRetired(slug);
@@ -110,6 +125,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   const pct = discountPct(regularPrice, salePrice);
   const brandSrc = brandLogoSrc(p.brand);
+  // Live special / sale deals on this product (Buy 3 get 1 free, % off…).
+  const deals = dealsForCategories(p.categories, await liveDeals());
+  const deal = bestDeal(deals, price);
   const related = await relatedProducts(p, 6);
 
   const compareItem: CompareItem = {
@@ -248,6 +266,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             <WishlistButton slug={p.slug} variant="text" className="text-sm" />
           </div>
 
+          {deal && (
+            <Link href={categoryPath(deal.slug)} className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-volt/40 bg-volt/10 px-4 py-2.5 text-sm font-bold text-volt hover:bg-volt/15">
+              🏷 {deal.name}: {dealLabel(deal)}
+              {deal.kind === "percent" && <span className="text-fg">— {formatPrice(dealPrice(price, deal))} per {p.type === "tyre" ? "tyre" : "item"}</span>}
+              {deal.limit && <span className="text-xs font-semibold text-muted">(max {deal.limit} per order)</span>}
+            </Link>
+          )}
+
           <div className="mt-4 flex items-end justify-between gap-4">
             <div className="min-w-0">
               {onSale && pct > 0 && (
@@ -260,15 +286,16 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
                   <div className="px-0.5 py-2">
                     <div className="text-[10px] font-extrabold uppercase tracking-wider text-muted">Per tyre</div>
-                    <div className="font-display text-3xl leading-none text-fg">{formatPrice(price)}</div>
+                    {deal?.kind === "percent" && <div className="text-sm leading-none text-faint line-through">{formatPrice(price)}</div>}
+                    <div className="font-display text-3xl leading-none text-fg">{formatPrice(deal ? dealPrice(price, deal) : price)}</div>
                   </div>
                   <div className="rounded-xl bg-volt/10 px-3.5 py-2 ring-1 ring-volt/30">
                     <div className="text-[10px] font-extrabold uppercase tracking-wider text-volt">Set of 4</div>
-                    <div className="font-display text-3xl leading-none text-volt">{formatPrice(setPriceOf4(price))}</div>
+                    <div className="font-display text-3xl leading-none text-volt">{formatPrice(deal ? priceForQty(price, 4, deal) : setPriceOf4(price))}</div>
                   </div>
                 </div>
               ) : (
-                <div className="font-display text-4xl text-fg">{formatPrice(price)}</div>
+                <div className="font-display text-4xl text-fg">{formatPrice(deal ? dealPrice(price, deal) : price)}</div>
               )}
             </div>
             <span className="flex shrink-0 items-end" aria-label={`${p.brand} tyres`}>
@@ -287,6 +314,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               inStock={inStock}
               sku={p.sku}
               size={p.specs.size}
+              deals={deals}
               item={{ id: p.id, slug: p.slug, name: p.name, brand: p.brand, image: p.thumb ?? p.image, price: price, type: p.type }}
             />
           </div>

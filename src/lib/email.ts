@@ -327,6 +327,7 @@ function itemsTable(o: Order, showSku = false): string {
     ${rows}
     ${line("Subtotal", zar(t.subtotal))}
     ${t.setDiscount ? line("Set of 4 saving", `&minus;${zar(t.setDiscount)}`) : ""}
+    ${t.dealLines?.length ? t.dealLines.map((d) => line(escapeHtml(d.label), `&minus;${zar(d.amount)}`)).join("") : t.dealDiscount ? line("Deal savings", `&minus;${zar(t.dealDiscount)}`) : ""}
     ${t.alignmentTotal ? line("Wheel alignment", zar(t.alignmentTotal)) : ""}
     ${t.balanceTotal ? line("Balance &amp; valve", zar(t.balanceTotal)) : ""}
     ${t.hazardTotal ? line("Road hazard cover", zar(t.hazardTotal)) : ""}
@@ -343,7 +344,7 @@ const STATUS_TEXT: Record<string, string> = {
   pending: "Awaiting payment", processing: "Paid — processing", "on-hold": "On hold", completed: "Completed",
   cancelled: "Cancelled", refunded: "Refunded", partially_refunded: "Partly refunded", failed: "Payment failed",
 };
-const PAYMENT_TEXT: Record<string, string> = { payfast: "PayFast (card / instant EFT)", happypay: "HappyPay (pay later)", coupon: "Coupon (no payment due)" };
+const PAYMENT_TEXT: Record<string, string> = { payfast: "PayFast (card / instant EFT)", happypay: "HappyPay (pay later)", coupon: "Coupon (no payment due)", deal: "Free deal (no payment due)" };
 
 /** Full order details — customer, contact, delivery address or fitment,
  *  payment and status — at the top of EVERY order email (customer and shop). */
@@ -496,6 +497,7 @@ async function tInvoice(o: Order, inv0: InvoiceInfo): Promise<Tmpl> {
       ${lines}
       ${extra("Subtotal", t.subtotal)}
       ${extra("Set of 4 saving", t.setDiscount, true)}
+      ${t.dealLines?.length ? t.dealLines.map((d) => extra(escapeHtml(d.label), d.amount, true)).join("") : t.dealDiscount ? extra("Deal savings", t.dealDiscount, true) : ""}
       ${extra("Wheel alignment", t.alignmentTotal)}
       ${extra("Balance &amp; valve", t.balanceTotal)}
       ${extra("Road hazard cover", t.hazardTotal)}

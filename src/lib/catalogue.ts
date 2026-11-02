@@ -3,6 +3,7 @@ import categoriesData from "@/data/categories.json";
 import metaData from "@/data/meta.json";
 import { cacheLife, cacheTag } from "next/cache";
 import { PRODUCTS_TAG } from "./catalogue-cache";
+import { hiddenDealSlugs } from "./deal-products";
 import type { Product, Category, CatalogueMeta, ProductType } from "./types";
 import { db, schema } from "./db";
 import { detectTyreSize } from "./voice-search";
@@ -127,11 +128,20 @@ export async function getProductsFresh(): Promise<Product[]> {
   return (await loadFromDb()) ?? (await getSnapshot());
 }
 
-export async function getProducts(): Promise<Product[]> {
+async function allProductsCached(): Promise<Product[]> {
   "use cache";
   cacheTag(PRODUCTS_TAG);
   cacheLife("hours");
   return (await loadFromDb()) ?? (await getSnapshot());
+}
+
+/** Every product the shop shows right now: all visible products, minus deal
+ *  products whose special / sale isn't running (see lib/deal-products). */
+export async function getProducts(): Promise<Product[]> {
+  const [all, hidden] = await Promise.all([allProductsCached(), hiddenDealSlugs()]);
+  if (!hidden.length) return all;
+  const h = new Set(hidden);
+  return all.filter((p) => !h.has(p.slug));
 }
 
 export async function getProduct(slug: string): Promise<Product | undefined> {

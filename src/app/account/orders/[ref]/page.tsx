@@ -9,7 +9,7 @@ import { AccountFrame } from "@/components/account/AccountNav";
 
 export const instant = false;
 
-const PAYMENT: Record<string, string> = { payfast: "PayFast (card / instant EFT)", happypay: "HappyPay (pay later)", coupon: "Coupon (nothing to pay)" };
+const PAYMENT: Record<string, string> = { payfast: "PayFast (card / instant EFT)", happypay: "HappyPay (pay later)", coupon: "Coupon (nothing to pay)", deal: "Free deal (nothing to pay)" };
 const date = (iso: string) => new Date(iso).toLocaleString("en-ZA", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 const CLOSED = ["cancelled", "refunded", "failed"];
 
@@ -81,6 +81,8 @@ export default async function MyOrder({ params }: { params: Promise<{ ref: strin
             <h2 className="mb-2 font-display text-xl">Totals</h2>
             <Row k="Subtotal" v={formatPrice(subtotal)} />
             {n(t.setDiscount) > 0 && <Row k="Set discount" v={`−${formatPrice(n(t.setDiscount))}`} />}
+            {t.dealLines?.length ? t.dealLines.map((d, i) => <Row key={i} k={d.label} v={`−${formatPrice(n(d.amount))}`} />)
+              : n(t.dealDiscount) > 0 && <Row k="Deal savings" v={`−${formatPrice(n(t.dealDiscount))}`} />}
             {n(t.hazardTotal) > 0 && <Row k="Road hazard cover" v={formatPrice(n(t.hazardTotal))} />}
             {n(t.alignmentTotal) > 0 && <Row k="Alignment" v={formatPrice(n(t.alignmentTotal))} />}
             {n(t.balanceTotal) > 0 && <Row k="Balancing" v={formatPrice(n(t.balanceTotal))} />}

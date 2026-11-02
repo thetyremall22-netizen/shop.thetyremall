@@ -33,3 +33,29 @@ export async function SpecialEnded({ special, limit = 8, heading }: { special: S
     </section>
   );
 }
+
+/** A deal product's page once its special / sale has ended: say so, link to the
+ *  normal product, and offer today's deals (instead of a 404). */
+export async function DealProductEnded({ specialName, original }: { specialName: string; original?: { slug: string; name: string } | null }) {
+  const deals = (await dealProducts(32)).filter((p) => p.inStock).slice(0, 8);
+  return (
+    <div className="container-x py-6 lg:py-10">
+      <section className="card border-volt/30 p-6 sm:p-8">
+        <h1 className="font-display text-2xl sm:text-3xl">This {specialName} deal has ended</h1>
+        <p className="mt-2 max-w-3xl text-sm text-muted sm:text-base">
+          Thanks for the support. {original ? <>The tyre is still in the shop at its normal price.</> : <>Here are our current deals instead.</>}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {original && <Link href={`/product/${original.slug}`} className="btn btn-volt h-10 px-5 text-sm">View {original.name}</Link>}
+          <Link href="/product-category/hot-dealz" className={`btn ${original ? "btn-dark" : "btn-volt"} h-10 px-5 text-sm`}>See all deals</Link>
+          <Link href="/shop" className="btn btn-dark h-10 px-5 text-sm">Browse the shop</Link>
+        </div>
+      </section>
+      {deals.length > 0 && (
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {deals.map((p) => <ProductCard key={p.id} p={p} />)}
+        </div>
+      )}
+    </div>
+  );
+}

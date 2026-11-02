@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { liveDeals, dealsForCategories } from "@/lib/special-categories";
+import { bestDeal, dealLabel, dealPrice, priceForQty } from "@/lib/deals";
 import type { Product } from "@/lib/types";
 import { formatPrice, formatPriceShort, discountPct } from "@/lib/format";
 import { hasSetPricing, setPriceOf4 } from "@/lib/pricing";
@@ -46,7 +48,8 @@ function BrandMark({ brand, logo }: { brand: string; logo?: string }) {
 export async function ProductCard({ p, eager = false }: { p: Product; eager?: boolean }) {
   const pct = discountPct(p.regularPrice, p.salePrice);
   const payLater = formatPriceShort(Math.round(p.price / 2));
-  const [s, logos] = await Promise.all([getStrings(), brandLogoMap()]);
+  const [s, logos, deals] = await Promise.all([getStrings(), brandLogoMap(), liveDeals()]);
+  const deal = bestDeal(dealsForCategories(p.categories, deals), p.price);
 
   return (
     <div
@@ -70,6 +73,7 @@ export async function ProductCard({ p, eager = false }: { p: Product; eager?: bo
           <div className="absolute left-2 top-2 flex flex-col gap-1.5">
             {p.onSale && pct > 0 && <span className="badge badge-sale">-{pct}%</span>}
             {p.type === "wheel" && <span className="badge badge-volt">MAG</span>}
+            {deal && <span className="badge badge-volt max-w-[150px] truncate" title={`${deal.name}: ${dealLabel(deal)}`}>🏷 {dealLabel(deal)}</span>}
           </div>
         </div>
       </Link>
@@ -99,14 +103,15 @@ export async function ProductCard({ p, eager = false }: { p: Product; eager?: bo
           <div className="mt-2.5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
               <div className="text-[9px] font-extrabold uppercase tracking-wider text-[#8a929c]">{s["product.per_tyre"]}</div>
-              {p.onSale && pct > 0 && (
-                <div className="text-[11px] leading-none text-neutral-400 line-through">{formatPrice(p.regularPrice)}</div>
+              {((p.onSale && pct > 0) || deal?.kind === "percent") && (
+                <div className="text-[11px] leading-none text-neutral-400 line-through">{formatPrice(deal?.kind === "percent" ? p.price : p.regularPrice)}</div>
               )}
-              <div className="font-display text-lg leading-tight text-[#14171a]">{formatPrice(p.price)}</div>
+              <div className="font-display text-lg leading-tight text-[#14171a]">{formatPrice(deal ? dealPrice(p.price, deal) : p.price)}</div>
             </div>
             <div className="shrink-0 self-stretch rounded-lg bg-[#eef6e0] px-2.5 py-1.5 text-left ring-1 ring-[#8ac53f]/40 sm:self-auto sm:text-right">
               <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4f7000]">{s["product.set_of_4"]}</span>
-              <div className="price-set font-display text-xl leading-tight">{formatPrice(setPriceOf4(p.price))}</div>
+              {/* A deal replaces the set-of-4 saving (e.g. Buy 3, get 1 free: a set of 4 = 3 × the price). */}
+              <div className="price-set font-display text-xl leading-tight">{formatPrice(deal ? priceForQty(p.price, 4, deal) : setPriceOf4(p.price))}</div>
             </div>
           </div>
         ) : (

@@ -145,11 +145,12 @@ export function OrderCustomerEditor({ id, customer, delivery, canEdit }: { id: s
 // ---- items + totals -----------------------------------------------------------
 
 interface Item { slug: string; name: string; sku?: string; qty: number; price: number; type?: string; alignment?: boolean; balanceQty?: number; roadHazard?: boolean }
-interface Totals { subtotal: number; setDiscount: number; alignmentTotal: number; balanceTotal: number; hazardTotal: number; couponDiscount: number; couponCode?: string; delivery: number; total: number }
+interface Totals { subtotal: number; setDiscount: number; dealDiscount?: number; alignmentTotal: number; balanceTotal: number; hazardTotal: number; couponDiscount: number; couponCode?: string; delivery: number; total: number }
 interface SearchHit { name: string; slug: string; price: number; size?: string; brand?: string }
 
 const TOTAL_FIELDS: { k: keyof Totals; label: string; minus?: boolean }[] = [
   { k: "setDiscount", label: "Set of 4 saving", minus: true },
+  { k: "dealDiscount", label: "Deal savings (Buy X get Y / % off)", minus: true },
   { k: "alignmentTotal", label: "Wheel alignment" },
   { k: "balanceTotal", label: "Balance & valve" },
   { k: "hazardTotal", label: "Road hazard cover" },
@@ -163,14 +164,14 @@ export function OrderItemsEditor({ id, items, totals, canEdit }: { id: string; i
   const sec = useOrderSection(id);
   const [editing, setEditing] = useState(false);
   const [rows, setRows] = useState(items.map((i) => ({ ...i, priceR: centsToRands(i.price) })));
-  const [tot, setTot] = useState<Record<string, string>>(Object.fromEntries(TOTAL_FIELDS.map((f) => [f.k, centsToRands(totals[f.k] as number)])));
+  const [tot, setTot] = useState<Record<string, string>>(Object.fromEntries(TOTAL_FIELDS.map((f) => [f.k, centsToRands((totals[f.k] as number) ?? 0)])));
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
 
   useEffect(() => {
     if (!editing) {
       setRows(items.map((i) => ({ ...i, priceR: centsToRands(i.price) })));
-      setTot(Object.fromEntries(TOTAL_FIELDS.map((f) => [f.k, centsToRands(totals[f.k] as number)])));
+      setTot(Object.fromEntries(TOTAL_FIELDS.map((f) => [f.k, centsToRands((totals[f.k] as number) ?? 0)])));
     }
   }, [items, totals, editing]);
 
@@ -187,7 +188,7 @@ export function OrderItemsEditor({ id, items, totals, canEdit }: { id: string; i
   const live = rows.filter((r) => r.qty > 0);
   const subtotal = live.reduce((n, r) => n + randsToCents(r.priceR) * r.qty, 0);
   const tc = (k: keyof Totals) => randsToCents(tot[k] ?? "0");
-  const newTotal = Math.max(0, subtotal - tc("setDiscount") + tc("alignmentTotal") + tc("balanceTotal") + tc("hazardTotal") - tc("couponDiscount") + tc("delivery"));
+  const newTotal = Math.max(0, subtotal - tc("setDiscount") - tc("dealDiscount") + tc("alignmentTotal") + tc("balanceTotal") + tc("hazardTotal") - tc("couponDiscount") + tc("delivery"));
 
   const line = (i: Item) => `${i.qty}× ${i.name} @ ${zar(i.price)}`;
   const changes: { label: string; from: string; to: string }[] = [];
@@ -199,7 +200,7 @@ export function OrderItemsEditor({ id, items, totals, canEdit }: { id: string; i
     if (r.qty === 0) changes.push({ label: "Removed", from: line(b), to: "" });
     else if (b.qty !== now.qty || b.price !== now.price || (b.sku ?? "") !== (now.sku ?? "") || b.name !== now.name) changes.push({ label: b.name, from: line(b), to: line(now) });
   }
-  for (const f of TOTAL_FIELDS) if ((totals[f.k] as number) !== tc(f.k)) changes.push({ label: f.label, from: zar(totals[f.k] as number), to: zar(tc(f.k)) });
+  for (const f of TOTAL_FIELDS) if (((totals[f.k] as number) ?? 0) !== tc(f.k)) changes.push({ label: f.label, from: zar((totals[f.k] as number) ?? 0), to: zar(tc(f.k)) });
   if (changes.length) changes.push({ label: "Order total", from: zar(totals.total), to: zar(newTotal) });
 
   const body = {

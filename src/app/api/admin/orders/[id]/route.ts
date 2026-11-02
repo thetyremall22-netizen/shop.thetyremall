@@ -127,6 +127,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       itemCount: items.reduce((n, i) => n + i.qty, 0),
       subtotal,
       setDiscount: pick("setDiscount"),
+      // Deal savings: keep the per-deal lines only while the amount is unchanged.
+      ...(pick("dealDiscount") > 0
+        ? { dealDiscount: pick("dealDiscount"), dealLines: pick("dealDiscount") === (t0.dealDiscount ?? 0) ? t0.dealLines : undefined }
+        : { dealDiscount: undefined, dealLines: undefined }),
       alignmentTotal: pick("alignmentTotal"),
       balanceTotal: pick("balanceTotal"),
       hazardTotal: pick("hazardTotal"),
@@ -135,7 +139,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       total: 0,
     };
     totals.freeDelivery = totals.delivery === 0;
-    totals.total = Math.max(0, subtotal - totals.setDiscount + totals.alignmentTotal + totals.balanceTotal + totals.hazardTotal - totals.couponDiscount + totals.delivery);
+    totals.total = Math.max(0, subtotal - totals.setDiscount - (totals.dealDiscount ?? 0) + totals.alignmentTotal + totals.balanceTotal + totals.hazardTotal - totals.couponDiscount + totals.delivery);
 
     const describe = (list: LineItem[]) => list.map((i) => `${i.qty}× ${i.name}${i.sku ? ` [${i.sku}]` : ""} @ R${(i.price / 100).toFixed(2)}`).join("; ");
     const beforeTxt = describe(current.items) + ` | total R${(current.totals.total / 100).toFixed(2)}`;

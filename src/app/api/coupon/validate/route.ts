@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateCoupon, type CouponItem } from "@/lib/coupons";
 import { getProduct } from "@/lib/catalogue";
+import { dealsForSlugs } from "@/lib/special-categories";
 
 // Public: check a coupon against a cart and return the discount (for display).
 // The authoritative discount is recomputed server-side at checkout.
@@ -24,6 +25,11 @@ export async function POST(req: NextRequest) {
   }
   if (!items.length) return NextResponse.json({ valid: false, error: "Your cart is empty." });
 
-  const res = await validateCoupon(code, { items, email: body.email });
+  // Coupons don't apply to products that have a live special / sale deal.
+  const deals = await dealsForSlugs(items.map((i) => i.slug)).catch(() => ({} as Record<string, unknown>));
+  const eligible = items.filter((i) => !deals[i.slug]);
+  if (!eligible.length) return NextResponse.json({ valid: false, error: "Coupons can't be used on deal products — the deal price already applies." });
+
+  const res = await validateCoupon(code, { items: eligible, email: body.email });
   return NextResponse.json(res);
 }

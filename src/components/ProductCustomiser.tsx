@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCart, type CartItem } from "@/lib/cart";
 import { formatPrice } from "@/lib/format";
 import { setDiscountFor, setPriceOf4, SET_OF_4_DISCOUNT, hasSetPricing } from "@/lib/pricing";
+import { applyDeals, bestDeal, dealHint, dealLabel, type Deal } from "@/lib/deals";
 import { WhatsAppButton } from "./WhatsAppButton";
 import {
   FITMENT_STORES,
@@ -36,13 +37,15 @@ function StepLabel({ n, children }: { n: number; children: React.ReactNode }) {
   );
 }
 
-export function ProductCustomiser({ item, inStock, sku, size }: { item: Item; inStock: boolean; sku?: string; size?: string }) {
+export function ProductCustomiser({ item, inStock, sku, size, deals = [] }: { item: Item; inStock: boolean; sku?: string; size?: string; deals?: Deal[] }) {
   const router = useRouter();
   const canBuy = useCanBuy();
   const { add, setDelivery, setFitment, setFitmentDate } = useCart();
   const isTyre = item.type === "tyre";
 
-  const [qty, setQty] = useState(isTyre ? 2 : 1);
+  // A live special / sale deal starts at its full deal quantity (e.g. 4 on Buy 3, get 1 free).
+  const deal0 = bestDeal(deals, item.price);
+  const [qty, setQty] = useState(deal0?.kind === "bxgy" ? deal0.buy + deal0.get : isTyre ? 2 : 1);
   const [method, setMethod] = useState<"delivery" | "fitment">("delivery");
   const [alignment, setAlignment] = useState(false);
   const [balanceQty, setBalanceQty] = useState(0);
@@ -51,14 +54,18 @@ export function ProductCustomiser({ item, inStock, sku, size }: { item: Item; in
 
   const t = useMemo(() => {
     const base = item.price * qty;
-    const setDiscount = setDiscountFor(item.price, qty, item.type);
+    // A deal replaces the set-of-4 saving (same rule as the cart and checkout).
+    const dealRun = applyDeals([{ slug: item.slug, price: item.price, qty, deals }]);
+    const deal = dealRun.applied[0] ?? null;
+    const setDiscount = dealRun.dealSlugs.size ? 0 : setDiscountFor(item.price, qty, item.type);
     const alignFee = alignment && isTyre ? ALIGNMENT_FEE : 0;
     const balanceFee = isTyre ? balanceQty * BALANCE_PER_TYRE : 0;
     const freeDelivery = !isTyre || qty >= FREE_DELIVERY_MIN_TYRES;
     const delivery = method === "fitment" ? 0 : freeDelivery ? 0 : STANDARD_DELIVERY_FEE;
     const options = alignFee + balanceFee;
-    return { base, setDiscount, alignFee, balanceFee, delivery, options, freeDelivery, total: base - setDiscount + options + delivery };
-  }, [item.price, qty, alignment, balanceQty, method, isTyre, item.type]);
+    const dealSaving = deal?.saving ?? 0;
+    return { base, setDiscount, deal, dealSaving, alignFee, balanceFee, delivery, options, freeDelivery, total: base - setDiscount - dealSaving + options + delivery };
+  }, [item.price, item.slug, qty, alignment, balanceQty, method, isTyre, item.type, deals]);
 
   const need = Math.max(0, FREE_DELIVERY_MIN_TYRES - qty);
 
@@ -135,7 +142,18 @@ export function ProductCustomiser({ item, inStock, sku, size }: { item: Item; in
             </div>
           )}
         </div>
-        {isTyre && (
+        {deal0 && (
+          t.deal ? (
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-volt/40 bg-volt/10 px-4 py-2.5 text-sm font-bold text-volt">
+              <Check width={16} height={16} /> {t.deal.label} — you save {formatPrice(t.dealSaving)}
+            </div>
+          ) : (
+            <div className="mt-3 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-2.5 text-sm font-bold text-amber-300">
+              🏷 {deal0.name}: {dealHint(qty, deal0) ?? dealLabel(deal0)}
+            </div>
+          )
+        )}
+        {isTyre && !deal0 && (
           t.setDiscount > 0 ? (
             <div className="mt-3 flex items-center gap-2 rounded-xl border border-volt/40 bg-volt/10 px-4 py-2.5 text-sm font-bold text-volt">
               <Check width={16} height={16} /> Set of 4 price applied — you save {formatPrice(t.setDiscount)}
@@ -240,6 +258,7 @@ export function ProductCustomiser({ item, inStock, sku, size }: { item: Item; in
       <div className="rounded-xl border border-line bg-surface p-4">
         <div className="flex items-center justify-between text-sm text-muted"><span>{qty} × {formatPrice(item.price)}</span><span className="text-fg">{formatPrice(t.base)}</span></div>
         {t.setDiscount > 0 && <div className="mt-1 flex items-center justify-between text-sm font-semibold text-volt"><span>Set of 4 saving</span><span>−{formatPrice(t.setDiscount)}</span></div>}
+        {t.deal && <div className="mt-1 flex items-center justify-between text-sm font-semibold text-volt"><span>{t.deal.label}</span><span>−{formatPrice(t.dealSaving)}</span></div>}
         {t.options > 0 && <div className="mt-1 flex items-center justify-between text-sm text-muted"><span>Options (alignment / balancing)</span><span className="text-fg">{formatPrice(t.options)}</span></div>}
         <div className="mt-1 flex items-center justify-between text-sm text-muted"><span>Delivery</span><span className={t.delivery === 0 ? "text-pay" : "text-fg"}>{t.delivery === 0 ? "FREE" : formatPrice(t.delivery)}</span></div>
         <div className="mt-3 flex items-center justify-between border-t border-line pt-3"><span className="font-bold">Total <span className="text-xs font-normal text-muted">(VAT incl.)</span></span><span className="font-display text-2xl text-volt">{formatPrice(t.total)}</span></div>

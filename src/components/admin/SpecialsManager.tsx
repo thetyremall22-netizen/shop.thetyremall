@@ -5,10 +5,30 @@ import { useRouter } from "next/navigation";
 import { ConfirmDialog, ChangeList, UndoBar } from "./ConfirmDialog";
 import { ImagePicker } from "./ImagePicker";
 import { BANNER_CANVAS, canvasHint } from "./image-compress";
+import { dealLabel } from "@/lib/deals";
+import { DealImporter } from "./DealImporter";
 
 export interface SpecialRow {
   id: number; slug: string; name: string; description: string; image: string;
   startAt: number | null; endAt: number | null; enabled: boolean; status: "draft" | "scheduled" | "live" | "ended"; count: number;
+  dealType: "none" | "bxgy" | "percent"; dealBuy: number; dealGet: number; dealPercent: number; dealLimit: number | null;
+}
+
+// Deal type presets; "custom-…" lets the admin type their own numbers.
+const DEAL_PRESETS: { v: string; label: string; type: "none" | "bxgy" | "percent"; buy?: number; get?: number; percent?: number }[] = [
+  { v: "none", label: "No deal — just a group of products", type: "none" },
+  { v: "b1g1", label: "Buy 1, get 1 free", type: "bxgy", buy: 1, get: 1 },
+  { v: "b2g2", label: "Buy 2, get 2 free", type: "bxgy", buy: 2, get: 2 },
+  { v: "b3g1", label: "Buy 3, get 1 free", type: "bxgy", buy: 3, get: 1 },
+  { v: "bxgy", label: "Buy X, get Y free (choose the numbers)", type: "bxgy" },
+  { v: "p10", label: "10% off", type: "percent", percent: 10 },
+  { v: "p50", label: "50% off", type: "percent", percent: 50 },
+  { v: "p100", label: "100% off (free)", type: "percent", percent: 100 },
+  { v: "pct", label: "% off (choose the %)", type: "percent" },
+];
+function presetOf(type: string, buy: number, get: number, percent: number): string {
+  return DEAL_PRESETS.find((p) => p.type === type && p.v !== "bxgy" && p.v !== "pct" && (p.type === "none" || (p.buy === buy && p.get === get) || p.percent === percent))?.v
+    ?? (type === "bxgy" ? "bxgy" : type === "percent" ? "pct" : "none");
 }
 
 const field = "h-10 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt";
@@ -24,10 +44,27 @@ const toLocal = (ms: number | null) => { if (!ms) return ""; const d = new Date(
 const fromLocal = (v: string) => (v ? new Date(v).getTime() : null);
 const slugify = (s: string) => s.toLowerCase().replace(/[^\w\s-]/g, "").trim().replace(/[\s_]+/g, "-").replace(/-+/g, "-").slice(0, 60);
 
-interface Form { name: string; slug: string; description: string; image: string; start: string; end: string; enabled: boolean }
-const blank: Form = { name: "", slug: "", description: "", image: "", start: "", end: "", enabled: true };
-const toForm = (s: SpecialRow): Form => ({ name: s.name, slug: s.slug, description: s.description, image: s.image, start: toLocal(s.startAt), end: toLocal(s.endAt), enabled: s.enabled });
-const body = (f: Form) => ({ name: f.name, slug: f.slug, description: f.description, image: f.image, startAt: fromLocal(f.start), endAt: fromLocal(f.end), enabled: f.enabled });
+interface Form { name: string; slug: string; description: string; image: string; start: string; end: string; enabled: boolean; deal: string; buy: string; get: string; percent: string; limit: string }
+const blank: Form = { name: "", slug: "", description: "", image: "", start: "", end: "", enabled: true, deal: "none", buy: "", get: "", percent: "", limit: "" };
+const toForm = (s: SpecialRow): Form => ({
+  name: s.name, slug: s.slug, description: s.description, image: s.image, start: toLocal(s.startAt), end: toLocal(s.endAt), enabled: s.enabled,
+  deal: presetOf(s.dealType, s.dealBuy, s.dealGet, s.dealPercent), buy: s.dealBuy ? String(s.dealBuy) : "", get: s.dealGet ? String(s.dealGet) : "",
+  percent: s.dealPercent ? String(s.dealPercent) : "", limit: s.dealLimit ? String(s.dealLimit) : "",
+});
+const body = (f: Form) => {
+  const p = DEAL_PRESETS.find((x) => x.v === f.deal) ?? DEAL_PRESETS[0];
+  return {
+    name: f.name, slug: f.slug, description: f.description, image: f.image, startAt: fromLocal(f.start), endAt: fromLocal(f.end), enabled: f.enabled,
+    dealType: p.type, dealBuy: p.buy ?? Number(f.buy || 0), dealGet: p.get ?? Number(f.get || 0), dealPercent: p.percent ?? Number(f.percent || 0),
+    dealLimit: p.type === "none" ? null : Number(f.limit || 0) || null,
+  };
+};
+/** "Buy 3, get 1 free · max 4 free per order" for the list. */
+function dealSummary(s: SpecialRow): string | null {
+  if (s.dealType === "none") return null;
+  const label = dealLabel({ kind: s.dealType, buy: s.dealBuy, get: s.dealGet, percent: s.dealPercent });
+  return s.dealLimit ? `${label} · max ${s.dealLimit} ${s.dealType === "bxgy" || s.dealPercent >= 100 ? "free" : "discounted"} per order` : label;
+}
 
 function SpecialForm({ f, set, slugEdited, setSlugEdited, example = "Father's Day Specials" }: { f: Form; set: (f: Form) => void; slugEdited: boolean; setSlugEdited: (v: boolean) => void; example?: string }) {
   return (
@@ -42,6 +79,32 @@ function SpecialForm({ f, set, slugEdited, setSlugEdited, example = "Father's Da
           <input type="datetime-local" className={field} value={f.start} onChange={(e) => set({ ...f, start: e.target.value })} /></label>
         <label><span className={lab}>Ends (optional — blank = no end)</span>
           <input type="datetime-local" className={field} value={f.end} onChange={(e) => set({ ...f, end: e.target.value })} /></label>
+      </div>
+      <div className="rounded-xl border border-line p-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label><span className={lab}>Deal type — what customers get on these products</span>
+            <select className={field} value={f.deal} onChange={(e) => set({ ...f, deal: e.target.value, ...(e.target.value === "p100" && !f.limit ? { limit: "4" } : {}) })}>
+              {DEAL_PRESETS.map((p) => <option key={p.v} value={p.v}>{p.label}</option>)}
+            </select></label>
+          {f.deal !== "none" && (
+            <label><span className={lab}>Limit per order (optional{f.deal === "p100" ? " — required for free deals" : ""})</span>
+              <input type="number" min={1} className={field} value={f.limit} placeholder="No limit" onChange={(e) => set({ ...f, limit: e.target.value })} /></label>
+          )}
+          {f.deal === "bxgy" && (<>
+            <label><span className={lab}>Buy how many</span><input type="number" min={1} className={field} value={f.buy} onChange={(e) => set({ ...f, buy: e.target.value })} /></label>
+            <label><span className={lab}>Get how many free</span><input type="number" min={1} className={field} value={f.get} onChange={(e) => set({ ...f, get: e.target.value })} /></label>
+          </>)}
+          {f.deal === "pct" && (
+            <label><span className={lab}>% off</span><input type="number" min={1} max={100} className={field} value={f.percent} onChange={(e) => set({ ...f, percent: e.target.value })} /></label>
+          )}
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          {f.deal === "none" ? "Products are just grouped and shown together — prices stay as they are."
+            : DEAL_PRESETS.find((p) => p.v === f.deal)?.type === "bxgy"
+              ? "Counts the same product only (e.g. 4 of the same tyre on Buy 3, get 1 free = 1 free). Taken off in the cart, at checkout and on the invoice. Replaces the set-of-4 saving; coupons don't apply to these products."
+              : "The lower price shows on the product and in the cart. Replaces the set-of-4 saving; coupons don't apply to these products."}
+          {f.deal !== "none" && " “Limit per order” = the most items one order can get free or discounted under this deal."}
+        </p>
       </div>
       <label className="block"><span className={lab}>Short description (optional)</span>
         <input className={field} value={f.description} onChange={(e) => set({ ...f, description: e.target.value })} /></label>
@@ -200,7 +263,7 @@ export function SpecialsManager({ specials, canEdit, canDelete, kind = "special"
 
   const changes = (s: SpecialRow) => {
     const a = toForm(s), b = editF;
-    const L: Record<keyof Form, string> = { name: "Name", slug: "Web address", description: "Description", image: "Image", start: "Starts", end: "Ends", enabled: "Switched on" };
+    const L: Record<keyof Form, string> = { name: "Name", slug: "Web address", description: "Description", image: "Image", start: "Starts", end: "Ends", enabled: "Switched on", deal: "Deal type", buy: "Buy", get: "Get free", percent: "% off", limit: "Limit per order" };
     return (Object.keys(L) as (keyof Form)[]).filter((k) => String(a[k]) !== String(b[k])).map((k) => ({ label: L[k], from: String(a[k] || "—"), to: String(b[k] || "—") }));
   };
 
@@ -228,6 +291,7 @@ export function SpecialsManager({ specials, canEdit, canDelete, kind = "special"
             <div>
               <div className="flex flex-wrap items-center gap-2"><span className="font-display text-lg text-fg">{s.name}</span><span className={`badge ${STATUS[s.status].badge}`}>{STATUS[s.status].label}</span></div>
               <div className="mt-0.5 text-xs text-muted">/product-category/{s.slug} · {s.count} product{s.count === 1 ? "" : "s"} · {when(s.startAt)} → {when(s.endAt)}</div>
+              {dealSummary(s) && <div className="mt-1"><span className="badge badge-volt">🏷 {dealSummary(s)}</span></div>}
             </div>
             <div className="flex items-center gap-3 text-sm font-semibold">
               {s.status === "live" && <a href={`/product-category/${s.slug}`} target="_blank" rel="noreferrer" className="text-muted hover:text-volt">View on site ↗</a>}
@@ -244,6 +308,7 @@ export function SpecialsManager({ specials, canEdit, canDelete, kind = "special"
                 </>
               )}
               <ProductPicker special={s} canEdit={canEdit} />
+              {canEdit && <DealImporter specialId={s.id} specialName={s.name} />}
             </div>
           )}
         </div>

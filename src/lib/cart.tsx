@@ -18,6 +18,7 @@ import {
   type DeliveryMethod,
 } from "./shop-config";
 import { setDiscountFor } from "./pricing";
+import { applyDeals, type Deal, type AppliedDeal } from "./deals";
 import { canBuyNow, showGeoBlocked } from "@/components/GeoNotice";
 import { trackTyrone } from "./tyrone-track";
 import { trackAddToCart } from "./ecommerce-tracking";
@@ -115,6 +116,9 @@ export interface CartTotals {
   itemCount: number;
   subtotal: number;
   setDiscount: number;
+  /** Special / sale deal savings (Buy 3 get 1 free, % off…). */
+  dealDiscount: number;
+  dealLines: AppliedDeal[];
   hazardTotal: number;
   alignmentTotal: number;
   balanceTotal: number;
@@ -134,6 +138,8 @@ interface CartContextValue extends CartState {
   setFitmentDate: (date: string | null) => void;
   clear: () => void;
   totals: CartTotals;
+  /** Live deals per product in the cart (from the server). */
+  deals: Record<string, Deal[]>;
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
 }
@@ -145,6 +151,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initial);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [deals, setDeals] = useState<Record<string, Deal[]>>({});
 
   useEffect(() => {
     try {
@@ -161,13 +168,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [state, hydrated]);
 
+  // Ask the server which cart products have a live special / sale deal.
+  const slugKey = [...new Set(state.items.map((i) => i.slug))].sort().join(",");
+  useEffect(() => {
+    if (!slugKey) return;
+    let on = true;
+    fetch("/api/deals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slugs: slugKey.split(",") }) })
+      .then((r) => (r.ok ? r.json() : null)).then((d) => { if (on && d?.deals) setDeals(d.deals); }).catch(() => {});
+    return () => { on = false; };
+  }, [slugKey]);
+
   const totals = useMemo<CartTotals>(() => {
     const tyreQty = state.items
       .filter((i) => i.type === "tyre")
       .reduce((n, i) => n + i.qty, 0);
     const itemCount = state.items.reduce((n, i) => n + i.qty, 0);
     const subtotal = state.items.reduce((n, i) => n + i.price * i.qty, 0);
-    const setDiscount = state.items.reduce((n, i) => n + setDiscountFor(i.price, i.qty, i.type), 0);
+    const dealRun = applyDeals(state.items.map((i) => ({ slug: i.slug, price: i.price, qty: i.qty, deals: deals[i.slug] })));
+    // A deal replaces the set-of-4 saving on that product (same rule as checkout).
+    const setDiscount = state.items.reduce((n, i) => n + (dealRun.dealSlugs.has(i.slug) ? 0 : setDiscountFor(i.price, i.qty, i.type)), 0);
     const hazardTotal = state.items
       .filter((i) => i.roadHazard)
       .reduce((n, i) => n + ROAD_HAZARD_FEE * i.qty, 0);
@@ -191,15 +210,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       itemCount,
       subtotal,
       setDiscount,
+      dealDiscount: dealRun.total,
+      dealLines: dealRun.applied,
       hazardTotal,
       alignmentTotal,
       balanceTotal,
       delivery,
       freeDelivery,
       tyresToFreeDelivery,
-      total: subtotal - setDiscount + hazardTotal + alignmentTotal + balanceTotal + delivery,
+      total: subtotal - setDiscount - dealRun.total + hazardTotal + alignmentTotal + balanceTotal + delivery,
     };
-  }, [state]);
+  }, [state, deals]);
 
   const value: CartContextValue = {
     ...state,
@@ -226,6 +247,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "CLEAR" });
     },
     totals,
+    deals,
     drawerOpen,
     setDrawerOpen,
   };

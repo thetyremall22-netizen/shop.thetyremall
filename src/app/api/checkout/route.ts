@@ -8,6 +8,8 @@ import { buildPaymentFields, payfastProcessUrl, isConfigured, isSandbox } from "
 import { createHappyPayOrder, isEnabled as happyPayEnabled } from "@/lib/happypay";
 import { getLive } from "@/lib/db/queries";
 import { validateCoupon } from "@/lib/coupons";
+import { dealsForSlugs } from "@/lib/special-categories";
+import { dealProductInfo } from "@/lib/deal-products";
 import { completePaidOrder } from "@/lib/order-payment";
 import { getSettingsFresh } from "@/lib/settings";
 import { addAudit } from "@/lib/audit";
@@ -49,7 +51,12 @@ export async function POST(req: NextRequest) {
   const lines: LineItem[] = [];
   for (const it of items) {
     const p = await getProduct(it.slug);
-    if (!p) continue;
+    if (!p) {
+      // A special / sale deal that has ended since it went in the cart: say so, don't drop it silently.
+      const d = await dealProductInfo(String(it.slug));
+      if (d) return NextResponse.json({ error: `The ${d.specialName} deal on one of your items has ended. Please remove it from your cart and try again.` }, { status: 409 });
+      continue;
+    }
     lines.push({
       id: p.id, slug: p.slug, name: p.name, brand: p.brand, sku: p.sku || undefined, price: p.price, type: p.type,
       qty: Math.max(1, Math.min(99, Math.floor(it.qty || 1))),
@@ -83,17 +90,21 @@ export async function POST(req: NextRequest) {
     delivery.address = { ...a, province, postalCode: a.postalCode.trim() };
   }
 
+  // Live special / sale deals (Buy 3 get 1 free, % off…) for these products.
+  const deals = await dealsForSlugs(lines.map((l) => l.slug)).catch(() => ({} as Awaited<ReturnType<typeof dealsForSlugs>>));
+
   // Re-validate any coupon server-side (never trust a client-sent discount).
+  // Coupons don't apply to products that have a live deal.
   let coupon: { code: string; discount: number } | undefined;
   if (body.couponCode) {
     const cr = await validateCoupon(body.couponCode, {
-      items: lines.map((l) => ({ slug: l.slug, price: l.price, qty: l.qty, type: l.type })),
+      items: lines.filter((l) => !deals[l.slug]).map((l) => ({ slug: l.slug, price: l.price, qty: l.qty, type: l.type })),
       email: customer.email,
     });
     if (cr.valid && cr.discount && cr.code) coupon = { code: cr.code, discount: cr.discount };
   }
 
-  const totals = computeTotals(lines, method, coupon);
+  const totals = computeTotals(lines, method, coupon, deals);
 
   // Order persistence is best-effort: if the database isn't available yet
   // (e.g. before Turso is connected on Vercel) we still let the customer pay —
@@ -123,7 +134,7 @@ export async function POST(req: NextRequest) {
     await setOrderAttribution(id, { ...attr, device: deviceFromUA(req.headers.get("user-agent") ?? ""), ...(staff ? { staff: true } : {}) }).catch((e) => console.error("[checkout] attribution not saved:", (e as Error).message));
     await addAudit({
       entity: "order", entityId: id, action: "created", actor: "Customer (website)",
-      summary: `Order placed online — ${lines.reduce((n, l) => n + l.qty, 0)} item(s), R${(totals.total / 100).toFixed(2)}, paying by ${totals.total === 0 ? "coupon (nothing to pay)" : paymentMethod}`,
+      summary: `Order placed online — ${lines.reduce((n, l) => n + l.qty, 0)} item(s), R${(totals.total / 100).toFixed(2)}, paying by ${totals.total === 0 ? (totals.couponCode ? "coupon (nothing to pay)" : "free deal (nothing to pay)") : paymentMethod}`,
     });
   } catch (e) {
     console.error("[checkout] saveOrder failed — proceeding to PayFast without a saved order:", (e as Error).message);
@@ -143,12 +154,13 @@ export async function POST(req: NextRequest) {
     (fwdHost && !/^(localhost|127\.|\[?::1\]?)/i.test(fwdHost) ? `${fwdProto}://${fwdHost}` : req.nextUrl.origin)
   ).replace(/\/+$/, "");
 
-  // --- Free order (e.g. a 100%-off coupon): no gateway, mark paid directly ---
+  // --- Free order (a 100%-off coupon or free deal): no gateway, mark paid directly ---
   if (totals.total === 0) {
     // Saved as a normal order, set to Processing, with the usual client + shop emails.
+    const freeBy = order.totals.couponCode ? `coupon ${order.totals.couponCode}` : order.totals.dealLines?.map((d) => d.label).join(", ") || "a deal";
     await completePaidOrder(id, {
-      paymentMethod: "coupon", actor: "Coupon",
-      note: `Nothing to pay — coupon ${order.totals.couponCode ?? ""} covered the full amount`.replace("  ", " "),
+      paymentMethod: order.totals.couponCode ? "coupon" : "deal", actor: order.totals.couponCode ? "Coupon" : "Deal",
+      note: `Nothing to pay — ${freeBy} covered the full amount`,
     });
     return NextResponse.json({ gateway: "free", reference, redirectUrl: `${origin}/checkout/return?ref=${encodeURIComponent(reference)}` });
   }

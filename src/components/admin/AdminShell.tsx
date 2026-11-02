@@ -52,7 +52,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="container-x py-6">
       <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
-        <aside className="lg:sticky lg:top-6 lg:h-fit">
+        <aside className="min-w-0 lg:sticky lg:top-6 lg:h-fit">
           <div className="mb-4 font-display text-lg">
             <span className="text-chrome">TTM</span> <span className="text-volt-grad">ADMIN</span>
           </div>

@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { getProductsFresh } from "@/lib/catalogue";
+import { allDealSlugs } from "@/lib/deal-products";
 import { SITE, merchantId, absUrl, googleCategory, merchantBrand, merchantDescription, feedProblem, zar } from "@/lib/merchant";
 
 // Google Merchant Center product feed (RSS 2.0 + Google's g: fields).
@@ -19,10 +20,11 @@ const CATEGORY_NAMES: Record<string, string> = {
 
 export async function GET() {
   await connection();
-  const products = await getProductsFresh();
+  const [products, dealSlugs] = await Promise.all([getProductsFresh(), allDealSlugs()]);
   const items: string[] = [];
   for (const p of products) {
     if (feedProblem(p)) continue;
+    if (dealSlugs.has(p.slug)) continue; // temporary special / sale deal products stay out of Google Shopping
     const onSale = p.onSale && p.regularPrice > p.price;
     const type = p.categories.map((c) => CATEGORY_NAMES[c]).find(Boolean) ?? (p.type === "wheel" ? "Mag Wheels" : "Tyres");
     items.push(`<item>${[

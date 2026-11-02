@@ -21,7 +21,9 @@ const NAV = [
 ];
 
 
-export function Header({ brands = [] }: { brands?: { name: string; logo: string | null }[] }) {
+export function Header({ brands = [], pages = [] }: { brands?: { name: string; logo: string | null }[]; pages?: { label: string; href: string }[] }) {
+  // Landing pages set to "main menu" in Admin → Pages go just before "Contact us".
+  const nav = pages.length ? [...NAV.slice(0, -1), ...pages, NAV[NAV.length - 1]] : NAV;
   const { totals, setDrawerOpen } = useCart();
   const { signedIn, wishlist } = useAccount();
   const wishCount = wishlist.length;
@@ -126,7 +128,7 @@ export function Header({ brands = [] }: { brands?: { name: string; logo: string 
                   </div>
                 </div>
 
-                {NAV.filter((n) => n.label !== "Home").map((n) => (
+                {nav.filter((n) => n.label !== "Home").map((n) => (
                   <Link
                     key={n.label}
                     href={n.href}
@@ -175,7 +177,7 @@ export function Header({ brands = [] }: { brands?: { name: string; logo: string 
               <button onClick={() => setMenuOpen(false)} aria-label="Close menu" className="text-muted"><Close /></button>
             </div>
             <div className="mt-5 flex flex-col">
-              {NAV.map((n) => (
+              {nav.map((n) => (
                 <Link key={n.label} href={n.href} onClick={() => setMenuOpen(false)} className="border-b border-line py-3 font-bold tracking-wide text-fg">
                   {n.label}
                 </Link>

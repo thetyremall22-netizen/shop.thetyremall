@@ -3,6 +3,7 @@ import { getProducts, categories } from "@/lib/catalogue";
 import { categoryPath, brandPath } from "@/lib/shop-url";
 import { filterBrands, getBrandDirectory } from "@/lib/brand-registry";
 import { BLOG_POSTS } from "@/data/blog";
+import { publishedLandingSlugs } from "@/lib/landing-pages";
 
 const BASE = "https://thetyremall.co.za";
 
@@ -74,5 +75,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .map((b) => ({ url: `${BASE}/brand/${b.slug}/`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.7 })));
   } catch { /* leave brands out rather than fail */ }
 
-  return [...staticEntries, ...categoryEntries, ...brandEntries, ...productEntries, ...blogEntries];
+  // Landing pages made in Admin → Pages.
+  let landingEntries: MetadataRoute.Sitemap = [];
+  try {
+    landingEntries = (await publishedLandingSlugs()).map((slug) => ({ url: `${BASE}/${slug}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.6 }));
+  } catch { /* leave them out rather than fail */ }
+
+  return [...staticEntries, ...categoryEntries, ...brandEntries, ...landingEntries, ...productEntries, ...blogEntries];
 }

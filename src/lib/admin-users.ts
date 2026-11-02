@@ -211,7 +211,8 @@ export type Perm =
   | "emails.view" | "emails.send"
   | "leads.view" | "leads.reply" | "leads.edit"
   | "content.view" | "content.edit"
-  | "settings.manage" | "users.manage" | "deals.manage";
+  | "settings.manage" | "users.manage" | "deals.manage"
+  | "pages.manage"; // landing pages (Admin → Pages): super admins only
 
 const ROLE_PERMS: Record<Role, Perm[] | "*"> = {
   super_admin: "*",

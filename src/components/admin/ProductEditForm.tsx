@@ -1,5 +1,6 @@
 "use client";
 
+import { CategoryPicker } from "./CategoryPicker";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog, ChangeList, UndoBar } from "./ConfirmDialog";
@@ -34,7 +35,7 @@ export function ProductEditForm({ slug, initial }: Props) {
   const [brand, setBrand] = useState(initial.brand);
   const [type, setType] = useState(initial.type === "accessory" ? "other" : initial.type || "tyre");
   const [sku, setSku] = useState(initial.sku);
-  const [categories, setCategories] = useState(initial.categories.join(", "));
+  const [categories, setCategories] = useState<string[]>(initial.categories);
   const [regular, setRegular] = useState(toR(initial.regularPrice));
   const [sale, setSale] = useState(toR(initial.salePrice));
   const [onSale, setOnSale] = useState(initial.onSale);
@@ -53,7 +54,7 @@ export function ProductEditForm({ slug, initial }: Props) {
 
   const buildBody = () => ({
       name, brand, type, sku,
-      categories: categories.split(/[|,]/).map((s) => s.trim()).filter(Boolean),
+      categories,
       regularPrice: Math.round(parseFloat(regular || "0") * 100),
       salePrice: Math.round(parseFloat(sale || "0") * 100),
       onSale,
@@ -91,7 +92,7 @@ export function ProductEditForm({ slug, initial }: Props) {
     }));
 
   function applyBody(b: Body) {
-    setName(b.name); setBrand(b.brand); setType(b.type); setSku(b.sku); setCategories(b.categories.join(", "));
+    setName(b.name); setBrand(b.brand); setType(b.type); setSku(b.sku); setCategories(b.categories);
     setRegular(toR(b.regularPrice)); setSale(toR(b.salePrice)); setOnSale(b.onSale); setStock(String(b.stockQty));
     setLow(String(b.lowStockThreshold)); setVisible(b.visible); setShortDesc(b.shortDescription); setDesc(b.description);
     setImage(b.image); setSpecs(b.specs);
@@ -129,8 +130,8 @@ export function ProductEditForm({ slug, initial }: Props) {
             </select>
           </Field>
           <Field label="SKU"><input value={sku} onChange={(e) => { setSku(e.target.value); touch(); }} className="num" /></Field>
-          <Field label="Categories (comma-separated)"><input value={categories} onChange={(e) => { setCategories(e.target.value); touch(); }} className="num" /></Field>
           <div className="flex items-end"><Toggle label="Visible in shop" checked={visible} onChange={(v) => { setVisible(v); touch(); }} /></div>
+          <div className="sm:col-span-2"><span className="mb-1.5 block text-xs font-semibold text-muted">Categories — a product can be in as many as you like</span><CategoryPicker value={categories} onChange={(v) => { setCategories(v); touch(); }} /></div>
         </div>
       </Section>
 

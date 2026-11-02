@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { CategoryPicker } from "./CategoryPicker";
 
 export function NewProductForm() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -22,7 +24,7 @@ export function NewProductForm() {
       salePrice: fd.get("salePrice") ? Math.round(parseFloat(String(fd.get("salePrice"))) * 100) : undefined,
       onSale: fd.get("onSale") === "on",
       stockQty: parseInt(String(fd.get("stockQty") || "0"), 10),
-      categories: String(fd.get("categories") ?? ""),
+      categories,
       shortDescription: String(fd.get("shortDescription") ?? ""),
     };
     const res = await fetch("/api/admin/products", {
@@ -53,7 +55,10 @@ export function NewProductForm() {
         <F label="Regular price (R)" name="regularPrice" type="number" step="0.01" required />
         <F label="Sale price (R, optional)" name="salePrice" type="number" step="0.01" />
         <F label="Stock quantity" name="stockQty" type="number" />
-        <F label="Categories (pipe-separated slugs)" name="categories" placeholder="suv-tyres|passenger-tyres" />
+      </div>
+      <div>
+        <span className="mb-1.5 block text-xs font-semibold text-muted">Categories — tick as many as you like</span>
+        <CategoryPicker value={categories} onChange={setCategories} />
       </div>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="onSale" /> On sale</label>
       <label className="block">

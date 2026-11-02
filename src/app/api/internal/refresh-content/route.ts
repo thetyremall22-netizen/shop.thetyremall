@@ -10,6 +10,7 @@ import { SETTINGS_TAG } from "@/lib/settings";
 import { BRANDS_TAG } from "@/lib/brand-registry";
 import { SPECIALS_TAG } from "@/lib/special-categories";
 import { PRODUCTS_TAG } from "@/lib/catalogue-cache";
+import { LANDING_TAG } from "@/lib/landing-pages";
 
 // Called once by the server itself right after it starts (see
 // lib/startup-refresh). A new build carries copies of the shop's content made
@@ -18,7 +19,7 @@ import { PRODUCTS_TAG } from "@/lib/catalogue-cache";
 // reviews, brands and prices could show the build's copy until someone saved
 // something in the admin. This marks them all out of date, so every page
 // rebuilds from the live database on its next visit.
-const TAGS = [CONTENT_TAG, HOME_TAG, PAGE_CONTENT_TAG, STRINGS_TAG, THEME_TAG, REVIEWS_TAG, SETTINGS_TAG, BRANDS_TAG, SPECIALS_TAG, PRODUCTS_TAG];
+const TAGS = [CONTENT_TAG, HOME_TAG, PAGE_CONTENT_TAG, STRINGS_TAG, THEME_TAG, REVIEWS_TAG, SETTINGS_TAG, BRANDS_TAG, SPECIALS_TAG, PRODUCTS_TAG, LANDING_TAG];
 
 export async function POST(req: NextRequest) {
   await connection();

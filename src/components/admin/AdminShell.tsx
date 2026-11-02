@@ -14,7 +14,7 @@ const BASE_NAV = [
   { href: "/admin/cart-recovery", label: "Abandoned Cart" },
 ];
 
-interface Me { name: string; email: string; role: string; isOwner: boolean; canManageUsers: boolean; canManageSettings: boolean; canManageDeals: boolean; canEditContent: boolean; supportNew?: number }
+interface Me { name: string; email: string; role: string; isOwner: boolean; canManageUsers: boolean; canManageSettings: boolean; canManageDeals: boolean; canEditContent: boolean; canManagePages?: boolean; supportNew?: number }
 const ROLE_LABEL: Record<string, string> = { super_admin: "Super Admin", manager: "Manager", editor: "Editor", viewer: "Viewer" };
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -30,6 +30,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const NAV = [
     ...BASE_NAV,
+    ...(me?.canManagePages ? [{ href: "/admin/pages", label: "Pages" }] : []),
     ...(me?.canEditContent ? [{ href: "/admin/content", label: "Content" }] : []),
     ...(me?.canEditContent ? [{ href: "/admin/media", label: "Media" }] : []),
     ...(me?.canEditContent ? [{ href: "/admin/reviews", label: "Reviews" }] : []),

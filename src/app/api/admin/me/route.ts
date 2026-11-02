@@ -15,6 +15,7 @@ export async function GET() {
     canManageSettings: can(u.role, "settings.manage"),
     canManageDeals: can(u.role, "deals.manage"),
     canEditContent: can(u.role, "content.edit"),
+    canManagePages: can(u.role, "pages.manage"),
     // New support requests waiting for staff (badge on the Support tab).
     supportNew: can(u.role, "orders.view") ? (await supportCounts()).open ?? 0 : 0,
   });

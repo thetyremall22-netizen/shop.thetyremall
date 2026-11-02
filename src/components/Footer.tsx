@@ -7,6 +7,7 @@ import { NAV_PRIMARY } from "@/lib/nav";
 import { getSettings, currentYear } from "@/lib/settings";
 import { LinkedText } from "./LinkedText";
 import { SocialLinks } from "./SocialLinks";
+import { landingMenu } from "@/lib/landing-pages";
 
 export async function Footer() {
   const s = await getSettings();
@@ -82,6 +83,10 @@ export async function Footer() {
             <li><Link href="/about#team" className="hover:text-volt">Meet the team</Link></li>
             <li><Link href="/blog" className="hover:text-volt">Blog</Link></li>
             <li><Link href="/terms" className="hover:text-volt">Terms &amp; Conditions</Link></li>
+            {/* landing pages set to "footer" in Admin → Pages */}
+            {(await landingMenu()).footer.map((l) => (
+              <li key={l.href}><Link href={l.href} className="hover:text-volt">{l.label}</Link></li>
+            ))}
           </ul>
         </div>
 

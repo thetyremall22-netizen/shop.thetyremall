@@ -118,6 +118,27 @@ export function classifyOrigin(a: Attribution | null | undefined, ownHost = "the
   return a?.staff ? { ...o, label: `${o.label} — placed by staff (logged in to the admin)` } : o;
 }
 
+/** Groups for Admin → Traffic sources. */
+export const BUCKETS = ["google-ads", "google-free", "google-search", "bing-ads", "bing-search", "ai", "other-ads", "other-search", "social", "email", "referral", "campaign", "direct"] as const;
+export type Bucket = (typeof BUCKETS)[number];
+export const BUCKET_LABEL: Record<Bucket, string> = {
+  "google-ads": "Google Ads", "google-free": "Google free listings", "google-search": "Google search",
+  "bing-ads": "Microsoft (Bing) Ads", "bing-search": "Bing search", ai: "AI assistants",
+  "other-ads": "Other ads", "other-search": "Other search engines", social: "Social media", email: "Email",
+  referral: "Other websites", campaign: "Other tagged links", direct: "Direct / unknown",
+};
+
+export function originBucket(o: Origin): Bucket {
+  if (o.type === "Paid ads") return o.source === "Google Ads" || /google/i.test(o.source) ? "google-ads" : o.source === "Microsoft Ads" || /bing|microsoft/i.test(o.source) ? "bing-ads" : "other-ads";
+  if (o.type === "Organic search") return o.source === "Google" ? (/free product listing/.test(o.label) ? "google-free" : "google-search") : o.source === "Bing" ? "bing-search" : "other-search";
+  if (o.type === "AI assistant") return "ai";
+  if (o.type === "Social") return "social";
+  if (o.type === "Email") return "email";
+  if (o.type === "Referral") return "referral";
+  if (o.type === "Campaign") return "campaign";
+  return "direct";
+}
+
 /** A visit from a paid ad click (Google / Microsoft / TikTok ads, or a paid utm tag). */
 export function isPaidTouch(t: Touch): boolean {
   return !!(t.clickIds.gclid || t.clickIds.gbraid || t.clickIds.wbraid || t.clickIds.msclkid || t.clickIds.ttclid || PAID_MEDIUM.test(t.utm.medium?.trim() || ""));

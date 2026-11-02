@@ -12,6 +12,7 @@ const BASE_NAV = [
   { href: "/admin/emails", label: "Emails" },
   { href: "/admin/leads", label: "Leads & Enquiries" },
   { href: "/admin/cart-recovery", label: "Abandoned Cart" },
+  { href: "/admin/traffic", label: "Traffic sources" },
 ];
 
 interface Me { name: string; email: string; role: string; isOwner: boolean; canManageUsers: boolean; canManageSettings: boolean; canManageDeals: boolean; canEditContent: boolean; canManagePages?: boolean; supportNew?: number }

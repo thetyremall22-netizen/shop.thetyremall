@@ -119,6 +119,13 @@ function blockedResponse(api: boolean): NextResponse {
 const LEGACY_WP = /^\/(wp-json|wp-admin|wp-includes|wp-content|wp-login|wp-cron|wp-config|wordpress|xmlrpc)/i;
 
 export async function proxy(req: NextRequest) {
+  // One address for the shop: www.thetyremall.co.za → thetyremall.co.za, keeping
+  // the path and every tag (gclid, utm_…). Browsers keep visit history, carts and
+  // sign-ins per address, so a split loses where a sale came from.
+  const host = (req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "").split(",")[0].trim().split(":")[0].toLowerCase();
+  if (host === "www.thetyremall.co.za") {
+    return NextResponse.redirect(`https://thetyremall.co.za${req.nextUrl.pathname}${req.nextUrl.search}`, 308);
+  }
   // The contact page lives at the old site's address, /contact-us/ (Google Ads
   // link there); the short /contact forwards to it permanently.
   if (/^\/contact\/?$/.test(req.nextUrl.pathname)) {

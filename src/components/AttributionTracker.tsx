@@ -38,10 +38,23 @@ function currentTouch(): Touch {
 }
 const isDirect = (t: Touch) => !t.referrer && !Object.keys(t.utm).length && !Object.keys(t.clickIds).length;
 
+/** Count the start of a visit in Admin → Traffic sources (fire and forget). */
+function reportVisit(touch: Touch, first: boolean) {
+  try {
+    const body = JSON.stringify({ touch, first });
+    if (!navigator.sendBeacon?.("/api/track/visit", new Blob([body], { type: "application/json" }))) {
+      void fetch("/api/track/visit", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+    }
+  } catch { /* never break the page */ }
+}
+
 // The referrer and ad tags only describe the page the visitor ARRIVED on; later
 // in-site page changes keep the same document.referrer, so they must not count
 // as a fresh arrival.
 let arrived = false;
+// Without browser storage (some private modes) every page looks like a first
+// visit; count it once per page load.
+let countedFirst = false;
 
 /** Call on every page view. */
 function track() {
@@ -55,9 +68,11 @@ function track() {
   const newSource = !isDirect(t); // an ad / search / link click always starts a new credited visit
   if (!s) {
     write({ touch: t, first: t, ...(ad ? { ad } : {}), sessionPages: 1, visits: 1, last: now });
+    if (!countedFirst) { countedFirst = true; reportVisit(t, true); }
     return;
   }
   if (newSource || newVisit) {
+    reportVisit(t, false);
     // A plain (direct) return visit keeps the earlier non-direct source, like WooCommerce.
     const keepOld = !newSource && !isDirect(s.touch) && now - s.touch.at < KEEP_MS;
     write({ ...s, ...(ad ? { ad } : {}), touch: keepOld ? s.touch : t, sessionPages: 1, visits: s.visits + (newVisit ? 1 : 0), last: now });

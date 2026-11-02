@@ -87,10 +87,10 @@ export function LandingPageEditor({ initial }: { initial: Page }) {
       <div className="card space-y-4 p-5">
         <h2 className="font-display text-xl">Page details</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Page title"><input value={p.title} onChange={(e) => set("title", e.target.value)} className="num w-full" /></Field>
-          <Field label="Address — thetyremall.co.za/…"><input value={p.slug} onChange={(e) => set("slug", slugify(e.target.value))} className="num w-full" /></Field>
+          <Field label="Page title"><input value={p.title} onChange={(e) => set("title", e.target.value)} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" /></Field>
+          <Field label="Address — thetyremall.co.za/…"><input value={p.slug} onChange={(e) => set("slug", slugify(e.target.value))} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" /></Field>
         </div>
-        <Field label="Subtitle"><textarea value={p.subtitle} onChange={(e) => set("subtitle", e.target.value)} rows={2} className="num w-full py-2" /></Field>
+        <Field label="Subtitle"><textarea value={p.subtitle} onChange={(e) => set("subtitle", e.target.value)} rows={2} className="w-full py-2 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" /></Field>
         <ImagePicker label="Banner image (optional — shown faintly behind the title)" value={p.heroImage} onChange={(v) => set("heroImage", v)} />
         <div className="flex flex-wrap items-center gap-6 border-t border-line pt-4">
           <Toggle label={p.published ? "Published — visible on the website" : "Draft — hidden from visitors"} checked={p.published} onChange={(v) => set("published", v)} />
@@ -108,8 +108,8 @@ export function LandingPageEditor({ initial }: { initial: Page }) {
         </div>
         {p.menu !== "none" && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Menu link text (blank = page title)"><input value={p.menuLabel} onChange={(e) => set("menuLabel", e.target.value)} maxLength={40} className="num w-full" /></Field>
-            <Field label="Order (lower numbers first)"><input type="number" value={p.menuOrder} onChange={(e) => set("menuOrder", Number(e.target.value) || 0)} className="num w-full" /></Field>
+            <Field label="Menu link text (blank = page title)"><input value={p.menuLabel} onChange={(e) => set("menuLabel", e.target.value)} maxLength={40} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" /></Field>
+            <Field label="Order (lower numbers first)"><input type="number" value={p.menuOrder} onChange={(e) => set("menuOrder", Number(e.target.value) || 0)} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" /></Field>
           </div>
         )}
         {p.menu === "main" && <p className="text-xs text-muted">Main menu links appear just before “Contact us”. Keep it to one or two so the menu doesn&apos;t get crowded.</p>}
@@ -131,33 +131,33 @@ export function LandingPageEditor({ initial }: { initial: Page }) {
               </div>
             </div>
             <div className="mt-3 space-y-3">
-              <Field label={s.type === "products" ? "Heading (blank = category name)" : "Heading (optional)"}><input value={s.heading ?? ""} onChange={(e) => setSection(s.id, { heading: e.target.value })} className="num w-full" /></Field>
+              <Field label={s.type === "products" ? "Heading (blank = category name)" : "Heading (optional)"}><input value={s.heading ?? ""} onChange={(e) => setSection(s.id, { heading: e.target.value })} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" /></Field>
 
               {s.type === "text" && (
                 <Field label="Text — leave a blank line between paragraphs. To add a link: [words to click](https://address)">
-                  <textarea value={s.body ?? ""} onChange={(e) => setSection(s.id, { body: e.target.value })} rows={7} className="num w-full py-2" />
+                  <textarea value={s.body ?? ""} onChange={(e) => setSection(s.id, { body: e.target.value })} rows={7} className="w-full py-2 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" />
                 </Field>
               )}
 
               {s.type === "image" && (<>
                 <ImagePicker label="Image" value={s.image ?? ""} onChange={(v) => setSection(s.id, { image: v })} previewClass="h-24 w-40" />
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Describe the image (for Google & screen readers)"><input value={s.alt ?? ""} onChange={(e) => setSection(s.id, { alt: e.target.value })} className="num w-full" /></Field>
-                  <Field label="Link when clicked (optional)"><input value={s.link ?? ""} onChange={(e) => setSection(s.id, { link: e.target.value })} placeholder="/product-category/… or https://…" className="num w-full" /></Field>
+                  <Field label="Describe the image (for Google & screen readers)"><input value={s.alt ?? ""} onChange={(e) => setSection(s.id, { alt: e.target.value })} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" /></Field>
+                  <Field label="Link when clicked (optional)"><input value={s.link ?? ""} onChange={(e) => setSection(s.id, { link: e.target.value })} placeholder="/product-category/… or https://…" className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" /></Field>
                 </div>
-                <Field label="Caption (optional)"><input value={s.caption ?? ""} onChange={(e) => setSection(s.id, { caption: e.target.value })} className="num w-full" /></Field>
+                <Field label="Caption (optional)"><input value={s.caption ?? ""} onChange={(e) => setSection(s.id, { caption: e.target.value })} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" /></Field>
               </>)}
 
               {s.type === "video" && (<>
-                <Field label="Video link — YouTube or Vimeo (or a link to an .mp4 file)"><input value={s.video ?? ""} onChange={(e) => setSection(s.id, { video: e.target.value })} placeholder="https://www.youtube.com/watch?v=…" className="num w-full" /></Field>
+                <Field label="Video link — YouTube or Vimeo (or a link to an .mp4 file)"><input value={s.video ?? ""} onChange={(e) => setSection(s.id, { video: e.target.value })} placeholder="https://www.youtube.com/watch?v=…" className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" /></Field>
                 {s.video && !isVideo(s.video) && <p className="text-xs text-sale">That doesn&apos;t look like a YouTube, Vimeo or .mp4 link — it won&apos;t show on the page.</p>}
-                <Field label="Caption (optional)"><input value={s.caption ?? ""} onChange={(e) => setSection(s.id, { caption: e.target.value })} className="num w-full" /></Field>
+                <Field label="Caption (optional)"><input value={s.caption ?? ""} onChange={(e) => setSection(s.id, { caption: e.target.value })} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" /></Field>
               </>)}
 
               {s.type === "products" && (<>
                 <div className="grid gap-3 sm:grid-cols-[1fr_160px]">
                   <Field label="Category to show (e.g. your special)">
-                    <select value={s.category ?? ""} onChange={(e) => setSection(s.id, { category: e.target.value })} className="num w-full">
+                    <select value={s.category ?? ""} onChange={(e) => setSection(s.id, { category: e.target.value })} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full">
                       <option value="">— choose a category —</option>
                       {groups.map((g) => (
                         <optgroup key={g} label={g}>
@@ -167,7 +167,7 @@ export function LandingPageEditor({ initial }: { initial: Page }) {
                     </select>
                   </Field>
                   <Field label="How many products">
-                    <select value={s.limit ?? 12} onChange={(e) => setSection(s.id, { limit: Number(e.target.value) })} className="num w-full">
+                    <select value={s.limit ?? 12} onChange={(e) => setSection(s.id, { limit: Number(e.target.value) })} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full">
                       {[4, 8, 12, 16, 24, 32, 48].map((n) => <option key={n} value={n}>{n}</option>)}
                     </select>
                   </Field>
@@ -179,7 +179,7 @@ export function LandingPageEditor({ initial }: { initial: Page }) {
                     (opens in a new tab — you can add single products or every product from an existing category in one go). You can also tick it on a product&apos;s edit page.
                   </p>
                 )}
-                <Field label="Short text above the products (optional)"><input value={s.body ?? ""} onChange={(e) => setSection(s.id, { body: e.target.value })} className="num w-full" /></Field>
+                <Field label="Short text above the products (optional)"><input value={s.body ?? ""} onChange={(e) => setSection(s.id, { body: e.target.value })} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" /></Field>
                 <p className="text-xs text-muted">
                   Products are added to special and sale categories in <Link href="/admin/products/specials" className="font-semibold text-volt hover:underline">Products → Special categories</Link>, or
                   on each product&apos;s edit page. A special that has ended or not started yet shows a short &ldquo;not running right now&rdquo; note instead.
@@ -198,8 +198,8 @@ export function LandingPageEditor({ initial }: { initial: Page }) {
       {/* SEO */}
       <div className="card space-y-4 p-5">
         <h2 className="font-display text-xl">Google (optional)</h2>
-        <Field label="Title in Google (blank = page title)"><input value={p.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} maxLength={120} className="num w-full" /></Field>
-        <Field label="Description in Google (blank = subtitle)"><textarea value={p.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} maxLength={300} rows={2} className="num w-full py-2" /></Field>
+        <Field label="Title in Google (blank = page title)"><input value={p.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} maxLength={120} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" /></Field>
+        <Field label="Description in Google (blank = subtitle)"><textarea value={p.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} maxLength={300} rows={2} className="w-full py-2 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt" /></Field>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">

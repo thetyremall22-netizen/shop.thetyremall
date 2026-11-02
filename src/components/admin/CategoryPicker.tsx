@@ -31,8 +31,8 @@ export function NewCategoryInline({ onCreated }: { onCreated: (c: { slug: string
     <div className="rounded-lg border border-volt/40 bg-volt/5 p-2.5">
       <div className="flex flex-wrap gap-2">
         <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void create(); } }}
-          placeholder="Name, e.g. Black Friday Sale" className="num min-w-[200px] flex-1" autoFocus />
-        <select value={kind} onChange={(e) => setKind(e.target.value as "special" | "sale")} className="num w-auto">
+          placeholder="Name, e.g. Black Friday Sale" className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt min-w-[200px] flex-1" autoFocus />
+        <select value={kind} onChange={(e) => setKind(e.target.value as "special" | "sale")} className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-auto">
           <option value="special">★ Special category</option>
           <option value="sale">% Sale category</option>
         </select>
@@ -74,7 +74,7 @@ export function CategoryPicker({ value, onChange }: { value: string[]; onChange:
       </div>
       {open && (
         <div className="mt-2 rounded-lg border border-line bg-surface p-3">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search categories…" className="num mb-2 w-full" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search categories…" className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt mb-2 w-full" />
           <div className="mb-3"><NewCategoryInline onCreated={(c) => { void load(); if (!value.includes(c.slug)) onChange([...value, c.slug]); }} /></div>
           {cats === null ? <p className="text-sm text-muted">Loading…</p> : (
             <div className="max-h-72 space-y-3 overflow-y-auto pr-1">

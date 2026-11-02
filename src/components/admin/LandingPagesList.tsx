@@ -33,10 +33,10 @@ export function LandingPagesList({ initial }: { initial: Row[] }) {
         <h2 className="font-display text-xl">New landing page</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <label className="block"><span className="mb-1.5 block text-xs font-semibold text-muted">Page title</span>
-            <input required value={title} onChange={(e) => { setTitle(e.target.value); if (!slugEdited) setSlug(slugify(e.target.value)); }} placeholder="e.g. Black Friday Tyre Specials" className="num w-full" />
+            <input required value={title} onChange={(e) => { setTitle(e.target.value); if (!slugEdited) setSlug(slugify(e.target.value)); }} placeholder="e.g. Black Friday Tyre Specials" className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" />
           </label>
           <label className="block"><span className="mb-1.5 block text-xs font-semibold text-muted">Address — thetyremall.co.za/…</span>
-            <input value={slug} onChange={(e) => { setSlug(slugify(e.target.value)); setSlugEdited(true); }} placeholder="black-friday-tyre-specials" className="num w-full" />
+            <input value={slug} onChange={(e) => { setSlug(slugify(e.target.value)); setSlugEdited(true); }} placeholder="black-friday-tyre-specials" className="h-10 rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt w-full" />
           </label>
           <button disabled={busy || !title.trim()} className="btn btn-volt h-11 px-5">{busy ? "Creating…" : "Create page"}</button>
         </div>

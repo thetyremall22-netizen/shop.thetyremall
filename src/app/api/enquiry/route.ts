@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin-auth";
 import { logEnquiry, type EnquiryType } from "@/lib/enquiries";
 import { sendEnquiryEmail } from "@/lib/email";
+import { attributionFromBody } from "@/lib/attribution";
 
 const TYPES = new Set<EnquiryType>(["whatsapp", "tyrone", "call"]);
 
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest) {
     storeId: str(body.storeId),
     storeName: str(body.storeName),
     test: await isAdmin(), // staff testing, not a real customer
+    attribution: attributionFromBody(body.attribution, req.headers.get("user-agent") ?? ""),
   });
 
   // Email the shop immediately for product enquiries (calls go into the weekly

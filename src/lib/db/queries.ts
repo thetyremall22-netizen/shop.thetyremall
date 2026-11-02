@@ -145,8 +145,10 @@ export type AdminFilter = "all" | "instock" | "low" | "out" | "sale";
  *  bulk edits so both always act on exactly the same products. Search covers
  *  name, SKU, brand, category, size/specs and slug — and "265/65R17"-style
  *  sizes typed with or without the slash / R. */
-function productWhere(opts: { q?: string; filter?: AdminFilter; type?: string }) {
+function productWhere(opts: { q?: string; filter?: AdminFilter; type?: string; category?: string }) {
   const conds = [];
+  // In this category (categories is a JSON list of slugs).
+  if (opts.category) conds.push(like(schema.products.categories, `%"${opts.category.replace(/[%_"]/g, "")}"%`));
   if (opts.q?.trim()) {
     const t = `%${opts.q.trim()}%`;
     const compact = `%${opts.q.replace(/[\s/r-]/gi, "")}%`;
@@ -166,7 +168,7 @@ function productWhere(opts: { q?: string; filter?: AdminFilter; type?: string })
 }
 
 /** Slugs of every product matching the admin filter (for "add all matching"). */
-export async function matchingProductSlugs(opts: { q?: string; filter?: AdminFilter; type?: string }): Promise<string[]> {
+export async function matchingProductSlugs(opts: { q?: string; filter?: AdminFilter; type?: string; category?: string }): Promise<string[]> {
   await ensureProducts();
   const rows = await db.select({ slug: schema.products.slug }).from(schema.products).where(productWhere(opts));
   return rows.map((r) => r.slug);
@@ -174,7 +176,7 @@ export async function matchingProductSlugs(opts: { q?: string; filter?: AdminFil
 
 export type ProductSort = "name" | "name_desc" | "stock_desc" | "stock_asc" | "price_desc" | "price_asc";
 
-export async function listProducts(opts: { q?: string; page?: number; perPage?: number; filter?: AdminFilter; type?: string; sort?: ProductSort }) {
+export async function listProducts(opts: { q?: string; page?: number; perPage?: number; filter?: AdminFilter; type?: string; category?: string; sort?: ProductSort }) {
   await ensureProducts();
   const page = Math.max(1, opts.page ?? 1);
   const perPage = opts.perPage ?? 30;
@@ -198,6 +200,7 @@ export async function listProducts(opts: { q?: string; page?: number; perPage?: 
     let rows = snapRows();
     if (opts.type === "other") rows = rows.filter((r) => r.type !== "tyre" && r.type !== "wheel");
     else if (opts.type) rows = rows.filter((r) => r.type === opts.type);
+    if (opts.category) rows = rows.filter((r) => String(r.categories).includes(`"${opts.category}"`));
     if (q) rows = rows.filter((r) => `${r.name} ${r.sku} ${r.brand} ${r.categories} ${r.specs} ${r.slug}`.toLowerCase().includes(q));
     if (opts.filter === "instock") rows = rows.filter((r) => r.stockQty > 0);
     if (opts.filter === "low") rows = rows.filter((r) => r.stockQty > 0 && r.stockQty <= r.lowStockThreshold);

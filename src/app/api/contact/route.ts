@@ -3,11 +3,14 @@ import { isAdmin } from "@/lib/admin-auth";
 import { saveLead } from "@/lib/contacts";
 import { sendLeadEmail } from "@/lib/email";
 import { validateContact } from "@/lib/validate";
+import { attributionFromBody } from "@/lib/attribution";
 
 export async function POST(req: NextRequest) {
   let b: Record<string, string>;
+  let raw: Record<string, unknown>;
   try {
-    b = (await req.json()) as Record<string, string>;
+    raw = (await req.json()) as Record<string, unknown>;
+    b = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, typeof v === "string" ? v : ""]));
   } catch {
     return NextResponse.json({ error: "bad request" }, { status: 400 });
   }
@@ -24,7 +27,8 @@ export async function POST(req: NextRequest) {
 
   // Record in Admin → Leads (Contact form tab). Never blocks the notification.
   const test = await isAdmin(); // staff testing the form
-  const leadId = await saveLead({ email, phone, name, source: "contact", message: fullMessage, test });
+  const attribution = attributionFromBody(raw.attribution, req.headers.get("user-agent") ?? "");
+  const leadId = await saveLead({ email, phone, name, source: "contact", message: fullMessage, test, attribution });
 
   try {
     await sendLeadEmail({ source: "contact", name, email, phone, message: fullMessage, leadId });

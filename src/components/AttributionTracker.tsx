@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { CLICK_KEYS, UTM_KEYS, hostOf, type Attribution, type Touch } from "@/lib/attribution";
+import { CLICK_KEYS, UTM_KEYS, hostOf, isPaidTouch, type Attribution, type Touch } from "@/lib/attribution";
 import { trackTyrone, tyroneSid } from "@/lib/tyrone-track";
 
 // Remembers where this visitor came from (Google Ads, search, AI, social…) so
@@ -49,27 +49,30 @@ function track() {
   const t = arrived ? { ...currentTouch(), referrer: "", utm: {}, clickIds: {} } : currentTouch();
   arrived = true;
   const s = read();
+  // Remember the latest ad click, so a later visit via search still shows the ad brought them.
+  const ad = isPaidTouch(t) ? t : s?.ad;
   const newVisit = !s || now - s.last > SESSION_MS;
   const newSource = !isDirect(t); // an ad / search / link click always starts a new credited visit
   if (!s) {
-    write({ touch: t, first: t, sessionPages: 1, visits: 1, last: now });
+    write({ touch: t, first: t, ...(ad ? { ad } : {}), sessionPages: 1, visits: 1, last: now });
     return;
   }
   if (newSource || newVisit) {
     // A plain (direct) return visit keeps the earlier non-direct source, like WooCommerce.
     const keepOld = !newSource && !isDirect(s.touch) && now - s.touch.at < KEEP_MS;
-    write({ ...s, touch: keepOld ? s.touch : t, sessionPages: 1, visits: s.visits + (newVisit ? 1 : 0), last: now });
+    write({ ...s, ...(ad ? { ad } : {}), touch: keepOld ? s.touch : t, sessionPages: 1, visits: s.visits + (newVisit ? 1 : 0), last: now });
     return;
   }
   write({ ...s, sessionPages: s.sessionPages + 1, last: now });
 }
 
-/** What checkout sends with the order. */
+/** What checkout (and every enquiry form) sends with the order / lead. */
 export function attributionForOrder(): Attribution | null {
   const s = read();
   if (!s) return null;
   const tyrone = tyroneSid();
-  return { touch: s.touch, first: s.first, sessionPages: s.sessionPages, visits: s.visits, ...(tyrone ? { tyrone } : {}) };
+  const ad = s.ad && Date.now() - s.ad.at < KEEP_MS ? s.ad : undefined;
+  return { touch: s.touch, first: s.first, ...(ad ? { ad } : {}), sessionPages: s.sessionPages, visits: s.visits, ...(tyrone ? { tyrone } : {}) };
 }
 
 export function AttributionTracker() {

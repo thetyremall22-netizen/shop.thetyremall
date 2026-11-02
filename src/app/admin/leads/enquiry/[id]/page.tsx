@@ -8,6 +8,8 @@ import { getEnquiry } from "@/lib/enquiries";
 import { extractContact } from "@/lib/contacts";
 import { formatPrice } from "@/lib/format";
 import { Close } from "@/components/icons";
+import { OrderAttribution } from "@/components/admin/OrderAttribution";
+import { parseAttribution } from "@/lib/attribution";
 
 export const instant = false;
 
@@ -46,6 +48,7 @@ export default async function EnquiryDetail({ params }: { params: Promise<{ id: 
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[320px_1fr]">
+        <div className="space-y-5">
         <div className="card p-5">
           <h2 className="font-display text-lg">Details</h2>
           <dl className="mt-3 space-y-1.5 text-sm">
@@ -67,6 +70,8 @@ export default async function EnquiryDetail({ params }: { params: Promise<{ id: 
               <p className="mt-1 whitespace-pre-wrap text-sm text-fg">{message}</p>
             </>
           )}
+        </div>
+        <OrderAttribution kind="lead" a={parseAttribution(e.attribution)} placedAt={new Date(Number(e.created_at) || 0).toISOString()} />
         </div>
 
         <div className="card p-5">

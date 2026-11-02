@@ -10,6 +10,8 @@ import { can } from "@/lib/admin-users";
 import { LeadEditor } from "@/components/admin/LeadEditor";
 import { AuditHistory } from "@/components/admin/AuditHistory";
 import { Close } from "@/components/icons";
+import { OrderAttribution } from "@/components/admin/OrderAttribution";
+import { parseAttribution } from "@/lib/attribution";
 
 export const instant = false;
 
@@ -57,6 +59,7 @@ export default async function ContactLeadDetail({ params }: { params: Promise<{ 
               product_url: str(l.product_url), message: str(l.message), notes: str(l.notes),
             }}
           />
+          <OrderAttribution kind="lead" a={parseAttribution(l.attribution)} placedAt={new Date(Number(l.created_at) || 0).toISOString()} />
           <AuditHistory
             entries={history}
             empty={`Received ${when(l.created_at)} via ${SOURCE_LABEL[str(l.source)] ?? str(l.source)}. No edits yet.`}

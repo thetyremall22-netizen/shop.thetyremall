@@ -14,5 +14,13 @@ const COLOR: Record<Origin["type"], string> = {
 /** Small coloured "where the sale came from" label. */
 export function OriginBadge({ origin }: { origin: Origin }) {
   const text = origin.type === "Paid ads" || origin.type === "Direct" ? origin.source : `${origin.type === "Organic search" ? "Search" : origin.type === "AI assistant" ? "AI" : origin.type}: ${origin.source}`;
-  return <span title={origin.label} className={`inline-block max-w-[180px] truncate rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ${COLOR[origin.type]}`}>{text}</span>;
+  const badge = <span title={origin.label} className={`inline-block max-w-[180px] truncate rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ${COLOR[origin.type]}`}>{text}</span>;
+  if (!origin.assist) return badge;
+  // Came back via search/direct after clicking an ad: show the ad too.
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      {badge}
+      <span title={origin.label} className={`inline-block max-w-[180px] truncate rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ${COLOR["Paid ads"]}`}>+ {origin.assist} earlier</span>
+    </span>
+  );
 }

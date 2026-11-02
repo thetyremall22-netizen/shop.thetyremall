@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { NewCategoryInline } from "./CategoryPicker";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePicker } from "./ImagePicker";
@@ -28,7 +29,8 @@ export function LandingPageEditor({ initial }: { initial: Page }) {
   const [cats, setCats] = useState<Cat[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  useEffect(() => { fetch("/api/admin/categories").then((r) => r.json()).then((d) => setCats(d.categories ?? [])).catch(() => {}); }, []);
+  const loadCats = () => fetch("/api/admin/categories").then((r) => r.json()).then((d) => setCats(d.categories ?? [])).catch(() => {});
+  useEffect(() => { void loadCats(); }, []);
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); };
@@ -170,6 +172,13 @@ export function LandingPageEditor({ initial }: { initial: Page }) {
                     </select>
                   </Field>
                 </div>
+                <NewCategoryInline onCreated={(c) => { void loadCats().then(() => setSection(s.id, { category: c.slug })); }} />
+                {s.category && cats.find((c) => c.slug === s.category && c.group !== "Main categories" && c.group !== "Other categories") && (
+                  <p className="text-xs text-muted">
+                    <Link href={`/admin/products/specials?${cats.find((c) => c.slug === s.category)?.group === "Sale categories" ? "kind=sale&" : ""}open=${s.category}`} target="_blank" className="font-semibold text-volt hover:underline">Add products to “{cats.find((c) => c.slug === s.category)?.name}” →</Link>{" "}
+                    (opens in a new tab — you can add single products or every product from an existing category in one go). You can also tick it on a product&apos;s edit page.
+                  </p>
+                )}
                 <Field label="Short text above the products (optional)"><input value={s.body ?? ""} onChange={(e) => setSection(s.id, { body: e.target.value })} className="num w-full" /></Field>
                 <p className="text-xs text-muted">
                   Products are added to special and sale categories in <Link href="/admin/products/specials" className="font-semibold text-volt hover:underline">Products → Special categories</Link>, or

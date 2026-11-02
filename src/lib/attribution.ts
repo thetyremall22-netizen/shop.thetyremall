@@ -16,6 +16,9 @@ export interface Attribution {
   touch: Touch;
   /** The very first visit we know of from this browser. */
   first?: Touch;
+  /** The latest paid ad click in the last 90 days, when the sale itself is
+   *  credited to a later visit (e.g. clicked a Google Ad, came back via search). */
+  ad?: Touch;
   sessionPages: number;  // pages viewed in the buying session
   visits: number;        // number of visits from this browser
   device?: string;       // Mobile / Tablet / Desktop (set by the server)
@@ -53,7 +56,12 @@ export function hostOf(url: string): string {
 const match = (host: string, list: [RegExp, string][]) => list.find(([re]) => re.test(host))?.[1];
 
 export type OriginType = "Paid ads" | "Organic search" | "AI assistant" | "Social" | "Email" | "Referral" | "Campaign" | "Direct";
-export interface Origin { type: OriginType; source: string; label: string; medium?: string }
+export interface Origin {
+  type: OriginType; source: string; label: string; medium?: string;
+  /** An ad that brought them earlier, when the credited visit wasn't the ad
+   *  ("Google Ads"). Google Ads counts these as its conversions too. */
+  assist?: string;
+}
 
 const PAID_MEDIUM = /^(cpc|ppc|paid|paidsearch|paid_search|paid-social|paidsocial|cpm|display|ads?)$/i;
 
@@ -82,6 +90,8 @@ function classifyTouch(a: Attribution | null | undefined, ownHost: string): Orig
   }
   if (t.clickIds.fbclid) return { type: "Social", source: "Facebook", label: "Social: Facebook / Instagram" };
   if (t.clickIds.ttclid) return { type: "Paid ads", source: "TikTok Ads", label: "TikTok Ads" };
+  // Unpaid Google results for shop products (Merchant Center adds srsltid).
+  if (t.clickIds.srsltid && (!host || refSearch === "Google")) return { type: "Organic search", source: "Google", label: "Organic search: Google (free product listing — not an ad)" };
   if (!internal) {
     const ai = match(host, AI);
     if (ai) return { type: "AI assistant", source: ai, label: `AI assistant: ${ai}` };
@@ -91,16 +101,38 @@ function classifyTouch(a: Attribution | null | undefined, ownHost: string): Orig
     if (/mail\.|outlook\.|webmail/.test(host)) return { type: "Email", source: host, label: `Email (${host})` };
     return { type: "Referral", source: host, label: `Referral: ${host}` };
   }
-  // Google Shopping / free listings add srsltid without a referrer.
-  if (t.clickIds.srsltid) return { type: "Organic search", source: "Google", label: "Organic search: Google (Shopping / free listing)" };
   return { type: "Direct", source: "Direct", label: "Direct (typed in, bookmark or app)" };
 }
 
 /** "Google Ads", "Organic search: Google", "AI assistant: ChatGPT", "Referral: example.co.za", "Direct"…
  *  Orders placed by logged-in staff keep their real source, with a note. */
 export function classifyOrigin(a: Attribution | null | undefined, ownHost = "thetyremall.co.za"): Origin {
-  const o = classifyTouch(a, ownHost);
+  let o = classifyTouch(a, ownHost);
+  // Credited to search/direct, but an ad click brought them here earlier (older
+  // orders only know the first visit).
+  const adTouch = a && o.type !== "Paid ads" ? [a.ad, a.first].find((t) => t && t.at !== a.touch.at && isPaidTouch(t)) : undefined;
+  if (a && adTouch) {
+    const ad = classifyTouch({ ...a, touch: adTouch }, ownHost);
+    o = { ...o, assist: ad.source, label: `${o.label} — first came from a ${ad.source} click${adTouch.at ? ` (${new Date(adTouch.at).toLocaleDateString("en-ZA", { day: "numeric", month: "short" })})` : ""}` };
+  }
   return a?.staff ? { ...o, label: `${o.label} — placed by staff (logged in to the admin)` } : o;
+}
+
+/** A visit from a paid ad click (Google / Microsoft / TikTok ads, or a paid utm tag). */
+export function isPaidTouch(t: Touch): boolean {
+  return !!(t.clickIds.gclid || t.clickIds.gbraid || t.clickIds.wbraid || t.clickIds.msclkid || t.clickIds.ttclid || PAID_MEDIUM.test(t.utm.medium?.trim() || ""));
+}
+
+/** A lead/enquiry's attribution from what the browser sent (null if none). */
+export function attributionFromBody(raw: unknown, userAgent: string): Attribution | null {
+  const a = sanitizeAttribution(raw);
+  return a ? { ...a, device: deviceFromUA(userAgent) } : null;
+}
+
+/** Saved attribution JSON (from the DB) back to an object. */
+export function parseAttribution(json: unknown): Attribution | null {
+  if (typeof json !== "string" || !json) return null;
+  try { return JSON.parse(json) as Attribution; } catch { return null; }
 }
 
 /** Rough device type from the browser's user-agent text. */
@@ -129,9 +161,10 @@ export function sanitizeAttribution(raw: unknown): Attribution | null {
   const t = touch(r.touch);
   if (!t) return null;
   const first = touch(r.first) ?? undefined;
+  const ad = touch(r.ad) ?? undefined;
   const tyrone = typeof r.tyrone === "string" && /^[a-z0-9-]{8,64}$/i.test(r.tyrone) ? r.tyrone : undefined;
   return {
-    touch: t, first, ...(tyrone ? { tyrone } : {}),
+    touch: t, first, ...(ad ? { ad } : {}), ...(tyrone ? { tyrone } : {}),
     sessionPages: Math.max(0, Math.min(10_000, Math.floor(Number(r.sessionPages) || 0))),
     visits: Math.max(0, Math.min(100_000, Math.floor(Number(r.visits) || 0))),
   };

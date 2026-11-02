@@ -5,6 +5,7 @@ import { listProducts, matchingProductSlugs, type AdminFilter } from "@/lib/db/q
 import { addAudit, actorName } from "@/lib/audit";
 
 const FILTERS: AdminFilter[] = ["all", "instock", "low", "out", "sale"];
+const cleanCategory = (v: unknown) => (typeof v === "string" && /^[\w-]{1,80}$/.test(v) ? v : undefined);
 
 /** The special's products, plus product search results to add from. */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -15,8 +16,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const q = sp.get("q") ?? "";
   const filter = FILTERS.includes(sp.get("filter") as AdminFilter) ? (sp.get("filter") as AdminFilter) : undefined;
   const type = ["tyre", "wheel", "other"].includes(sp.get("type") ?? "") ? sp.get("type")! : undefined;
+  const category = cleanCategory(sp.get("category"));
   const memberSlugs = new Set(await productsInSpecial(s.slug));
-  const results = q || filter || type ? await listProducts({ q, filter, type, perPage: 30, sort: "stock_desc" }) : { rows: [], total: 0 };
+  const results = q || filter || type || category ? await listProducts({ q, filter, type, category, perPage: 30, sort: "stock_desc" }) : { rows: [], total: 0 };
   const memberRows = await specialMembers(s.slug);
   return NextResponse.json({
     members: memberRows,
@@ -40,8 +42,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const filter = FILTERS.includes(m.filter as AdminFilter) ? (m.filter as AdminFilter) : undefined;
     const type = ["tyre", "wheel", "other"].includes(String(m.type)) ? String(m.type) : undefined;
     const q = typeof m.q === "string" ? m.q : undefined;
-    if (!q && !filter && !type) return NextResponse.json({ error: "Search or filter first, so you don't add the whole catalogue by mistake." }, { status: 400 });
-    slugs = await matchingProductSlugs({ q, filter, type });
+    const category = cleanCategory(m.category);
+    if (!q && !filter && !type && !category) return NextResponse.json({ error: "Search or filter first, so you don't add the whole catalogue by mistake." }, { status: 400 });
+    slugs = await matchingProductSlugs({ q, filter, type, category });
   }
   if (!slugs.length) return NextResponse.json({ error: "No products selected." }, { status: 400 });
   const changed = await setProductsInSpecial(s.slug, slugs, action);

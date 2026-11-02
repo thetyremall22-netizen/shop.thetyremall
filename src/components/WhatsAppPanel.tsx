@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { whatsappHref, SHOP_EMAIL, SHOP_PHONE_DISPLAY } from "@/lib/shop-config";
 import { Close, WhatsApp, Check } from "./icons";
+import { attributionForOrder } from "./AttributionTracker";
 import { validateContact, type ContactErrors } from "@/lib/validate";
 import { WhatsAppDetailsForm } from "./WhatsAppGate";
 import { EnquiryNotAvailable, useCanBuy } from "./GeoNotice";
@@ -56,7 +57,7 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
       const res = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source: "whatsapp-quote", ...clean, message: buildMessage(), contactConsent: consent }),
+        body: JSON.stringify({ source: "whatsapp-quote", ...clean, message: buildMessage(), contactConsent: consent, attribution: attributionForOrder() }),
         keepalive: true,
       });
       if (res.status === 400) {

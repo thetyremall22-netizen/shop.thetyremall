@@ -3,6 +3,7 @@ import { isAdmin } from "@/lib/admin-auth";
 import { saveLead, extractContact } from "@/lib/contacts";
 import { sendLeadEmail } from "@/lib/email";
 import { validateContact } from "@/lib/validate";
+import { attributionFromBody } from "@/lib/attribution";
 
 // Single entry point for every website lead that carries contact details: the
 // WhatsApp quote panel, the "Before we chat" step on every WhatsApp button, and
@@ -53,7 +54,8 @@ export async function POST(req: NextRequest) {
 
   // Sent while logged in to the admin = staff testing, not a real customer.
   const test = await isAdmin();
-  const leadId = await saveLead({ email, phone, name, source, message, productName, sku, productUrl, test });
+  const attribution = attributionFromBody(body.attribution, req.headers.get("user-agent") ?? "");
+  const leadId = await saveLead({ email, phone, name, source, message, productName, sku, productUrl, test, attribution });
 
   if (leadId) {
     sendLeadEmail({ source, name, email, phone, productName, sku, price, productUrl, message, leadId })

@@ -7,6 +7,8 @@ import { listEnquiries } from "@/lib/enquiries";
 import { listCarts } from "@/lib/cart-recovery";
 import { journeyCount } from "@/lib/tyrone-journey";
 import { AdminSearch } from "@/components/admin/AdminSearch";
+import { OriginBadge } from "@/components/admin/OriginBadge";
+import { classifyOrigin, parseAttribution } from "@/lib/attribution";
 
 export const instant = false;
 
@@ -16,6 +18,11 @@ const when = (ms: unknown) => {
 };
 function str(v: unknown): string { return v == null ? "" : String(v); }
 function truncate(s: string, n: number): string { return s.length > n ? s.slice(0, n) + "…" : s; }
+/** "Came from" badge (Google Ads, search…); "—" for ones from before 2 Nov 2026 when this started. */
+function cameFrom(row: Record<string, unknown>): React.ReactNode {
+  const a = parseAttribution(row.attribution);
+  return a ? <OriginBadge origin={classifyOrigin(a)} /> : "";
+}
 
 // One tab per website form (matched on the lead's `source`), then each kind of
 // activity on its own tab: Tyrone questions, older WhatsApp taps, call taps and
@@ -102,11 +109,11 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
       {isSourceTab(tab) && (
         <Table
           empty={q ? "No matches on this tab." : "Nothing captured here yet."}
-          head={["When", "Name", "Phone", "Email", "Product", "Message"]}
+          head={["When", "Name", "Phone", "Email", "Came from", "Product", "Message"]}
           rows={leadRows.map((l) => ({
             href: `/admin/leads/contact/${l.id}`,
             test: Number(l.test) === 1,
-            cells: [when(l.created_at), str(l.name), str(l.phone), str(l.email), str(l.product_name), truncate(str(l.message), 70)],
+            cells: [when(l.created_at), str(l.name), str(l.phone), str(l.email), cameFrom(l), str(l.product_name), truncate(str(l.message), 70)],
           }))}
         />
       )}
@@ -118,11 +125,11 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
       {tab === "tyrone-questions" && (
         <Table
           empty={q ? "No matches." : "No Tyrone questions yet."}
-          head={["When", "Question", "Product shown"]}
+          head={["When", "Question", "Came from", "Product shown"]}
           rows={questionRows.map((e) => ({
             href: `/admin/leads/enquiry/${e.id}`,
             test: Number(e.test) === 1,
-            cells: [when(e.created_at), truncate(str(e.message), 90), str(e.product_name) || "—"],
+            cells: [when(e.created_at), truncate(str(e.message), 90), cameFrom(e), str(e.product_name) || "—"],
           }))}
         />
       )}
@@ -147,11 +154,11 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
         <p className="mt-4 text-sm text-muted">Each row is someone tapping a phone number on the website to call a store. The caller isn&apos;t identified; this shows which stores and products get calls.</p>
         <Table
           empty="No call taps yet."
-          head={["When", "Store", "Product"]}
+          head={["When", "Store", "Came from", "Product"]}
           rows={callRows.map((e) => ({
             href: `/admin/leads/enquiry/${e.id}`,
             test: Number(e.test) === 1,
-            cells: [when(e.created_at), str(e.store_name) || "—", str(e.product_name) || "—"],
+            cells: [when(e.created_at), str(e.store_name) || "—", cameFrom(e), str(e.product_name) || "—"],
           }))}
         />
         </>
@@ -160,7 +167,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
   );
 }
 
-function Table({ head, rows, empty }: { head: string[]; rows: { cells: string[]; href: string; test?: boolean }[]; empty: string }) {
+function Table({ head, rows, empty }: { head: string[]; rows: { cells: React.ReactNode[]; href: string; test?: boolean }[]; empty: string }) {
   if (rows.length === 0) return <p className="mt-5 text-sm text-muted">{empty}</p>;
   return (
     <div className="mt-5 overflow-x-auto rounded-xl border border-line">

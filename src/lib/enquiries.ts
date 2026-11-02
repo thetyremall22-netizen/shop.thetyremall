@@ -1,5 +1,6 @@
 import "server-only";
 import { libsql } from "./db";
+import type { Attribution } from "./attribution";
 
 export type EnquiryType = "whatsapp" | "tyrone" | "call";
 
@@ -14,6 +15,8 @@ export interface Enquiry {
   storeName?: string;
   /** Submitted by a logged-in staff member (a test, not a real customer). */
   test?: boolean;
+  /** Where the visitor came from (Google Ads, search…), as for orders. */
+  attribution?: Attribution | null;
 }
 
 let ensured = false;
@@ -32,6 +35,7 @@ async function ensureTable() {
     created_at INTEGER NOT NULL
   )`);
   try { await libsql.execute("ALTER TABLE enquiries ADD COLUMN test INTEGER NOT NULL DEFAULT 0"); } catch { /* exists */ }
+  try { await libsql.execute("ALTER TABLE enquiries ADD COLUMN attribution TEXT NOT NULL DEFAULT ''"); } catch { /* exists */ }
   ensured = true;
 }
 
@@ -40,9 +44,10 @@ export async function logEnquiry(e: Enquiry): Promise<void> {
   try {
     await ensureTable();
     await libsql.execute({
-      sql: `INSERT INTO enquiries (type, product_slug, product_name, sku, price, message, store_id, store_name, created_at, test)
-            VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      args: [e.type, e.productSlug ?? null, e.productName ?? null, e.sku ?? null, e.price ?? null, e.message ?? null, e.storeId ?? null, e.storeName ?? null, Date.now(), e.test ? 1 : 0],
+      sql: `INSERT INTO enquiries (type, product_slug, product_name, sku, price, message, store_id, store_name, created_at, test, attribution)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      args: [e.type, e.productSlug ?? null, e.productName ?? null, e.sku ?? null, e.price ?? null, e.message ?? null, e.storeId ?? null, e.storeName ?? null, Date.now(), e.test ? 1 : 0,
+        e.attribution ? JSON.stringify(e.attribution) : ""],
     });
   } catch (err) {
     console.error("[enquiry] log failed", err);

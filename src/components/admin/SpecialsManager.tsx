@@ -59,6 +59,8 @@ function ProductPicker({ special, canEdit }: { special: SpecialRow; canEdit: boo
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("");
   const [type, setType] = useState("");
+  const [category, setCategory] = useState("");
+  const [cats, setCats] = useState<{ slug: string; name: string; group: string }[]>([]);
   const [results, setResults] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -71,13 +73,17 @@ function ProductPicker({ special, canEdit }: { special: SpecialRow; canEdit: boo
     if (search && q) u.set("q", q);
     if (search && filter) u.set("filter", filter);
     if (search && type) u.set("type", type);
+    if (search && category) u.set("category", category);
     const r = await fetch(`/api/admin/specials/${special.id}/products?${u}`).then((x) => x.json()).catch(() => null);
     if (!r) return;
     setMembers(r.members); setResults(r.results); setTotal(r.total);
   }
   useEffect(() => { void load(false); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [special.id]);
+  useEffect(() => { fetch("/api/admin/categories").then((r) => r.json()).then((d) => setCats(d.categories ?? [])).catch(() => {}); }, []);
+  const catGroups = [...new Set(cats.map((c) => c.group))];
+  const catName = (slug: string) => cats.find((c) => c.slug === slug)?.name ?? slug;
 
-  async function change(action: "add" | "remove", payload: { slugs?: string[]; match?: { q: string; filter: string; type: string } }, isUndo = false) {
+  async function change(action: "add" | "remove", payload: { slugs?: string[]; match?: { q: string; filter: string; type: string; category: string } }, isUndo = false) {
     setBusy(true); setMsg(null);
     const res = await fetch(`/api/admin/specials/${special.id}/products`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...payload, undo: isUndo }) });
     const d = await res.json().catch(() => ({}));
@@ -85,7 +91,7 @@ function ProductPicker({ special, canEdit }: { special: SpecialRow; canEdit: boo
     if (!res.ok) { setMsg(d.error ?? "Failed."); return; }
     setMsg(`✓ ${action === "add" ? "Added" : "Removed"} ${d.changed} product${d.changed === 1 ? "" : "s"}`);
     if (!isUndo && d.changed) setUndo({ action, slugs: d.slugs, message: `${action === "add" ? "Added" : "Removed"} ${d.changed} product(s)` });
-    await load(!!(q || filter || type));
+    await load(!!(q || filter || type || category));
     router.refresh();
   }
 
@@ -110,10 +116,19 @@ function ProductPicker({ special, canEdit }: { special: SpecialRow; canEdit: boo
           <div className="mt-2 flex flex-wrap gap-2">
             <input className={`${field} min-w-[220px] flex-1`} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && load()} placeholder="Search name, SKU, brand or size (e.g. 265/65R17)" />
             <select className={`${field} w-auto`} value={type} onChange={(e) => setType(e.target.value)}><option value="">All types</option><option value="tyre">Tyres</option><option value="wheel">Wheels / Rims</option><option value="other">Other</option></select>
+            <select className={`${field} w-auto max-w-[240px]`} value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Category">
+              <option value="">Any category</option>
+              {catGroups.map((g) => (
+                <optgroup key={g} label={g}>
+                  {cats.filter((c) => c.group === g && c.slug !== special.slug).map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+                </optgroup>
+              ))}
+            </select>
             <select className={`${field} w-auto`} value={filter} onChange={(e) => setFilter(e.target.value)}><option value="">Any stock</option><option value="instock">In stock</option><option value="sale">On sale</option><option value="low">Low stock</option></select>
             <button onClick={() => load()} className="btn btn-volt h-10 px-4 text-sm">Search</button>
           </div>
-          {(q || filter || type) && total > 0 && (
+          <p className="mt-1.5 text-xs text-muted">Tip: choose a category (e.g. SUV tyres) and press Search, then “Add all matching” to put every product from that category into this one.</p>
+          {(q || filter || type || category) && total > 0 && (
             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
               <span className="text-muted">{total.toLocaleString()} matching</span>
               <button disabled={busy} onClick={() => setConfirmAll("add")} className="btn btn-volt-outline h-8 px-3 text-xs">+ Add all {total.toLocaleString()} matching</button>
@@ -141,23 +156,24 @@ function ProductPicker({ special, canEdit }: { special: SpecialRow; canEdit: boo
       <ConfirmDialog open={!!confirmAll} busy={busy} onNo={() => setConfirmAll(null)}
         title={confirmAll === "add" ? `Add all ${total.toLocaleString()} matching products to “${special.name}”?` : `Remove all matching products from “${special.name}”?`}
         yesLabel={confirmAll === "add" ? "Yes, add them" : "Yes, remove them"}
-        onYes={() => change(confirmAll!, { match: { q, filter, type } })}>
-        <p>Matching: {[q && `“${q}”`, type && { tyre: "tyres", wheel: "wheels/rims", other: "other products" }[type], filter && { instock: "in stock", sale: "on sale", low: "low stock" }[filter]].filter(Boolean).join(" · ")}</p>
+        onYes={() => change(confirmAll!, { match: { q, filter, type, category } })}>
+        <p>Matching: {[q && `“${q}”`, category && `category “${catName(category)}”`, type && { tyre: "tyres", wheel: "wheels/rims", other: "other products" }[type], filter && { instock: "in stock", sale: "on sale", low: "low stock" }[filter]].filter(Boolean).join(" · ")}</p>
       </ConfirmDialog>
       {undo && <UndoBar message={undo.message} onClose={() => setUndo(null)} onUndo={() => change(undo.action === "add" ? "remove" : "add", { slugs: undo.slugs }, true)} />}
     </div>
   );
 }
 
-export function SpecialsManager({ specials, canEdit, canDelete, kind = "special" }: { specials: SpecialRow[]; canEdit: boolean; canDelete: boolean; kind?: "special" | "sale" }) {
+export function SpecialsManager({ specials, canEdit, canDelete, kind = "special", openSlug }: { specials: SpecialRow[]; canEdit: boolean; canDelete: boolean; kind?: "special" | "sale"; openSlug?: string }) {
   const word = kind === "sale" ? "sale category" : "special category";
   const example = kind === "sale" ? "Black Friday Sale" : "Father's Day Specials";
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [newF, setNewF] = useState<Form>(blank);
   const [newSlugEdited, setNewSlugEdited] = useState(false);
-  const [open, setOpen] = useState<number | null>(null);
-  const [editF, setEditF] = useState<Form>(blank);
+  const opened = openSlug ? specials.find((s) => s.slug === openSlug) : undefined;
+  const [open, setOpen] = useState<number | null>(opened?.id ?? null);
+  const [editF, setEditF] = useState<Form>(opened ? toForm(opened) : blank);
   const [editSlugEdited, setEditSlugEdited] = useState(true);
   const [pending, setPending] = useState<{ kind: "create" } | { kind: "save"; s: SpecialRow } | { kind: "delete"; s: SpecialRow } | null>(null);
   const [busy, setBusy] = useState(false);

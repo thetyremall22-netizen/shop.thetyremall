@@ -10,6 +10,7 @@ import { parseSize, sizeToShopHref } from "@/lib/tyre-size";
 import { MicButton } from "./MicButton";
 import { WhatsAppPanel } from "./WhatsAppPanel";
 import { WhatsAppDetailsForm } from "./WhatsAppGate";
+import { attributionForOrder } from "./AttributionTracker";
 import { TyroneLeadForm } from "./TyroneLeadForm";
 import { loadSavedContact, type SavedContact } from "@/lib/saved-contact";
 import { validateContact } from "@/lib/validate";
@@ -672,6 +673,7 @@ export function Tyrone() {
         productSlug: firstProduct?.slug,
         productName: firstProduct?.name,
         price: firstProduct?.price,
+        attribution: attributionForOrder(),
       }),
       keepalive: true,
     }).catch(() => {});
@@ -686,7 +688,7 @@ export function Tyrone() {
       fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source: "tyrone", message: t }),
+        body: JSON.stringify({ source: "tyrone", message: t, attribution: attributionForOrder() }),
         keepalive: true,
       }).catch(() => {});
       leadReply = { from: "bot", text: "Got it — I've saved your details. Someone from The Tyre Mall will reach out to help. 👍" };

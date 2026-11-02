@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { validateContact, type ContactErrors } from "@/lib/validate";
 import { loadSavedContact, storeSavedContact, type SavedContact } from "@/lib/saved-contact";
 import { GateField } from "./WhatsAppGate";
+import { attributionForOrder } from "./AttributionTracker";
 import { EnquiryNotAvailable, useCanBuy } from "./GeoNotice";
 
 /** Inside Tyrone: "Leave your details so the team can get back to you". Not
@@ -30,7 +31,7 @@ export function TyroneLeadForm({ questions, onSent }: { questions: string[]; onS
     try {
       const res = await fetch("/api/lead", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source: "tyrone", ...clean, message, productUrl: window.location.href }),
+        body: JSON.stringify({ source: "tyrone", ...clean, message, productUrl: window.location.href, attribution: attributionForOrder() }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));

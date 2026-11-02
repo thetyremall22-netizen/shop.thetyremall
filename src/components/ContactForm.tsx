@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check } from "./icons";
+import { attributionForOrder } from "./AttributionTracker";
 import { validateContact, type ContactErrors } from "@/lib/validate";
 import { EnquiryNotAvailable, useCanBuy } from "./GeoNotice";
 
@@ -29,7 +30,7 @@ export function ContactForm() {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, attribution: attributionForOrder() }),
       });
       const data = await res.json();
       if (!res.ok) {

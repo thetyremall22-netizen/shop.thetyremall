@@ -9,7 +9,8 @@ export const instant = false;
 
 export default async function SpecialsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const me = await requirePermission("products.view");
-  const kind = (await searchParams).kind === "sale" ? "sale" : "special";
+  const sp = await searchParams;
+  const kind = sp.kind === "sale" ? "sale" : "special";
   const [specials, counts] = await Promise.all([listSpecials(kind), specialProductCounts()]);
   const now = Date.now();
   const tab = (k: "special" | "sale", label: string) => (
@@ -30,7 +31,7 @@ export default async function SpecialsPage({ searchParams }: { searchParams: Pro
         To change prices, use the products list&apos;s bulk “Sale” action on the same products.
       </p>
       <div className="mt-5">
-        <SpecialsManager key={kind} kind={kind} canEdit={can(me.role, "products.edit")} canDelete={can(me.role, "products.delete")}
+        <SpecialsManager key={kind} kind={kind} openSlug={sp.open} canEdit={can(me.role, "products.edit")} canDelete={can(me.role, "products.delete")}
           specials={specials.map((s) => ({ ...s, status: specialStatus(s, now), count: counts[s.slug] ?? 0 }))} />
       </div>
     </AdminShell>

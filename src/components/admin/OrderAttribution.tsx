@@ -22,15 +22,16 @@ function Rows({ rows }: { rows: [string, React.ReactNode][] }) {
 const utmText = (t: Touch) => Object.entries(t.utm).map(([k, v]) => `${k}: ${v}`).join(" · ");
 const adClick = (t: Touch) => Object.keys(t.clickIds).filter((k) => k !== "srsltid").join(", ");
 
-/** "Where did this sale come from" box on the admin order page (like WooCommerce). */
-export function OrderAttribution({ a, placedAt }: { a: Attribution | null; placedAt: string }) {
+/** "Where did this sale come from" box on the admin order page (like WooCommerce).
+ *  Also used on leads and enquiries (`kind`). */
+export function OrderAttribution({ a, placedAt, kind = "order" }: { a: Attribution | null; placedAt: string; kind?: "order" | "lead" }) {
   const origin = classifyOrigin(a);
   return (
     <div className="card p-5">
-      <h2 className="font-display text-lg">Order attribution</h2>
+      <h2 className="font-display text-lg">{kind === "order" ? "Order attribution" : "Where this came from"}</h2>
       <div className="mt-2"><OriginBadge origin={origin} /></div>
       {!a ? (
-        <p className="mt-2 text-sm text-muted">Not recorded. This order was placed before the website started tracking where sales come from.</p>
+        <p className="mt-2 text-sm text-muted">Not recorded. {kind === "order" ? "This order was placed before the website started tracking where sales come from." : "This came in before the website started recording where enquiries come from (2 Nov 2026)."}</p>
       ) : (
         <>
           <Rows rows={[
@@ -38,6 +39,7 @@ export function OrderAttribution({ a, placedAt }: { a: Attribution | null; place
             ["Source type", origin.type],
             ["Campaign tags", utmText(a.touch) || null],
             ["Ad click", adClick(a.touch) ? `Yes (${adClick(a.touch)})` : null],
+            ["Earlier ad click", origin.assist ? `${origin.assist}${a.ad?.at ? ` on ${when(a.ad.at)}` : a.first?.at ? ` on ${when(a.first.at)}` : ""}${a.ad?.utm.term ? ` — searched “${a.ad.utm.term}”` : ""}` : null],
             ["Came from", a.touch.referrer ? <a href={a.touch.referrer} target="_blank" rel="noreferrer noopener" className="text-volt hover:underline">{hostOf(a.touch.referrer)}</a> : null],
             ["Landing page", a.touch.landing || null],
             ["Tyrone chat", a.tyrone ? <a href={`/admin/leads/tyrone/${a.tyrone}`} className="font-semibold text-volt hover:underline">Chatted to Tyrone first — see the conversation →</a> : null],
@@ -45,7 +47,7 @@ export function OrderAttribution({ a, placedAt }: { a: Attribution | null; place
             ["Placed by staff", a.staff ? "Yes (logged in to the admin, so it's marked TEST)" : null],
             ["Pages viewed", a.sessionPages ? `${a.sessionPages} in this visit` : null],
             ["Visits", a.visits ? String(a.visits) : null],
-            ["Visit started", a.touch.at ? `${when(a.touch.at)} (${ago(a.touch.at, placedAt)} before ordering)` : null],
+            ["Visit started", a.touch.at ? `${when(a.touch.at)} (${ago(a.touch.at, placedAt)} before ${kind === "order" ? "ordering" : "getting in touch"})` : null],
           ]} />
           {a.first && a.first.at && a.first.at !== a.touch.at && (
             <div className="mt-4 border-t border-line pt-3">

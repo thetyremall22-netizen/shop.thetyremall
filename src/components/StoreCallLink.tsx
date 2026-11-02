@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Phone } from "./icons";
+import { attributionForOrder } from "./AttributionTracker";
 
 /** Tap-to-call on mobile only (item 41). On desktop the number is shown as
  *  plain text. Each mobile tap is logged for the weekly branch digest. */
@@ -20,7 +21,7 @@ export function StoreCallLink({
     fetch("/api/enquiry", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "call", storeId, storeName }),
+      body: JSON.stringify({ type: "call", storeId, storeName, attribution: attributionForOrder() }),
       keepalive: true,
     }).catch(() => {});
   }

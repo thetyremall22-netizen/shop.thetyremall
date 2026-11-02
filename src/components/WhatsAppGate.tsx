@@ -5,6 +5,7 @@ import { whatsappHref } from "@/lib/shop-config";
 import { validateContact, type ContactErrors } from "@/lib/validate";
 import { loadSavedContact, storeSavedContact } from "@/lib/saved-contact";
 import { WhatsApp } from "./icons";
+import { attributionForOrder } from "./AttributionTracker";
 import { EnquiryNotAvailable, useCanBuy } from "./GeoNotice";
 
 export interface WhatsAppLead {
@@ -54,7 +55,7 @@ export function WhatsAppDetailsForm({
     fetch("/api/lead", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...lead, ...clean, message: fullMessage }),
+      body: JSON.stringify({ ...lead, ...clean, message: fullMessage, attribution: attributionForOrder() }),
       keepalive: true,
     }).catch(() => {});
     storeSavedContact(clean as { name: string; email: string; phone: string });

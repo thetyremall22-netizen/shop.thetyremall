@@ -5,13 +5,55 @@ import { useEffect, useState } from "react";
 interface Cat { slug: string; name: string; group: string; status: string }
 const STATUS: Record<string, string> = { scheduled: "starts later", ended: "ended", disabled: "off" };
 
+/** Make a new special or sale category on the spot (e.g. "Black Friday Sale").
+ *  It's live straight away with no end date; dates, a description and more
+ *  products can be set later in Products → Special categories. */
+export function NewCategoryInline({ onCreated }: { onCreated: (c: { slug: string; name: string }) => void }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [kind, setKind] = useState<"special" | "sale">("special");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function create() {
+    if (!name.trim()) { setError("Give the category a name."); return; }
+    setBusy(true); setError(null);
+    const res = await fetch("/api/admin/specials", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), kind, enabled: true }) });
+    const d = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setError(d.error ?? "Couldn't create the category."); return; }
+    onCreated({ slug: d.special.slug, name: d.special.name });
+    setName(""); setOpen(false);
+  }
+
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className="text-xs font-bold text-volt hover:underline">+ Create a new special or sale category</button>;
+  return (
+    <div className="rounded-lg border border-volt/40 bg-volt/5 p-2.5">
+      <div className="flex flex-wrap gap-2">
+        <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void create(); } }}
+          placeholder="Name, e.g. Black Friday Sale" className="num min-w-[200px] flex-1" autoFocus />
+        <select value={kind} onChange={(e) => setKind(e.target.value as "special" | "sale")} className="num w-auto">
+          <option value="special">★ Special category</option>
+          <option value="sale">% Sale category</option>
+        </select>
+        <button type="button" disabled={busy} onClick={create} className="btn btn-volt h-10 px-4 text-sm disabled:opacity-60">{busy ? "Creating…" : "Create"}</button>
+        <button type="button" onClick={() => { setOpen(false); setError(null); }} className="text-xs font-semibold text-muted hover:text-fg">Cancel</button>
+      </div>
+      {error && <p className="mt-1.5 text-xs font-semibold text-sale">{error}</p>}
+      <p className="mt-1.5 text-xs text-muted">It shows on the website straight away. Add start/end dates, a picture or more products in Products → Special categories.</p>
+    </div>
+  );
+}
+
 /** Choose a product's categories: tick as many as you like (main categories,
- *  special and sale categories), and remove any with ✕. */
+ *  special and sale categories), remove any with ✕, or make a new special or
+ *  sale category on the spot. */
 export function CategoryPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const [cats, setCats] = useState<Cat[] | null>(null);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
-  useEffect(() => { fetch("/api/admin/categories").then((r) => r.json()).then((d) => setCats(d.categories ?? [])).catch(() => setCats([])); }, []);
+  const load = () => fetch("/api/admin/categories").then((r) => r.json()).then((d) => setCats(d.categories ?? [])).catch(() => setCats([]));
+  useEffect(() => { void load(); }, []);
 
   const byslug = new Map((cats ?? []).map((c) => [c.slug, c]));
   const toggle = (slug: string) => onChange(value.includes(slug) ? value.filter((s) => s !== slug) : [...value, slug]);
@@ -33,6 +75,7 @@ export function CategoryPicker({ value, onChange }: { value: string[]; onChange:
       {open && (
         <div className="mt-2 rounded-lg border border-line bg-surface p-3">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search categories…" className="num mb-2 w-full" />
+          <div className="mb-3"><NewCategoryInline onCreated={(c) => { void load(); if (!value.includes(c.slug)) onChange([...value, c.slug]); }} /></div>
           {cats === null ? <p className="text-sm text-muted">Loading…</p> : (
             <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
               {groups.map((g) => (

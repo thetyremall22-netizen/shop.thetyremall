@@ -1,5 +1,5 @@
 import "server-only";
-import { eq, desc, and, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, sql, inArray, not, or, like } from "drizzle-orm";
 import { db, schema, libsql } from "./db";
 
 export type EmailType =
@@ -95,19 +95,47 @@ export const EMAIL_TABS: { v: string; label: string; types: string[] }[] = [
   { v: "wishlist", label: "Wishlist alerts", types: ["wishlist_alert"] },
 ];
 
-/** Email counts per tab (and per status within a tab). */
-export async function emailTabCounts(): Promise<Record<string, number>> {
+// ---- who an email went to: customers, or the shop & staff ------------------------
+// Shop & staff = the shop inbox, any @thetyremall.co.za address, or a staff
+// member's login email. Everything else went to a customer.
+export type EmailAudience = "customers" | "shop";
+const SHOP_DOMAIN = "%@thetyremall.co.za";
+
+async function staffAddresses(): Promise<string[]> {
+  const out = new Set([(process.env.SHOP_EMAIL ?? "shop@thetyremall.co.za").toLowerCase()]);
+  try {
+    const r = await libsql.execute("SELECT email FROM admin_users");
+    for (const x of r.rows) if (x.email) out.add(String(x.email).trim().toLowerCase());
+  } catch { /* no staff table yet */ }
+  return [...out];
+}
+
+async function audienceCondition(audience?: EmailAudience) {
+  if (!audience) return undefined;
+  const addr = sql`LOWER(${schema.emails.toAddr})`;
+  const shop = or(like(addr, SHOP_DOMAIN), inArray(addr, await staffAddresses()))!;
+  return audience === "shop" ? shop : not(shop);
+}
+
+/** Email counts per tab within one audience, plus each audience's total. */
+export async function emailTabCounts(audience?: EmailAudience): Promise<Record<string, number>> {
   try {
     await ensureSchema();
-    const r = await libsql.execute(`SELECT type, COUNT(*) n FROM emails GROUP BY type`);
-    const byType = new Map(r.rows.map((x) => [String(x.type), Number(x.n)]));
+    const cond = await audienceCondition(audience);
+    const rows = await db.select({ type: schema.emails.type, n: sql<number>`count(*)` }).from(schema.emails).where(cond).groupBy(schema.emails.type);
+    const byType = new Map(rows.map((x) => [String(x.type), Number(x.n)]));
     const out: Record<string, number> = { all: [...byType.values()].reduce((a, b) => a + b, 0) };
     for (const t of EMAIL_TABS) out[t.v] = t.types.reduce((n, ty) => n + (byType.get(ty) ?? 0), 0);
+    for (const a of ["customers", "shop"] as const) {
+      const c = await audienceCondition(a);
+      const r = await db.select({ n: sql<number>`count(*)` }).from(schema.emails).where(c);
+      out[`audience:${a}`] = Number(r[0]?.n ?? 0);
+    }
     return out;
   } catch { return {}; }
 }
 
-export async function listEmails(opts: { page?: number; perPage?: number; type?: string; types?: string[]; status?: string; q?: string } = {}) {
+export async function listEmails(opts: { page?: number; perPage?: number; type?: string; types?: string[]; status?: string; q?: string; audience?: EmailAudience } = {}) {
   const page = Math.max(1, opts.page ?? 1);
   const perPage = opts.perPage ?? 30;
   try {
@@ -116,6 +144,8 @@ export async function listEmails(opts: { page?: number; perPage?: number; type?:
     if (opts.type) conds.push(eq(schema.emails.type, opts.type));
     if (opts.types?.length) conds.push(inArray(schema.emails.type, opts.types));
     if (opts.status) conds.push(eq(schema.emails.status, opts.status));
+    const aud = await audienceCondition(opts.audience);
+    if (aud) conds.push(aud);
     const q = opts.q?.trim().toLowerCase();
     if (q) {
       const like = `%${q}%`;

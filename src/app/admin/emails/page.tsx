@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { listEmails, emailTabCounts, EMAIL_TYPE_LABELS, EMAIL_TABS } from "@/lib/email-log";
+import { listEmails, emailTabCounts, EMAIL_TYPE_LABELS, EMAIL_TABS, type EmailAudience } from "@/lib/email-log";
 import { AdminSearch } from "@/components/admin/AdminSearch";
 
 export const instant = false;
@@ -28,14 +28,17 @@ export default async function AdminEmails({ searchParams }: { searchParams: Prom
   const status = sp.status || undefined;
   const tab = EMAIL_TABS.find((t) => t.v === sp.tab);
   const q = (sp.q ?? "").trim();
+  // Two separate lists: emails sent to customers, and emails sent to the shop & staff.
+  const audience: EmailAudience = sp.to === "shop" ? "shop" : "customers";
   const [{ rows, total, perPage }, counts] = await Promise.all([
-    listEmails({ page, perPage: 40, status, types: tab?.types, q }),
-    emailTabCounts(),
+    listEmails({ page, perPage: 40, status, types: tab?.types, q, audience }),
+    emailTabCounts(audience),
   ]);
   const pages = Math.max(1, Math.ceil(total / perPage));
 
   const qs = (next: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams();
+    if (audience === "shop") p.set("to", "shop");
     if (status) p.set("status", status);
     if (tab) p.set("tab", tab.v);
     if (q) p.set("q", q);
@@ -52,10 +55,29 @@ export default async function AdminEmails({ searchParams }: { searchParams: Prom
       </div>
       <p className="mt-1 text-sm text-muted">Every email the site sends — order confirmations, failures, cancellations, refunds, enquiries and abandoned-cart nudges. Open one to read, resend, or edit &amp; resend.</p>
 
+      {/* customers vs shop & staff */}
+      <div className="mt-4 flex flex-wrap gap-1 border-b border-line">
+        {([["customers", "📨 Sent to customers"], ["shop", "🏪 Sent to the shop & staff"]] as const).map(([v, label]) => {
+          const active = audience === v;
+          const href = v === "shop" ? "/admin/emails?to=shop" : "/admin/emails";
+          return (
+            <Link key={v} href={href}
+              className={`-mb-px rounded-t-lg border px-4 py-2 text-sm font-bold transition-colors ${active ? "border-line border-b-ink-2 bg-ink-2 text-fg" : "border-transparent text-muted hover:text-fg"}`}>
+              {label} <span className="font-semibold opacity-70">({(counts[`audience:${v}`] ?? 0).toLocaleString()})</span>
+            </Link>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-xs text-muted">
+        {audience === "shop"
+          ? "Emails sent to the shop inbox (shop@thetyremall.co.za), other @thetyremall.co.za addresses and staff logins — new-order alerts, enquiries, payment checks and staff account emails."
+          : "Emails sent to customers — order confirmations, invoices, abandoned-cart reminders, enquiry replies, support replies and wishlist alerts."}
+      </p>
+
       <AdminSearch className="mt-4 max-w-xl" placeholder="Search recipient, subject or order no.…" />
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {TABS.map((f) => {
+        {TABS.filter((f) => !f.v || (counts[f.v] ?? 0) > 0 || tab?.v === f.v).map((f) => {
           const active = (tab?.v ?? "") === f.v;
           return (
             <Link key={f.label} href={qs({ tab: f.v, page: undefined })}

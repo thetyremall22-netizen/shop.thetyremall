@@ -39,6 +39,8 @@ export interface Category {
   count: number;
   image: string | null;
   primary: boolean;
+  /** Set on special / sale categories made in Admin (Black Friday Sale…). */
+  kind?: "special" | "sale";
 }
 
 export interface CatalogueMeta {

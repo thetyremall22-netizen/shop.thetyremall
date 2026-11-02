@@ -21,7 +21,7 @@ const NAV = [
 ];
 
 
-export function Header({ brands = [], pages = [] }: { brands?: { name: string; logo: string | null }[]; pages?: { label: string; href: string }[] }) {
+export function Header({ brands = [], pages = [], specials = [] }: { brands?: { name: string; logo: string | null }[]; pages?: { label: string; href: string }[]; specials?: { name: string; slug: string; kind: "special" | "sale" }[] }) {
   // Landing pages set to "main menu" in Admin → Pages go just before "Contact us".
   const nav = pages.length ? [...NAV.slice(0, -1), ...pages, NAV[NAV.length - 1]] : NAV;
   const { totals, setDrawerOpen } = useCart();
@@ -91,6 +91,16 @@ export function Header({ brands = [], pages = [] }: { brands?: { name: string; l
                   </Link>
                   <div className="invisible absolute left-0 top-full z-50 w-56 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
                     <div className="overflow-hidden rounded-xl border border-line bg-ink-2 shadow-2xl shadow-black/60">
+                      {/* Live specials & sales from Admin → Products → Special categories */}
+                      {specials.length > 0 && (
+                        <div className="border-b border-line">
+                          {specials.map((c) => (
+                            <Link key={c.slug} href={categoryPath(c.slug)} className="block px-4 py-2.5 text-sm font-bold text-volt transition-colors hover:bg-surface">
+                              {c.kind === "sale" ? "% " : "★ "}{c.name}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                       {NAV_PRIMARY.map((c) => (
                         <Link
                           key={c.slug}
@@ -184,6 +194,11 @@ export function Header({ brands = [], pages = [] }: { brands?: { name: string; l
               ))}
               <div className="mt-3 border-t border-line pt-3">
                 <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted">Shop by category</div>
+                {specials.map((c) => (
+                  <Link key={c.slug} href={categoryPath(c.slug)} onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-bold text-volt">
+                    {c.kind === "sale" ? "% " : "★ "}{c.name}
+                  </Link>
+                ))}
                 {NAV_PRIMARY.map((c) => (
                   <Link key={c.slug} href={categoryPath(c.slug)} onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-medium text-fg">
                     {c.label} Tyres

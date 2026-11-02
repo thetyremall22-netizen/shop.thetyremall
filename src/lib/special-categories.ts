@@ -3,7 +3,7 @@ import { cacheTag, cacheLife, revalidateTag } from "next/cache";
 import { libsql } from "./db";
 import { categories as STATIC_CATEGORIES, getCategory } from "./catalogue";
 import { FILTER_PAGES } from "./shop-url";
-import { revalidateProducts } from "./catalogue-cache";
+import { revalidateProducts, PRODUCTS_TAG } from "./catalogue-cache";
 import type { Category } from "./types";
 
 // Special (seasonal) categories — e.g. "Father's Day Specials", "Christmas
@@ -115,7 +115,17 @@ export async function liveSpecialCategories(): Promise<Category[]> {
   const all = await listSpecials();
   const live = all.filter((c) => liveSet.has(c.slug));
   const counts = await specialProductCounts();
-  return live.map((c) => ({ id: 100000 + c.id, name: c.name, slug: c.slug, count: counts[c.slug] ?? 0, image: c.image || null, primary: false } as Category));
+  return live.map((c) => ({ id: 100000 + c.id, name: c.name, slug: c.slug, count: counts[c.slug] ?? 0, image: c.image || null, primary: false, kind: c.kind } as Category));
+}
+
+/** Live specials and sales that have products, for the "All Categories" menu.
+ *  Cached; refreshed within minutes of a start/end time, and at once when a
+ *  special or its products change. */
+export async function menuSpecials(): Promise<{ name: string; slug: string; kind: SpecialKind }[]> {
+  "use cache";
+  cacheTag(SPECIALS_TAG, PRODUCTS_TAG);
+  cacheLife("minutes");
+  return (await liveSpecialCategories()).filter((c) => c.count > 0).map((c) => ({ name: c.name, slug: c.slug, kind: c.kind ?? "special" }));
 }
 
 /** A category by slug: the built-in ones, or a special that's live now. */

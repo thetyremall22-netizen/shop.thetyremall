@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { menuBrands } from "@/lib/brand-registry";
 import { landingMenu } from "@/lib/landing-pages";
+import { menuSpecials } from "@/lib/special-categories";
 import { Anton, Inter } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/lib/cart";
@@ -48,6 +49,7 @@ export default async function RootLayout({
   const themeVars = await themeCss();
   const brands = await menuBrands(); // live brand list for the "Shop by Brands" menu
   const landing = await landingMenu(); // landing pages linked from the menu / footer (Admin → Pages)
+  const specials = await menuSpecials(); // live specials & sales for the "All Categories" menu
   return (
     <html lang="en" className={`${inter.variable} ${anton.variable}`} suppressHydrationWarning>
       <head>
@@ -66,7 +68,7 @@ export default async function RootLayout({
           <AccountProvider>
             <ScrollToTop />
             <GeoBanner />
-            <Header brands={brands} pages={landing.main} />
+            <Header brands={brands} pages={landing.main} specials={specials} />
             <main>{children}</main>
             <Footer />
             <CartDrawer />

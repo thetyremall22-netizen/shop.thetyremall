@@ -131,6 +131,22 @@ function FilterBody({
         <CheckRow checked={current("onSale") === "1"} label="On sale only" onChange={() => setParam("onSale", current("onSale") === "1" ? null : "1")} />
       </Group>
 
+      {categories.some((c) => c.kind && c.count > 0) && (
+        <Group title="Specials &amp; sales">
+          <ul className="space-y-1">
+            {categories.filter((c) => c.kind && c.count > 0).map((c) => (
+              <Radio
+                key={c.slug}
+                name="type-cat"
+                checked={current("category") === c.slug}
+                label={`${c.kind === "sale" ? "% " : "★ "}${c.name} (${c.count})`}
+                onChange={() => setParams({ type: null, category: current("category") === c.slug ? null : c.slug })}
+              />
+            ))}
+          </ul>
+        </Group>
+      )}
+
       <Group title="Category">
         <ul className="space-y-1">
           <Radio name="type-cat" checked={!current("category") && !current("type")} label="All products" onChange={() => setParams({ type: null, category: null })} />

@@ -6,6 +6,7 @@ import { FILTER_PAGES } from "./shop-url";
 import { revalidateProducts, PRODUCTS_TAG } from "./catalogue-cache";
 import type { Category } from "./types";
 import type { Deal } from "./deals";
+import { liveProductDeals } from "./product-deals";
 
 // Special (seasonal) categories — e.g. "Father's Day Specials", "Christmas
 // Deals". Created in Admin → Products → Special categories with an optional
@@ -34,11 +35,13 @@ export interface SpecialCategory {
   dealBuy: number;
   dealGet: number;
   dealPercent: number;
+  /** R off each item (cents), for "amount" deals. */
+  dealAmount: number;
   /** Most items per order that get the deal; null = no limit. */
   dealLimit: number | null;
 }
 
-export type DealType = "none" | "bxgy" | "percent";
+export type DealType = "none" | "bxgy" | "percent" | "amount";
 
 export type SpecialStatus = "draft" | "scheduled" | "live" | "ended";
 
@@ -66,7 +69,7 @@ async function ensureTable() {
   )`);
   try { await libsql.execute("ALTER TABLE special_categories ADD COLUMN kind TEXT NOT NULL DEFAULT 'special'"); } catch { /* already there */ }
   // Deal settings (new columns; existing specials default to "no deal").
-  for (const col of ["deal_type TEXT NOT NULL DEFAULT 'none'", "deal_buy INTEGER NOT NULL DEFAULT 0", "deal_get INTEGER NOT NULL DEFAULT 0", "deal_percent INTEGER NOT NULL DEFAULT 0", "deal_limit INTEGER"]) {
+  for (const col of ["deal_type TEXT NOT NULL DEFAULT 'none'", "deal_buy INTEGER NOT NULL DEFAULT 0", "deal_get INTEGER NOT NULL DEFAULT 0", "deal_percent INTEGER NOT NULL DEFAULT 0", "deal_limit INTEGER", "deal_amount INTEGER NOT NULL DEFAULT 0"]) {
     try { await libsql.execute(`ALTER TABLE special_categories ADD COLUMN ${col}`); } catch { /* already there */ }
   }
   ensured = true;
@@ -77,7 +80,8 @@ function toSpecial(r: Record<string, unknown>): SpecialCategory {
     id: Number(r.id), kind: String(r.kind ?? "special") === "sale" ? "sale" : "special", slug: String(r.slug), name: String(r.name), description: String(r.description ?? ""),
     image: String(r.image ?? ""), startAt: r.start_at == null ? null : Number(r.start_at), endAt: r.end_at == null ? null : Number(r.end_at),
     enabled: Number(r.enabled) === 1, createdAt: Number(r.created_at), updatedAt: Number(r.updated_at),
-    dealType: r.deal_type === "bxgy" || r.deal_type === "percent" ? r.deal_type : "none",
+    dealType: r.deal_type === "bxgy" || r.deal_type === "percent" || r.deal_type === "amount" ? r.deal_type : "none",
+    dealAmount: Number(r.deal_amount ?? 0),
     dealBuy: Number(r.deal_buy ?? 0), dealGet: Number(r.deal_get ?? 0), dealPercent: Number(r.deal_percent ?? 0),
     dealLimit: r.deal_limit == null ? null : Number(r.deal_limit),
   };
@@ -129,6 +133,7 @@ function bumpSpecials() {
 /** The deal a special gives, if it has one set up properly. */
 export function dealOf(s: SpecialCategory): Deal | null {
   if (s.dealType === "bxgy" && s.dealBuy > 0 && s.dealGet > 0) return { slug: s.slug, name: s.name, kind: "bxgy", buy: s.dealBuy, get: s.dealGet, percent: 0, limit: s.dealLimit };
+  if (s.dealType === "amount" && s.dealAmount > 0) return { slug: s.slug, name: s.name, kind: "amount", buy: 0, get: 0, percent: 0, amount: s.dealAmount, limit: s.dealLimit };
   if (s.dealType === "percent" && s.dealPercent > 0) return { slug: s.slug, name: s.name, kind: "percent", buy: 0, get: 0, percent: Math.min(100, s.dealPercent), limit: s.dealLimit };
   return null;
 }
@@ -152,16 +157,26 @@ export function dealsForCategories(categories: string[], deals: Record<string, D
   return categories.map((c) => deals[c]).filter((d): d is Deal => !!d);
 }
 
+/** A product's live deals: its special / sale categories' deals plus any deal
+ *  set on the product itself (Admin → product → Deal / offer). */
+export async function dealsForProduct(slug: string, categories: string[]): Promise<Deal[]> {
+  const [cat, own] = await Promise.all([liveDeals(), liveProductDeals()]);
+  const ds = dealsForCategories(categories, cat);
+  return own[slug] ? [...ds, own[slug]] : ds;
+}
+
 /** Live deals for each of these products (only products that have one). */
 export async function dealsForSlugs(slugs: string[]): Promise<Record<string, Deal[]>> {
-  const deals = await liveDeals();
-  if (!Object.keys(deals).length || !slugs.length) return {};
+  const [deals, own] = await Promise.all([liveDeals(), liveProductDeals()]);
+  if ((!Object.keys(deals).length && !Object.keys(own).length) || !slugs.length) return {};
   const out: Record<string, Deal[]> = {};
   const r = await libsql.execute({ sql: `SELECT slug, categories FROM products WHERE slug IN (${slugs.map(() => "?").join(",")})`, args: slugs });
   for (const row of r.rows as Record<string, unknown>[]) {
     let cats: string[] = [];
     try { cats = JSON.parse(String(row.categories || "[]")); } catch { /* none */ }
     const ds = dealsForCategories(cats, deals);
+    const mine = own[String(row.slug)];
+    if (mine) ds.push(mine);
     if (ds.length) out[String(row.slug)] = ds;
   }
   return out;
@@ -205,7 +220,7 @@ export async function shopCategories(): Promise<Category[]> {
 
 export interface SpecialInput {
   kind?: SpecialKind; name: string; slug?: string; description?: string; image?: string; startAt?: number | null; endAt?: number | null; enabled?: boolean;
-  dealType?: DealType; dealBuy?: number; dealGet?: number; dealPercent?: number; dealLimit?: number | null;
+  dealType?: DealType; dealBuy?: number; dealGet?: number; dealPercent?: number; dealAmount?: number; dealLimit?: number | null;
 }
 
 async function slugTaken(slug: string, exceptId?: number): Promise<boolean> {
@@ -215,8 +230,8 @@ async function slugTaken(slug: string, exceptId?: number): Promise<boolean> {
 }
 
 function dealArgs(i: SpecialInput): (string | number | null)[] {
-  const t = i.dealType === "bxgy" || i.dealType === "percent" ? i.dealType : "none";
-  return [t, t === "bxgy" ? i.dealBuy ?? 0 : 0, t === "bxgy" ? i.dealGet ?? 0 : 0, t === "percent" ? i.dealPercent ?? 0 : 0, t === "none" ? null : i.dealLimit && i.dealLimit > 0 ? i.dealLimit : null];
+  const t = i.dealType === "bxgy" || i.dealType === "percent" || i.dealType === "amount" ? i.dealType : "none";
+  return [t, t === "bxgy" ? i.dealBuy ?? 0 : 0, t === "bxgy" ? i.dealGet ?? 0 : 0, t === "percent" ? i.dealPercent ?? 0 : 0, t === "none" ? null : i.dealLimit && i.dealLimit > 0 ? i.dealLimit : null, t === "amount" ? i.dealAmount ?? 0 : 0];
 }
 
 function validate(i: SpecialInput): string | null {
@@ -225,6 +240,7 @@ function validate(i: SpecialInput): string | null {
   if (i.dealType === "bxgy" && (!(i.dealBuy && i.dealBuy > 0) || !(i.dealGet && i.dealGet > 0))) return "For a “Buy X, get Y free” deal, enter how many to buy and how many are free.";
   if (i.dealType === "percent" && !(i.dealPercent && i.dealPercent > 0 && i.dealPercent <= 100)) return "Enter a % off between 1 and 100.";
   if (i.dealType === "percent" && i.dealPercent === 100 && !(i.dealLimit && i.dealLimit > 0)) return "A 100% off (free) deal needs a limit per order, e.g. 4.";
+  if (i.dealType === "amount" && !(i.dealAmount && i.dealAmount > 0)) return "Enter how many Rand off each item.";
   return null;
 }
 
@@ -237,7 +253,7 @@ export async function createSpecial(i: SpecialInput): Promise<{ ok: true; specia
   if (await slugTaken(slug)) return { ok: false, error: `The address “${slug}” is already used by another category. Choose a different one.` };
   const now = Date.now();
   const r = await libsql.execute({
-    sql: `INSERT INTO special_categories (kind, slug, name, description, image, start_at, end_at, enabled, created_at, updated_at, deal_type, deal_buy, deal_get, deal_percent, deal_limit) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    sql: `INSERT INTO special_categories (kind, slug, name, description, image, start_at, end_at, enabled, created_at, updated_at, deal_type, deal_buy, deal_get, deal_percent, deal_limit, deal_amount) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     args: [i.kind === "sale" ? "sale" : "special", slug, i.name.trim(), i.description?.trim() ?? "", i.image ?? "", i.startAt ?? null, i.endAt ?? null, i.enabled === false ? 0 : 1, now, now, ...dealArgs(i)],
   });
   revalidateProducts();
@@ -254,7 +270,7 @@ export async function updateSpecial(id: number, i: SpecialInput): Promise<{ ok: 
   const slug = slugify(i.slug || before.slug);
   if (slug !== before.slug && (await slugTaken(slug, id))) return { ok: false, error: `The address “${slug}” is already used by another category.` };
   await libsql.execute({
-    sql: `UPDATE special_categories SET slug = ?, name = ?, description = ?, image = ?, start_at = ?, end_at = ?, enabled = ?, updated_at = ?, deal_type = ?, deal_buy = ?, deal_get = ?, deal_percent = ?, deal_limit = ? WHERE id = ?`,
+    sql: `UPDATE special_categories SET slug = ?, name = ?, description = ?, image = ?, start_at = ?, end_at = ?, enabled = ?, updated_at = ?, deal_type = ?, deal_buy = ?, deal_get = ?, deal_percent = ?, deal_limit = ?, deal_amount = ? WHERE id = ?`,
     args: [slug, i.name.trim(), i.description?.trim() ?? "", i.image ?? "", i.startAt ?? null, i.endAt ?? null, i.enabled === false ? 0 : 1, Date.now(), ...dealArgs(i), id],
   });
   // Address changed: move the product tags across.

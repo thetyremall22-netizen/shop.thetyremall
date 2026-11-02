@@ -4,6 +4,8 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { listProducts, productTypeCounts, type AdminFilter, type ProductSort } from "@/lib/db/queries";
 import { categories as BUILT_IN_CATEGORIES } from "@/lib/catalogue";
 import { listSpecials } from "@/lib/special-categories";
+import { getProductDeals, productDealStatus, asDeal } from "@/lib/product-deals";
+import { dealLabel } from "@/lib/deals";
 
 const SORTS: ProductSort[] = ["stock_desc", "stock_asc", "price_desc", "price_asc", "name", "name_desc"];
 import { AdminSearch } from "@/components/admin/AdminSearch";
@@ -27,10 +29,14 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
     listSpecials(),
   ]);
   const catName = new Map<string, string>([...BUILT_IN_CATEGORIES.map((c) => [c.slug, c.name] as [string, string]), ...specials.map((s) => [s.slug, `${s.kind === "sale" ? "%" : "★"} ${s.name}`] as [string, string])]);
+  const deals = await getProductDeals(rows.map((r) => r.slug)).catch(() => new Map());
+  const now = Date.now();
   const tableRows = rows.map((r) => {
     let cats: string[] = [];
     try { cats = JSON.parse(r.categories || "[]"); } catch { /* none */ }
-    return { ...r, categoryNames: cats.map((c) => catName.get(c) ?? c) };
+    const d = deals.get(r.slug);
+    const st = d ? productDealStatus(d, now) : null;
+    return { ...r, categoryNames: cats.map((c) => catName.get(c) ?? c), dealText: d ? `${dealLabel(asDeal(d))}${st === "scheduled" ? " (starts later)" : st === "ended" ? " (ended)" : ""}` : undefined };
   });
   const TYPE_TABS = [
     { v: "", label: "All products", n: counts.all },

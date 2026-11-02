@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { UndoBar } from "./ConfirmDialog";
+import { UndoBar, ConfirmDialog } from "./ConfirmDialog";
+import { DealFields, blankDeal, formToDeal, dealSummaryText, type DealForm } from "./DealFields";
 
 export interface AdminProductRow {
   slug: string;
@@ -18,6 +19,8 @@ export interface AdminProductRow {
   lowStockThreshold: number;
   /** Category names, for the Category column. */
   categoryNames?: string[];
+  /** The product's own deal, e.g. "Buy 3, get 1 free" (Deal / offer). */
+  dealText?: string;
 }
 
 const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2 });
@@ -35,7 +38,11 @@ export function ProductsTable({ rows, q, filter, type, total, sort = "stock_desc
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const [undo, setUndo] = useState<{ id: number; message: string } | null>(null);
+  const [undo, setUndo] = useState<{ id: number; message: string; deal?: boolean } | null>(null);
+  // Bulk "Deal" action: set (or remove) a deal on the selected products.
+  const [dealOpen, setDealOpen] = useState(false);
+  const [dealMode, setDealMode] = useState<"set" | "remove">("set");
+  const [dealF, setDealF] = useState<DealForm>(blankDeal);
 
   // action builder
   const [kind, setKind] = useState<ActionKind>("price");
@@ -98,6 +105,21 @@ export function ProductsTable({ rows, q, filter, type, total, sort = "stock_desc
       else setMsg(d.error ?? "Bulk update failed.");
     } catch (e) { setMsg((e as Error).message); }
     setBusy(false);
+  }
+
+  async function applyDeal() {
+    setBusy(true); setMsg(null);
+    const target = applyAll ? { scope: "filter", q, filter, type } : { scope: "selected", slugs: [...sel] };
+    const res = await fetch("/api/admin/products/deals", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dealMode === "remove" ? { ...target, remove: true } : { ...target, deal: formToDeal(dealF) }) });
+    const d = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setMsg(d.error ?? "Couldn't apply the deal."); return; }
+    setDealOpen(false);
+    const what = dealMode === "remove" ? "Removed the deal from" : "Deal set on";
+    setMsg(`✓ ${what} ${d.updated} product${d.updated === 1 ? "" : "s"} — live within ~1 min.`);
+    if (d.auditId) setUndo({ id: d.auditId, deal: true, message: `${what} ${d.updated} product${d.updated === 1 ? "" : "s"}` });
+    setSel(new Set()); setApplyAll(false); router.refresh();
   }
 
   const inp = "h-9 rounded-lg border border-line bg-surface-2 px-2.5 text-sm text-fg outline-none focus:border-volt";
@@ -173,9 +195,27 @@ export function ProductsTable({ rows, q, filter, type, total, sort = "stock_desc
           ) : (
             <button onClick={apply} disabled={busy} className="btn btn-volt h-9 px-4 text-sm disabled:opacity-50">Apply</button>
           )}
+          <span className="mx-1 h-5 w-px bg-line" />
+          <button onClick={() => { setDealOpen(true); setMsg(null); }} disabled={busy} className="btn btn-volt-outline h-9 px-3 text-sm disabled:opacity-50">🏷 Deal…</button>
           {msg && <span className={`text-xs font-semibold ${msg.startsWith("✓") ? "text-pay" : "text-sale"}`}>{msg}</span>}
         </div>
       )}
+      <ConfirmDialog open={dealOpen} busy={busy} wide onNo={() => setDealOpen(false)} onYes={applyDeal}
+        title={`Deal for ${affected.toLocaleString()} selected product${affected === 1 ? "" : "s"}`}
+        yesLabel={dealMode === "remove" ? `Yes, remove their deal` : `Yes, apply to ${affected.toLocaleString()} product${affected === 1 ? "" : "s"}`} noLabel="Cancel">
+        <div className="mb-3 flex gap-2">
+          {(["set", "remove"] as const).map((m) => (
+            <button key={m} type="button" onClick={() => setDealMode(m)} className={`rounded-full px-3.5 py-1.5 text-sm font-semibold ${dealMode === m ? "bg-volt text-volt-ink" : "border border-line text-muted hover:text-fg"}`}>
+              {m === "set" ? "Set a deal" : "Remove their deal"}
+            </button>
+          ))}
+        </div>
+        {dealMode === "set" ? (<>
+          <DealFields f={dealF} set={setDealF} />
+          <p className="mt-2 text-sm font-semibold text-fg">{dealSummaryText(formToDeal(dealF))}</p>
+          <p className="mt-1 text-xs text-muted">Replaces any deal these products already have of their own (sale / special category deals aren&apos;t changed). You can undo straight after.</p>
+        </>) : <p className="text-sm text-muted">Takes the product&apos;s own deal off these products (sale / special category deals aren&apos;t changed). You can undo straight after.</p>}
+      </ConfirmDialog>
       {!active && msg && <div className="mb-3 text-xs font-semibold text-pay">{msg}</div>}
 
       <div className="overflow-x-auto rounded-xl border border-line">
@@ -208,6 +248,7 @@ export function ProductsTable({ rows, q, filter, type, total, sort = "stock_desc
                   </td>
                   <td className="px-4 py-2.5 whitespace-nowrap">
                     {p.onSale ? <><span className="text-faint line-through">{zar(p.regularPrice)}</span> <span className="font-semibold text-fg">{zar(p.salePrice)}</span></> : <span className="font-semibold text-fg">{zar(p.price)}</span>}
+                    {p.dealText && <div className="mt-0.5"><span className="badge badge-volt">🏷 {p.dealText}</span></div>}
                   </td>
                   <td className="px-4 py-2.5">
                     {p.stockQty === 0
@@ -226,7 +267,7 @@ export function ProductsTable({ rows, q, filter, type, total, sort = "stock_desc
       {undo && (
         <UndoBar message={undo.message} seconds={60} onClose={() => setUndo(null)}
           onUndo={async () => {
-            const res = await fetch("/api/admin/products/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scope: "undo", auditId: undo.id }) });
+            const res = await fetch(undo.deal ? "/api/admin/products/deals" : "/api/admin/products/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scope: "undo", auditId: undo.id }) });
             const d = await res.json().catch(() => ({}));
             setMsg(res.ok ? `↩ Undone — ${d.restored} product${d.restored === 1 ? "" : "s"} put back.` : d.error ?? "Couldn't undo.");
             router.refresh();

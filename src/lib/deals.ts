@@ -12,30 +12,38 @@
 //  • "Limit per order" caps how many items one order gets free / discounted
 //    under that deal (required for 100% off).
 
-export type DealKind = "bxgy" | "percent";
+/** bxgy = buy X get Y free · percent = % off · amount = R off each · price = a set deal price each */
+export type DealKind = "bxgy" | "percent" | "amount" | "price";
 
 export interface Deal {
-  /** The special / sale category's address (e.g. "black-friday-2026"). */
+  /** Who gives the deal: a special / sale category's address (e.g. "black-friday-2026"),
+   *  or "product:<slug>" for a deal set on one product. */
   slug: string;
-  /** Its name (e.g. "Black Friday 2026"). */
+  /** Shown to customers (e.g. "Black Friday 2026", "Weekend Special"). */
   name: string;
   kind: DealKind;
   buy: number;      // bxgy: buy this many…
   get: number;      // …get this many free
   percent: number;  // percent: % off (1–100)
+  amount?: number;  // amount: cents off each item
+  price?: number;   // price: deal price for each item (cents)
   /** Most items per order that get the deal (free / discounted); null = no limit. */
   limit: number | null;
 }
 
-/** "Buy 3, get 1 free" · "10% off" · "Free". */
-export function dealLabel(d: Pick<Deal, "kind" | "buy" | "get" | "percent">): string {
+const rands = (c: number) => `R${(c / 100).toLocaleString("en-ZA", { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 })}`;
+
+/** "Buy 3, get 1 free" · "10% off" · "Free" · "R200 off each" · "Deal price R1,999". */
+export function dealLabel(d: Pick<Deal, "kind" | "buy" | "get" | "percent" | "amount" | "price">): string {
   if (d.kind === "percent") return d.percent >= 100 ? "Free" : `${d.percent}% off`;
+  if (d.kind === "amount") return `${rands(d.amount ?? 0)} off each`;
+  if (d.kind === "price") return `Deal price ${rands(d.price ?? 0)}`;
   return `Buy ${d.buy}, get ${d.get} free`;
 }
 
 /** How many items (of `qty`) are free / discounted, before the per-order limit. */
 function dealUnits(qty: number, d: Deal): number {
-  if (d.kind === "percent") return qty;
+  if (d.kind !== "bxgy") return qty;
   const group = d.buy + d.get;
   return group > 0 ? Math.floor(qty / group) * d.get : 0;
 }
@@ -43,12 +51,14 @@ function dealUnits(qty: number, d: Deal): number {
 /** Saving on one item (cents) under a deal. */
 function unitSaving(unit: number, d: Deal): number {
   if (d.kind === "percent") return Math.round((unit * Math.min(100, Math.max(0, d.percent))) / 100);
+  if (d.kind === "amount") return Math.min(unit, Math.max(0, d.amount ?? 0));
+  if (d.kind === "price") return Math.max(0, unit - Math.max(0, d.price ?? unit));
   return unit;
 }
 
-/** Price after a % off deal (for showing on product cards / pages). */
+/** Price of one item under a % off / R off / deal-price deal (for product cards / pages). */
 export function dealPrice(unit: number, d: Deal): number {
-  return d.kind === "percent" ? Math.max(0, unit - unitSaving(unit, d)) : unit;
+  return d.kind === "bxgy" ? unit : Math.max(0, unit - unitSaving(unit, d));
 }
 
 /** The better of a product's live deals (most saving at this quantity, else

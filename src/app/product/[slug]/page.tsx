@@ -25,7 +25,7 @@ import { findRetired, wantedFrom } from "@/lib/retired-products";
 import { productJsonLd } from "@/lib/merchant";
 import { TrackViewItem } from "@/components/TrackViewItem";
 import { Chevron, Check, Truck, Shield, Bolt, Star } from "@/components/icons";
-import { liveDeals, dealsForCategories } from "@/lib/special-categories";
+import { dealsForProduct } from "@/lib/special-categories";
 import { bestDeal, dealLabel, dealPrice, priceForQty } from "@/lib/deals";
 import { categoryPath } from "@/lib/shop-url";
 import { dealProductInfo } from "@/lib/deal-products";
@@ -126,7 +126,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const pct = discountPct(regularPrice, salePrice);
   const brandSrc = brandLogoSrc(p.brand);
   // Live special / sale deals on this product (Buy 3 get 1 free, % off…).
-  const deals = dealsForCategories(p.categories, await liveDeals());
+  const deals = await dealsForProduct(p.slug, p.categories);
   const deal = bestDeal(deals, price);
   const related = await relatedProducts(p, 6);
 
@@ -269,7 +269,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           {deal && (
             <Link href={categoryPath(deal.slug)} className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-volt/40 bg-volt/10 px-4 py-2.5 text-sm font-bold text-volt hover:bg-volt/15">
               🏷 {deal.name}: {dealLabel(deal)}
-              {deal.kind === "percent" && <span className="text-fg">— {formatPrice(dealPrice(price, deal))} per {p.type === "tyre" ? "tyre" : "item"}</span>}
+              {deal.kind !== "bxgy" && <span className="text-fg">— {formatPrice(dealPrice(price, deal))} per {p.type === "tyre" ? "tyre" : "item"}</span>}
               {deal.limit && <span className="text-xs font-semibold text-muted">(max {deal.limit} per order)</span>}
             </Link>
           )}
@@ -286,7 +286,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
                   <div className="px-0.5 py-2">
                     <div className="text-[10px] font-extrabold uppercase tracking-wider text-muted">Per tyre</div>
-                    {deal?.kind === "percent" && <div className="text-sm leading-none text-faint line-through">{formatPrice(price)}</div>}
+                    {deal && deal.kind !== "bxgy" && <div className="text-sm leading-none text-faint line-through">{formatPrice(price)}</div>}
                     <div className="font-display text-3xl leading-none text-fg">{formatPrice(deal ? dealPrice(price, deal) : price)}</div>
                   </div>
                   <div className="rounded-xl bg-volt/10 px-3.5 py-2 ring-1 ring-volt/30">

@@ -11,11 +11,11 @@ import { DealImporter } from "./DealImporter";
 export interface SpecialRow {
   id: number; slug: string; name: string; description: string; image: string;
   startAt: number | null; endAt: number | null; enabled: boolean; status: "draft" | "scheduled" | "live" | "ended"; count: number;
-  dealType: "none" | "bxgy" | "percent"; dealBuy: number; dealGet: number; dealPercent: number; dealLimit: number | null;
+  dealType: "none" | "bxgy" | "percent" | "amount"; dealBuy: number; dealGet: number; dealPercent: number; dealAmount: number; dealLimit: number | null;
 }
 
 // Deal type presets; "custom-…" lets the admin type their own numbers.
-const DEAL_PRESETS: { v: string; label: string; type: "none" | "bxgy" | "percent"; buy?: number; get?: number; percent?: number }[] = [
+const DEAL_PRESETS: { v: string; label: string; type: "none" | "bxgy" | "percent" | "amount"; buy?: number; get?: number; percent?: number }[] = [
   { v: "none", label: "No deal — just a group of products", type: "none" },
   { v: "b1g1", label: "Buy 1, get 1 free", type: "bxgy", buy: 1, get: 1 },
   { v: "b2g2", label: "Buy 2, get 2 free", type: "bxgy", buy: 2, get: 2 },
@@ -25,8 +25,10 @@ const DEAL_PRESETS: { v: string; label: string; type: "none" | "bxgy" | "percent
   { v: "p50", label: "50% off", type: "percent", percent: 50 },
   { v: "p100", label: "100% off (free)", type: "percent", percent: 100 },
   { v: "pct", label: "% off (choose the %)", type: "percent" },
+  { v: "amount", label: "Rand off each item (choose the amount)", type: "amount" },
 ];
 function presetOf(type: string, buy: number, get: number, percent: number): string {
+  if (type === "amount") return "amount";
   return DEAL_PRESETS.find((p) => p.type === type && p.v !== "bxgy" && p.v !== "pct" && (p.type === "none" || (p.buy === buy && p.get === get) || p.percent === percent))?.v
     ?? (type === "bxgy" ? "bxgy" : type === "percent" ? "pct" : "none");
 }
@@ -44,25 +46,26 @@ const toLocal = (ms: number | null) => { if (!ms) return ""; const d = new Date(
 const fromLocal = (v: string) => (v ? new Date(v).getTime() : null);
 const slugify = (s: string) => s.toLowerCase().replace(/[^\w\s-]/g, "").trim().replace(/[\s_]+/g, "-").replace(/-+/g, "-").slice(0, 60);
 
-interface Form { name: string; slug: string; description: string; image: string; start: string; end: string; enabled: boolean; deal: string; buy: string; get: string; percent: string; limit: string }
-const blank: Form = { name: "", slug: "", description: "", image: "", start: "", end: "", enabled: true, deal: "none", buy: "", get: "", percent: "", limit: "" };
+interface Form { name: string; slug: string; description: string; image: string; start: string; end: string; enabled: boolean; deal: string; buy: string; get: string; percent: string; amount: string; limit: string }
+const blank: Form = { name: "", slug: "", description: "", image: "", start: "", end: "", enabled: true, deal: "none", buy: "", get: "", percent: "", amount: "", limit: "" };
 const toForm = (s: SpecialRow): Form => ({
   name: s.name, slug: s.slug, description: s.description, image: s.image, start: toLocal(s.startAt), end: toLocal(s.endAt), enabled: s.enabled,
   deal: presetOf(s.dealType, s.dealBuy, s.dealGet, s.dealPercent), buy: s.dealBuy ? String(s.dealBuy) : "", get: s.dealGet ? String(s.dealGet) : "",
-  percent: s.dealPercent ? String(s.dealPercent) : "", limit: s.dealLimit ? String(s.dealLimit) : "",
+  percent: s.dealPercent ? String(s.dealPercent) : "", amount: s.dealAmount ? String(s.dealAmount / 100) : "", limit: s.dealLimit ? String(s.dealLimit) : "",
 });
 const body = (f: Form) => {
   const p = DEAL_PRESETS.find((x) => x.v === f.deal) ?? DEAL_PRESETS[0];
   return {
     name: f.name, slug: f.slug, description: f.description, image: f.image, startAt: fromLocal(f.start), endAt: fromLocal(f.end), enabled: f.enabled,
     dealType: p.type, dealBuy: p.buy ?? Number(f.buy || 0), dealGet: p.get ?? Number(f.get || 0), dealPercent: p.percent ?? Number(f.percent || 0),
+    dealAmount: p.type === "amount" ? Math.round((parseFloat(f.amount.replace(",", ".")) || 0) * 100) : 0,
     dealLimit: p.type === "none" ? null : Number(f.limit || 0) || null,
   };
 };
 /** "Buy 3, get 1 free · max 4 free per order" for the list. */
 function dealSummary(s: SpecialRow): string | null {
   if (s.dealType === "none") return null;
-  const label = dealLabel({ kind: s.dealType, buy: s.dealBuy, get: s.dealGet, percent: s.dealPercent });
+  const label = dealLabel({ kind: s.dealType, buy: s.dealBuy, get: s.dealGet, percent: s.dealPercent, amount: s.dealAmount });
   return s.dealLimit ? `${label} · max ${s.dealLimit} ${s.dealType === "bxgy" || s.dealPercent >= 100 ? "free" : "discounted"} per order` : label;
 }
 
@@ -96,6 +99,9 @@ function SpecialForm({ f, set, slugEdited, setSlugEdited, example = "Father's Da
           </>)}
           {f.deal === "pct" && (
             <label><span className={lab}>% off</span><input type="number" min={1} max={100} className={field} value={f.percent} onChange={(e) => set({ ...f, percent: e.target.value })} /></label>
+          )}
+          {f.deal === "amount" && (
+            <label><span className={lab}>Rand off each item</span><input type="number" min={1} step="0.01" className={field} value={f.amount} placeholder="e.g. 200" onChange={(e) => set({ ...f, amount: e.target.value })} /></label>
           )}
         </div>
         <p className="mt-2 text-xs text-muted">
@@ -263,7 +269,7 @@ export function SpecialsManager({ specials, canEdit, canDelete, kind = "special"
 
   const changes = (s: SpecialRow) => {
     const a = toForm(s), b = editF;
-    const L: Record<keyof Form, string> = { name: "Name", slug: "Web address", description: "Description", image: "Image", start: "Starts", end: "Ends", enabled: "Switched on", deal: "Deal type", buy: "Buy", get: "Get free", percent: "% off", limit: "Limit per order" };
+    const L: Record<keyof Form, string> = { name: "Name", slug: "Web address", description: "Description", image: "Image", start: "Starts", end: "Ends", enabled: "Switched on", deal: "Deal type", buy: "Buy", get: "Get free", percent: "% off", amount: "Rand off each", limit: "Limit per order" };
     return (Object.keys(L) as (keyof Form)[]).filter((k) => String(a[k]) !== String(b[k])).map((k) => ({ label: L[k], from: String(a[k] || "—"), to: String(b[k] || "—") }));
   };
 

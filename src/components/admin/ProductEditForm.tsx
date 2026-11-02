@@ -143,6 +143,7 @@ export function ProductEditForm({ slug, initial }: Props) {
           <Field label="Low-stock alert at"><input type="number" min={0} value={low} onChange={(e) => { setLow(e.target.value); touch(); }} className="num" /></Field>
         </div>
         <div className="mt-3"><Toggle label="On sale" checked={onSale} onChange={(v) => { setOnSale(v); touch(); }} /></div>
+        <p className="mt-1.5 text-xs text-muted">“On sale” shows the Sale price above (with the regular price crossed out) until you switch it off. For a deal with rules or dates — Buy 3 get 1 free, % off, R off, a deal price — use <b>Deal / offer</b> on the right.</p>
       </Section>
 
       <Section title="Content">

@@ -10,7 +10,8 @@ export function parseSpecialBody(b: Record<string, unknown>): SpecialInput {
     kind: b.kind === "sale" ? "sale" : "special",
     name: str(b.name, 80), slug: str(b.slug, 80), description: str(b.description, 600), image: image(b.image),
     startAt: when(b.startAt), endAt: when(b.endAt), enabled: b.enabled !== false,
-    dealType: b.dealType === "bxgy" || b.dealType === "percent" ? b.dealType : "none",
+    dealType: b.dealType === "bxgy" || b.dealType === "percent" || b.dealType === "amount" ? b.dealType : "none",
     dealBuy: count(b.dealBuy), dealGet: count(b.dealGet), dealPercent: count(b.dealPercent), dealLimit: count(b.dealLimit) || null,
+    dealAmount: typeof b.dealAmount === "number" && b.dealAmount > 0 ? Math.min(Math.round(b.dealAmount), 100_000_00) : 0,
   };
 }

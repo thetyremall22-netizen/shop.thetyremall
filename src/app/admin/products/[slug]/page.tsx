@@ -9,13 +9,15 @@ import { getProductRow } from "@/lib/db/queries";
 import { listAudit } from "@/lib/audit";
 import { AuditHistory } from "@/components/admin/AuditHistory";
 import { Close } from "@/components/icons";
+import { ProductDealCard } from "@/components/admin/ProductDealCard";
+import { can } from "@/lib/admin-users";
 
 function parseJson<T>(s: string, fallback: T): T { try { return JSON.parse(s) as T; } catch { return fallback; } }
 
 export const instant = false;
 
 export default async function AdminProductEdit({ params }: { params: Promise<{ slug: string }> }) {
-  await requireAdmin();
+  const me = await requireAdmin();
   const { slug } = await params;
   const p = await getProductRow(slug);
   if (!p) notFound();
@@ -62,7 +64,10 @@ export default async function AdminProductEdit({ params }: { params: Promise<{ s
           }}
         />
       </div>
-      <AuditHistory title="Change history" entries={history} empty="No changes recorded yet. Every edit made here is listed with who made it." />
+      <div className="space-y-5">
+        <ProductDealCard slug={p.slug} canEdit={can(me.role, "products.edit")} />
+        <AuditHistory title="Change history" entries={history} empty="No changes recorded yet. Every edit made here is listed with who made it." />
+      </div>
       </div>
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-4">

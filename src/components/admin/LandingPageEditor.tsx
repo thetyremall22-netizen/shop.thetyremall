@@ -70,6 +70,16 @@ export function LandingPageEditor({ initial }: { initial: Page }) {
   }
 
   const groups = [...new Set(cats.map((c) => c.group))];
+  // "Special / sale for this page": the page's (first) products section.
+  const productsSection = p.sections.find((s) => s.type === "products" && s.category) ?? p.sections.find((s) => s.type === "products");
+  const linkedCat = productsSection?.category ? cats.find((c) => c.slug === productsSection.category) : undefined;
+  const linkCategory = (slug: string) => {
+    if (!slug) return;
+    if (productsSection) { setSection(productsSection.id, { category: slug }); return; }
+    setP((x) => ({ ...x, sections: [{ id: newId(), type: "products", heading: "", category: slug, limit: 48 }, ...x.sections] }));
+    setDirty(true);
+  };
+  const isSpecial = (c?: Cat) => !!c && (c.group === "Special categories" || c.group === "Sale categories");
 
   return (
     <div className="mt-2 space-y-6">
@@ -96,6 +106,30 @@ export function LandingPageEditor({ initial }: { initial: Page }) {
         <div className="flex flex-wrap items-center gap-6 border-t border-line pt-4">
           <Toggle label={p.published ? "Published — visible on the website" : "Draft — hidden from visitors"} checked={p.published} onChange={(v) => set("published", v)} />
         </div>
+      </div>
+
+      {/* the special / sale this page is for */}
+      <div className="card space-y-3 p-5">
+        <h2 className="font-display text-xl">Special / sale for this page</h2>
+        <p className="text-sm text-muted">Choose the special or sale category this page is for — its products are shown on the page (and kept up to date as you add or remove products).</p>
+        <select value={productsSection?.category ?? ""} onChange={(e) => linkCategory(e.target.value)}
+          className="h-11 w-full max-w-xl rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt">
+          <option value="">— choose a special or sale category —</option>
+          {["Special categories", "Sale categories", ...groups.filter((g) => g !== "Special categories" && g !== "Sale categories")].filter((g) => groups.includes(g)).map((g) => (
+            <optgroup key={g} label={g}>
+              {cats.filter((c) => c.group === g).map((c) => <option key={c.slug} value={c.slug}>{c.name}{STATUS[c.status] ?? ""}</option>)}
+            </optgroup>
+          ))}
+        </select>
+        <NewCategoryInline onCreated={(c) => { void loadCats().then(() => linkCategory(c.slug)); }} />
+        {linkedCat && (
+          <p className="text-sm">
+            <span className="font-semibold text-volt">✓ Linked to “{linkedCat.name}”</span>
+            {dirty && <span className="text-muted"> — click <b>Save changes</b> to keep it.</span>}
+            {isSpecial(linkedCat) && <> · <Link href={`/admin/products/specials?${linkedCat.group === "Sale categories" ? "kind=sale&" : ""}open=${linkedCat.slug}`} target="_blank" className="font-semibold text-volt hover:underline">Add / change its products →</Link></>}
+          </p>
+        )}
+        <p className="text-xs text-muted">The products show in a section on the page (see Page sections below), where you can change its heading or how many products show, or move it.</p>
       </div>
 
       {/* menu */}

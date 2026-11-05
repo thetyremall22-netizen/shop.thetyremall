@@ -234,7 +234,52 @@ function ProductPicker({ special, canEdit }: { special: SpecialRow; canEdit: boo
   );
 }
 
-export function SpecialsManager({ specials, canEdit, canDelete, kind = "special", openSlug }: { specials: SpecialRow[]; canEdit: boolean; canDelete: boolean; kind?: "special" | "sale"; openSlug?: string }) {
+export interface PageLink { id: number; title: string; slug: string; published: boolean; categories: string[] }
+
+/** Which landing pages show this special's products, and a quick way to link one. */
+function LandingPageLink({ special, pages, canPages }: { special: SpecialRow; pages: PageLink[]; canPages: boolean }) {
+  const router = useRouter();
+  const linked = pages.filter((p) => p.categories.includes(special.slug));
+  const others = pages.filter((p) => !p.categories.includes(special.slug));
+  const [pick, setPick] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  if (!canPages) return null;
+  async function link() {
+    if (!pick) return;
+    setBusy(true); setErr(null);
+    const res = await fetch(`/api/admin/landing-pages/${pick}/link`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category: special.slug, name: special.name }) });
+    const d = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setErr(d.error ?? "Couldn't link the page."); return; }
+    setPick(""); router.refresh();
+  }
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+      <span className="font-semibold text-muted">📄 Landing page:</span>
+      {linked.map((p) => (
+        <span key={p.id} className="inline-flex items-center gap-1">
+          <a href={`/admin/pages/${p.id}`} className="font-semibold text-volt hover:underline">{p.title}</a>
+          <span className="text-muted">(/{p.slug}{p.published ? "" : " · draft, not on the site yet"})</span>
+        </span>
+      ))}
+      {!linked.length && <span className="text-muted">none yet</span>}
+      {others.length > 0 && (
+        <span className="inline-flex items-center gap-1.5">
+          <select value={pick} onChange={(e) => setPick(e.target.value)} className="h-8 rounded-lg border border-line bg-surface-2 px-2 text-xs text-fg outline-none focus:border-volt">
+            <option value="">{linked.length ? "Also show on…" : "Show these products on…"}</option>
+            {others.map((p) => <option key={p.id} value={p.id}>{p.title} (/{p.slug})</option>)}
+          </select>
+          <button type="button" disabled={!pick || busy} onClick={link} className="btn btn-volt h-8 px-3 text-xs disabled:opacity-50">{busy ? "Linking…" : "Link page"}</button>
+        </span>
+      )}
+      {!pages.length && <a href="/admin/pages" className="font-semibold text-volt hover:underline">Make a landing page →</a>}
+      {err && <span className="text-sale">{err}</span>}
+    </div>
+  );
+}
+
+export function SpecialsManager({ specials, canEdit, canDelete, kind = "special", openSlug, pages = [], canPages = false }: { specials: SpecialRow[]; canEdit: boolean; canDelete: boolean; kind?: "special" | "sale"; openSlug?: string; pages?: PageLink[]; canPages?: boolean }) {
   const word = kind === "sale" ? "sale category" : "special category";
   const example = kind === "sale" ? "Black Friday Sale" : "Father's Day Specials";
   const router = useRouter();
@@ -298,6 +343,7 @@ export function SpecialsManager({ specials, canEdit, canDelete, kind = "special"
               <div className="flex flex-wrap items-center gap-2"><span className="font-display text-lg text-fg">{s.name}</span><span className={`badge ${STATUS[s.status].badge}`}>{STATUS[s.status].label}</span></div>
               <div className="mt-0.5 text-xs text-muted">/product-category/{s.slug} · {s.count} product{s.count === 1 ? "" : "s"} · {when(s.startAt)} → {when(s.endAt)}</div>
               {dealSummary(s) && <div className="mt-1"><span className="badge badge-volt">🏷 {dealSummary(s)}</span></div>}
+              <LandingPageLink special={s} pages={pages} canPages={canPages} />
             </div>
             <div className="flex items-center gap-3 text-sm font-semibold">
               {s.status === "live" && <a href={`/product-category/${s.slug}`} target="_blank" rel="noreferrer" className="text-muted hover:text-volt">View on site ↗</a>}

@@ -230,3 +230,19 @@ export function videoSource(url: string): { kind: "iframe" | "file"; src: string
   if (/^(https:\/\/|\/)[^\s"']+\.(mp4|webm)(\?[^\s"']*)?$/i.test(u)) return { kind: "file", src: u };
   return null;
 }
+
+/** Show a category's products on a landing page (Admin → Specials → "Landing
+ *  page"): uses the page's products section, or adds one at the top. */
+export async function linkCategoryToPage(id: number, category: string): Promise<{ ok: true; page: LandingPage; added: boolean } | { ok: false; error: string }> {
+  const page = await getLandingPage(id);
+  if (!page) return { ok: false, error: "That page no longer exists." };
+  const cat = category.trim().slice(0, 80);
+  if (!cat) return { ok: false, error: "Choose a category." };
+  if (page.sections.some((s) => s.type === "products" && s.category === cat)) return { ok: true, page, added: false };
+  const empty = page.sections.find((s) => s.type === "products" && !s.category);
+  const sections = empty
+    ? page.sections.map((s) => (s === empty ? { ...s, category: cat } : s))
+    : [{ id: `s${Date.now().toString(36)}`, type: "products" as const, heading: "", category: cat, limit: 48 }, ...page.sections];
+  const r = await saveLandingPage(id, { ...page, sections });
+  return r.ok ? { ok: true, page: r.page, added: true } : r;
+}

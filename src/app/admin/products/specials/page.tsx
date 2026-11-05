@@ -4,6 +4,7 @@ import { can } from "@/lib/admin-users";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { SpecialsManager } from "@/components/admin/SpecialsManager";
 import { listSpecials, specialStatus, specialProductCounts } from "@/lib/special-categories";
+import { listLandingPages } from "@/lib/landing-pages";
 
 export const instant = false;
 
@@ -11,7 +12,10 @@ export default async function SpecialsPage({ searchParams }: { searchParams: Pro
   const me = await requirePermission("products.view");
   const sp = await searchParams;
   const kind = sp.kind === "sale" ? "sale" : "special";
-  const [specials, counts] = await Promise.all([listSpecials(kind), specialProductCounts()]);
+  const canPages = can(me.role, "pages.manage");
+  const [specials, counts, landing] = await Promise.all([listSpecials(kind), specialProductCounts(), canPages ? listLandingPages() : Promise.resolve([])]);
+  // Landing pages and which categories they show (for each special's "Landing page" line).
+  const pages = landing.map((p) => ({ id: p.id, title: p.title, slug: p.slug, published: p.published, categories: p.sections.filter((s) => s.type === "products" && s.category).map((s) => s.category as string) }));
   const now = Date.now();
   const tab = (k: "special" | "sale", label: string) => (
     <Link href={k === "sale" ? "/admin/products/specials?kind=sale" : "/admin/products/specials"}
@@ -31,7 +35,7 @@ export default async function SpecialsPage({ searchParams }: { searchParams: Pro
         To change prices, use the products list&apos;s bulk “Sale” action on the same products.
       </p>
       <div className="mt-5">
-        <SpecialsManager key={kind} kind={kind} openSlug={sp.open} canEdit={can(me.role, "products.edit")} canDelete={can(me.role, "products.delete")}
+        <SpecialsManager key={kind} kind={kind} openSlug={sp.open} pages={pages} canPages={canPages} canEdit={can(me.role, "products.edit")} canDelete={can(me.role, "products.delete")}
           specials={specials.map((s) => ({ ...s, status: specialStatus(s, now), count: counts[s.slug] ?? 0 }))} />
       </div>
     </AdminShell>

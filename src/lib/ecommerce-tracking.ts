@@ -7,8 +7,9 @@
 // bypasses it. Browser-only module.
 import { ANALYTICS_ENABLED } from "./analytics";
 
-/** Google Ads purchase conversion: "[10fa] Google for WooCommerce purchase action". */
-const ADS_PURCHASE = "AW-858886436/3bFDCPO1gL4bEKSixpkD";
+/** Google Ads purchase conversion: "Purchase React Website" (made for this site
+ *  on 5 Nov 2026; replaces the old "[10fa] Google for WooCommerce purchase action"). */
+const ADS_PURCHASE = "AW-858886436/54H4CPD7yLIdEKSixpkD";
 
 export interface TrackItem { id: number; name: string; brand: string; price: number; qty?: number; type?: string }
 

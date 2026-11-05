@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { trackSearch } from "@/lib/ecommerce-tracking";
 import Image from "next/image";
 import { Search, Close, Flame } from "./icons";
 import { formatPrice } from "@/lib/format";
@@ -118,6 +119,7 @@ export function MegaSearch() {
     if (!t) return;
     pushRecent(t);
     setOpen(false);
+    trackSearch(t);
     router.push(`/shop?q=${encodeURIComponent(t)}`);
   }
 

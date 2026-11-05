@@ -6,6 +6,7 @@ import { validateContact, type ContactErrors } from "@/lib/validate";
 import { loadSavedContact, storeSavedContact } from "@/lib/saved-contact";
 import { WhatsApp } from "./icons";
 import { attributionForOrder } from "./AttributionTracker";
+import { trackLead } from "@/lib/ecommerce-tracking";
 import { EnquiryNotAvailable, useCanBuy } from "./GeoNotice";
 
 export interface WhatsAppLead {
@@ -59,6 +60,7 @@ export function WhatsAppDetailsForm({
       keepalive: true,
     }).catch(() => {});
     storeSavedContact(clean as { name: string; email: string; phone: string });
+    trackLead("whatsapp_chat");
 
     const url = whatsappHref(fullMessage);
     const w = window.open(url, "_blank", "noopener,noreferrer");

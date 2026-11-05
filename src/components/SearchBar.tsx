@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { trackSearch } from "@/lib/ecommerce-tracking";
 import Image from "next/image";
 import { Search } from "./icons";
 import { formatPriceShort } from "@/lib/format";
@@ -58,6 +59,7 @@ export function SearchBar({ big = false }: { big?: boolean }) {
   function submit(term = q) {
     if (!term.trim()) return;
     setOpen(false);
+    trackSearch(term);
     router.push(`/shop?q=${encodeURIComponent(term.trim())}`);
   }
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check } from "./icons";
 import { attributionForOrder } from "./AttributionTracker";
+import { trackLead } from "@/lib/ecommerce-tracking";
 import { validateContact, type ContactErrors } from "@/lib/validate";
 import { EnquiryNotAvailable, useCanBuy } from "./GeoNotice";
 
@@ -39,6 +40,7 @@ export function ContactForm() {
         setSending(false);
         return;
       }
+      trackLead("contact_form");
       setSent(true);
     } catch {
       setError("Network error — please try again, or call us on 078 0088 788.");

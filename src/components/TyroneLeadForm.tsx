@@ -5,6 +5,7 @@ import { validateContact, type ContactErrors } from "@/lib/validate";
 import { loadSavedContact, storeSavedContact, type SavedContact } from "@/lib/saved-contact";
 import { GateField } from "./WhatsAppGate";
 import { attributionForOrder } from "./AttributionTracker";
+import { trackLead } from "@/lib/ecommerce-tracking";
 import { EnquiryNotAvailable, useCanBuy } from "./GeoNotice";
 
 /** Inside Tyrone: "Leave your details so the team can get back to you". Not
@@ -42,6 +43,7 @@ export function TyroneLeadForm({ questions, onSent }: { questions: string[]; onS
     } catch {
       setErr("Couldn't send — check your connection and try again."); setBusy(false); return;
     }
+    trackLead("tyrone_form");
     const c = clean as SavedContact;
     storeSavedContact(c);
     onSent(c);

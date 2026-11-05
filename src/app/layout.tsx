@@ -12,6 +12,7 @@ import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
 import { FloatingWidgets } from "@/components/FloatingWidgets";
 import { AttributionTracker } from "@/components/AttributionTracker";
+import { ContactClickTracker } from "@/components/ContactClickTracker";
 import { GeoBlockedDialog, GeoBanner } from "@/components/GeoNotice";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { GoogleTracking, GoogleTagManagerNoScript } from "@/components/GoogleTracking";
@@ -81,6 +82,7 @@ export default async function RootLayout({
             <CartDrawer />
             <FloatingWidgets />
             <AttributionTracker />
+            <ContactClickTracker />
             <GeoBlockedDialog />
             <CookieConsent />
           </AccountProvider>

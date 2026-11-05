@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { trackLogin, trackSignUp } from "@/lib/ecommerce-tracking";
 import { PasswordInput } from "@/components/admin/PasswordInput";
 
 export const field = "h-11 w-full rounded-lg border border-line bg-surface-2 px-3 text-sm text-fg outline-none focus:border-volt";
@@ -55,7 +56,7 @@ export function AuthForms({ initial = "signin" }: { initial?: Mode }) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const { ok, d } = await post("/api/account/login", { email: fd.get("email"), password: fd.get("password") });
-    if (ok) await afterSignIn();
+    if (ok) { trackLogin(); await afterSignIn(); }
     else if (d.unverified) setUnverified(true);
   }
 
@@ -69,7 +70,7 @@ export function AuthForms({ initial = "signin" }: { initial?: Mode }) {
       password: fd.get("password"), wishlistEmails: fd.get("wishlistEmails") === "on",
       next: wish ? `/wishlist` : next,
     });
-    if (ok) { setEmail(em); setMode("sent"); }
+    if (ok) { trackSignUp(); setEmail(em); setMode("sent"); }
   }
 
   async function forgot(e: React.FormEvent<HTMLFormElement>) {

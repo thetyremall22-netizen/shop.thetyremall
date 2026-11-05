@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
+import { trackViewCart } from "@/lib/ecommerce-tracking";
 import Image from "next/image";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/format";
@@ -11,6 +13,13 @@ import { NotAvailableNotice, useCanBuy } from "@/components/GeoNotice";
 
 export default function CartPage() {
   const { items, totals, setQty, remove, toggleHazard, deliveryMethod, setDelivery, fitmentStoreId, setFitment } = useCart();
+  // Google Analytics: cart viewed (once per visit, after the saved cart has loaded).
+  const viewed = useRef(false);
+  useEffect(() => {
+    if (viewed.current || !items.length) return;
+    viewed.current = true;
+    trackViewCart(items, totals.total);
+  }, [items, totals.total]);
   const canBuy = useCanBuy();
 
   if (items.length === 0) {

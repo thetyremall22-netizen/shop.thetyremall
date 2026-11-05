@@ -4,6 +4,7 @@ import { useState } from "react";
 import { whatsappHref, SHOP_EMAIL, SHOP_PHONE_DISPLAY } from "@/lib/shop-config";
 import { Close, WhatsApp, Check } from "./icons";
 import { attributionForOrder } from "./AttributionTracker";
+import { trackLead } from "@/lib/ecommerce-tracking";
 import { validateContact, type ContactErrors } from "@/lib/validate";
 import { WhatsAppDetailsForm } from "./WhatsAppGate";
 import { EnquiryNotAvailable, useCanBuy } from "./GeoNotice";
@@ -67,6 +68,7 @@ export function WhatsAppPanel({ open, onClose }: { open: boolean; onClose: () =>
         setBusy(false);
         return;
       }
+      trackLead("whatsapp_quote");
       setSent(true);
     } catch {
       setSent(true); // network hiccup: still let them continue on WhatsApp

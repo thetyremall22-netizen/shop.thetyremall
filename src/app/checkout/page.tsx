@@ -12,7 +12,7 @@ import { formatPrice } from "@/lib/format";
 import { FITMENT_CENTRES, PAYMENT_METHODS } from "@/lib/shop-config";
 import { Check, Truck, Pin, Shield, Bolt } from "@/components/icons";
 import { trackTyrone } from "@/lib/tyrone-track";
-import { trackBeginCheckout, savePendingPurchase } from "@/lib/ecommerce-tracking";
+import { trackBeginCheckout, trackAddPaymentInfo, savePendingPurchase } from "@/lib/ecommerce-tracking";
 
 export default function CheckoutPage() {
   const { items, totals, deliveryMethod, fitmentStoreId, fitmentDate } = useCart();
@@ -178,6 +178,7 @@ export default function CheckoutPage() {
       // Remember what was ordered, so the thank-you page can report the sale to
       // Google Ads / Analytics once the payment is confirmed.
       if (data.reference) {
+        trackAddPaymentInfo(items, payTotal, payment);
         savePendingPurchase({
           ref: String(data.reference), items,
           email: body.customer.email, phone: body.customer.phone, firstName: body.customer.firstName, lastName: body.customer.lastName,

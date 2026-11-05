@@ -116,3 +116,47 @@ export function trackPurchase(p: PendingPurchase, totalCents: number) {
   gtag("event", "conversion", { send_to: ADS_PURCHASE, transaction_id: p.ref, currency: "ZAR", value });
   markSent(p.ref);
 }
+
+// ---- more shop steps -----------------------------------------------------------
+
+export function trackRemoveFromCart(item: TrackItem) {
+  gtag("event", "remove_from_cart", { currency: "ZAR", value: valueOf([item]), items: items([item]) });
+}
+
+export function trackViewCart(list: TrackItem[], totalCents: number) {
+  if (!list.length) return;
+  gtag("event", "view_cart", { currency: "ZAR", value: rand(totalCents), items: items(list) });
+}
+
+/** Sent as the shopper leaves for PayFast / HappyPay (payment_type = how they're paying). */
+export function trackAddPaymentInfo(list: TrackItem[], totalCents: number, paymentType: string) {
+  if (!list.length) return;
+  gtag("event", "add_payment_info", { currency: "ZAR", value: rand(totalCents), payment_type: paymentType, items: items(list) });
+}
+
+export function trackSearch(term: string) {
+  const t = term.trim();
+  if (t) gtag("event", "search", { search_term: t.slice(0, 100) });
+}
+
+// ---- leads & contact -------------------------------------------------------------
+// GA4 events to mark as "key events" in Google Analytics (Admin → Events), and
+// import into Google Ads as lead conversions (Goals → Conversions → New →
+// Import → Google Analytics 4):
+//   generate_lead  — a quote / contact / chat form sent (lead_source says which)
+//   click_to_call  — a phone number tapped
+//   whatsapp_click — WhatsApp opened
+//   email_click    — an email address tapped
+
+/** contact_form · whatsapp_quote · whatsapp_chat · tyrone_chat · tyrone_form */
+export function trackLead(source: string) {
+  gtag("event", "generate_lead", { lead_source: source, currency: "ZAR", value: 0 });
+}
+
+export function trackContactClick(channel: "phone" | "whatsapp" | "email", where: string) {
+  const event = channel === "phone" ? "click_to_call" : channel === "whatsapp" ? "whatsapp_click" : "email_click";
+  gtag("event", event, { link_location: where.slice(0, 100) });
+}
+
+export function trackSignUp() { gtag("event", "sign_up", { method: "email" }); }
+export function trackLogin() { gtag("event", "login", { method: "email" }); }

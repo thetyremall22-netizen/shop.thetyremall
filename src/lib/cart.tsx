@@ -21,7 +21,7 @@ import { setDiscountFor } from "./pricing";
 import { applyDeals, type Deal, type AppliedDeal } from "./deals";
 import { canBuyNow, showGeoBlocked } from "@/components/GeoNotice";
 import { trackTyrone } from "./tyrone-track";
-import { trackAddToCart } from "./ecommerce-tracking";
+import { trackAddToCart, trackRemoveFromCart } from "./ecommerce-tracking";
 
 export interface CartItem {
   id: number;
@@ -233,7 +233,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setDrawerOpen(true);
     },
     setQty: (id, qty) => dispatch({ type: "SET_QTY", id, qty }),
-    remove: (id) => dispatch({ type: "REMOVE", id }),
+    remove: (id) => {
+      const it = state.items.find((i) => i.id === id);
+      if (it) trackRemoveFromCart(it);
+      dispatch({ type: "REMOVE", id });
+    },
     toggleHazard: (id) => dispatch({ type: "TOGGLE_HAZARD", id }),
     setDelivery: (method) => dispatch({ type: "SET_DELIVERY", method }),
     setFitment: (storeId) => dispatch({ type: "SET_FITMENT", storeId }),

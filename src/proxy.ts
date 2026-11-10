@@ -137,6 +137,19 @@ export async function proxy(req: NextRequest) {
     url.pathname = "/contact-us/";
     return NextResponse.redirect(url, 308);
   }
+  // A product address with an extra "/" in it (from a slug typed like
+  // "firemax-185/60r15-…") → the cleaned address, e.g. /product/firemax-185-60r15-….
+  const split = /^\/product\/([^/]+\/.+?)\/?$/.exec(req.nextUrl.pathname);
+  if (split && (req.method === "GET" || req.method === "HEAD")) {
+    let raw = split[1];
+    try { raw = decodeURIComponent(raw); } catch { /* keep as is */ }
+    const clean = raw.toLowerCase().replace(/[^a-z0-9_]+/g, "-").replace(/(^-|-$)/g, "");
+    if (clean) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/product/${clean}`;
+      return NextResponse.redirect(url, 308);
+    }
+  }
   if (LEGACY_WP.test(req.nextUrl.pathname) || req.nextUrl.pathname.startsWith("/wp-")) {
     return new NextResponse("Gone", { status: 410, headers: { "cache-control": "public, max-age=86400" } });
   }

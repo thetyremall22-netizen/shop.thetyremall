@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
   if (regularPrice <= 0) return NextResponse.json({ error: "A regular price is required." }, { status: 400 });
 
   const product: NewProduct = {
-    slug: String(b.slug ?? "").trim() || slugify(name),
+    // A typed slug is cleaned too: a "/" (e.g. "185/60r15") would split the
+    // web address and the product page could never be found.
+    slug: slugify(String(b.slug ?? "")) || slugify(name),
     name,
     brand: String(b.brand ?? "").trim(),
     type: b.type === "wheel" ? "wheel" : b.type === "other" || b.type === "accessory" ? "other" : "tyre",

@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { TestBadge, TestToggle } from "@/components/admin/TestFlag";
 import { notFound } from "next/navigation";
@@ -10,6 +11,7 @@ import { AuditHistory } from "@/components/admin/AuditHistory";
 import { OrderCustomerEditor, OrderItemsEditor, OrderStatusEditor, OrderEmailActions, OrderNoteForm } from "@/components/admin/OrderEditors";
 import { getOrder, orderAttributions, STATUS_LABEL, STATUS_BADGE } from "@/lib/orders";
 import { cancelReasonsById } from "@/lib/cancel-reasons";
+import { listItnForOrder } from "@/lib/payfast-itn";
 import { OrderAttribution } from "@/components/admin/OrderAttribution";
 import { listAudit } from "@/lib/audit";
 import { getInvoice } from "@/lib/invoices";
@@ -30,6 +32,9 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   if (!o) notFound();
   const [orderEmails, history, invoice, support, attr, cancelWhy] = await Promise.all([listEmailsForOrder(o.reference), listAudit("order", o.id), getInvoice(o.id), supportForOrder(o.reference), orderAttributions([o.id]), o.status === "cancelled" ? cancelReasonsById([o.id]) : Promise.resolve({} as Awaited<ReturnType<typeof cancelReasonsById>>)]);
   const why = cancelWhy[o.id];
+  const pfNotices = await listItnForOrder(o.id);
+  // Fields shown already elsewhere on the page (customer, ids) are left out of the PayFast box.
+  const PF_HIDE = new Set(["m_payment_id", "pf_payment_id", "payment_status", "amount_gross", "amount_fee", "amount_net", "name_first", "name_last", "email_address", "custom_str1", "item_name", "item_description"]);
   // Show part numbers for orders placed before SKUs were saved on the order.
   const items = await Promise.all(o.items.map(async (i) => (i.sku ? i : { ...i, sku: (await getProduct(i.slug).catch(() => undefined))?.sku || undefined })));
   const canEdit = can(me.role, "orders.edit");
@@ -77,6 +82,35 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
       <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_340px]">
         <div className="space-y-5">
           <OrderItemsEditor id={o.id} items={items} totals={t} canEdit={canEdit} />
+
+          {pfNotices.length > 0 && (
+            <div className="card p-5">
+              <h2 className="font-display text-lg">What PayFast reported</h2>
+              <p className="mt-1 text-xs text-muted">Each payment notice PayFast sent for this order. PayFast&apos;s fee differs by payment method (card, Instant EFT, store card…).</p>
+              <div className="mt-3 space-y-3">
+                {pfNotices.map((n) => {
+                  const extra = Object.entries(n.fields).filter(([k, v]) => !PF_HIDE.has(k) && v !== "");
+                  const pct = n.amountFee != null && n.amountGross ? Math.abs(n.amountFee) / n.amountGross * 100 : null;
+                  return (
+                    <div key={n.id} className="rounded-lg border border-line p-3 text-sm">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span className={`badge ${n.status === "COMPLETE" ? "badge-pay" : "badge-muted"}`}>{n.status || "—"}</span>
+                        {n.amountGross != null && <span>Paid <b className="text-fg">R{n.amountGross.toFixed(2)}</b></span>}
+                        {n.amountFee != null && <span className="text-muted">PayFast fee R{Math.abs(n.amountFee).toFixed(2)}{pct != null ? ` (${pct.toFixed(2)}%)` : ""}</span>}
+                        {n.amountNet != null && <span className="text-muted">You receive R{n.amountNet.toFixed(2)}</span>}
+                        <span className="text-xs text-faint">{when(n.receivedAt)}{n.pfPaymentId ? ` · PF ${n.pfPaymentId}` : ""}</span>
+                      </div>
+                      {extra.length > 0 && (
+                        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+                          {extra.map(([k, v]) => (<Fragment key={k}><dt className="text-muted">{k}</dt><dd className="break-all text-fg">{v}</dd></Fragment>))}
+                        </dl>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="card p-5">
             <h2 className="font-display text-lg">Order status</h2>

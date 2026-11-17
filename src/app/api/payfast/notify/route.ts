@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyItnSignature, validateWithPayfast } from "@/lib/payfast";
 import { getOrder } from "@/lib/orders";
 import { completePaidOrder, failOrder, holdForReview } from "@/lib/order-payment";
+import { saveItn } from "@/lib/payfast-itn";
 
 export async function POST(req: NextRequest) {
   const raw = await req.text();
@@ -26,6 +27,9 @@ export async function POST(req: NextRequest) {
     console.warn("[payfast] ITN for unknown order", id);
     return new NextResponse("ok", { status: 200 }); // 200 so PayFast stops retrying
   }
+
+  // Keep what PayFast reported (status, amount, fee, method details) for the admin.
+  await saveItn(id, data);
 
   // 3. amount matches (gross in rands vs our minor units)
   const expected = (order.totals.total / 100).toFixed(2);

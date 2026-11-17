@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useGarage, sameVehicle, type GarageItem } from "@/lib/garage-client";
 import { shopHref } from "@/lib/shop-url";
 import { useRouter } from "next/navigation";
 import { Check, Close, WhatsApp, Search } from "./icons";
@@ -26,11 +27,7 @@ export interface VehicleRecord {
   rimHrefs: { size: string; href: string }[];
 }
 
-const GARAGE_KEY = "ttm-garage-v1";
-export interface GarageItem {
-  make: string; model: string; year: number; generation: string | null; trim: string | null;
-  image: string | null; selectedSize: string | null; tyreOptions: string[]; rimOptions: string[]; pcd: string | null;
-}
+export type { GarageItem };
 
 const prettyPcd = (p: string | null) => (p ? p.replace(/\*/g, "×") : null);
 
@@ -41,24 +38,19 @@ export function VehicleSizeChoice({ record, compact = false }: { record: Vehicle
   const router = useRouter();
   const { make, model, year, trim, generation, tyreOptions, rimOptions, pcd, image } = record;
   const [size, setSize] = useState(tyreOptions[0] ?? "");
-  const [garage, setGarage] = useState<GarageItem[]>([]);
+  const [garage, setGarage] = useGarage();
 
   useEffect(() => { setSize(tyreOptions[0] ?? ""); }, [record.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { try { const r = localStorage.getItem(GARAGE_KEY); if (r) setGarage(JSON.parse(r)); } catch {} }, []);
 
   const vehicleLabel = `${year} ${make} ${model}${trim ? ` ${trim}` : ""}`;
   const ctx = { vehicle: vehicleLabel };
 
-  const inGarage = garage.some((g) => g.make === make && g.model === model && g.year === year && g.trim === trim);
+  const me = { make, model, year, trim };
+  const inGarage = garage.some((g) => sameVehicle(g, me));
   function toggleGarage() {
-    let next: GarageItem[];
-    if (inGarage) {
-      next = garage.filter((g) => !(g.make === make && g.model === model && g.year === year && g.trim === trim));
-    } else {
-      next = [{ make, model, year, generation, trim, image, selectedSize: size, tyreOptions, rimOptions, pcd }, ...garage].slice(0, 6);
-    }
-    setGarage(next);
-    try { localStorage.setItem(GARAGE_KEY, JSON.stringify(next)); } catch {}
+    setGarage(inGarage
+      ? garage.filter((g) => !sameVehicle(g, me))
+      : [{ make, model, year, generation, trim, image, selectedSize: size, tyreOptions, rimOptions, pcd }, ...garage]);
   }
 
   function search() {
@@ -77,10 +69,10 @@ export function VehicleSizeChoice({ record, compact = false }: { record: Vehicle
 
   return (
     <div className="card overflow-hidden p-0">
-      <div className={`grid gap-5 p-5 ${compact ? "" : "sm:grid-cols-[200px_1fr]"}`}>
-        {/* vehicle photo / no-photo */}
-        {!compact && (
-          <div className="plate grid aspect-[4/3] place-items-center overflow-hidden rounded-xl">
+      <div className={`grid gap-5 p-5 ${compact ? (image ? "sm:grid-cols-[160px_1fr]" : "") : "sm:grid-cols-[200px_1fr]"}`}>
+        {/* vehicle photo / no-photo (the smaller home-page version shows the photo only when there is one) */}
+        {(!compact || image) && (
+          <div className={`plate grid place-items-center overflow-hidden rounded-xl ${compact ? "aspect-[3/2] w-full max-w-[240px] self-start" : "aspect-[4/3]"}`}>
             {image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={image} alt={`${make} ${model}`} className="h-full w-full object-cover" />
@@ -178,12 +170,25 @@ export function VehicleSizeChoice({ record, compact = false }: { record: Vehicle
 
 /** My Garage grid — saved vehicles with their chosen size. */
 export function Garage() {
-  const [garage, setGarage] = useState<GarageItem[]>([]);
-  useEffect(() => { try { const r = localStorage.getItem(GARAGE_KEY); if (r) setGarage(JSON.parse(r)); } catch {} }, []);
-  const save = (g: GarageItem[]) => { setGarage(g); try { localStorage.setItem(GARAGE_KEY, JSON.stringify(g)); } catch {} };
-  if (!garage.length) return null;
+  const [garage, save] = useGarage();
+  // Empty garage: nothing on the page, unless the visitor came via the
+  // "My Garage" link (#my-garage) — then explain how to add a vehicle.
+  const [askedFor, setAskedFor] = useState(false);
+  useEffect(() => { setAskedFor(window.location.hash === "#my-garage"); }, []);
+  // The garage appears after the page loads, so scroll to it ourselves.
+  useEffect(() => { if (askedFor) document.getElementById("my-garage")?.scrollIntoView({ behavior: "smooth" }); }, [askedFor]);
+  if (!garage.length) {
+    if (!askedFor) return null;
+    return (
+      <div id="my-garage" className="scroll-mt-28">
+        <h2 className="font-display text-xl">My Garage</h2>
+        <p className="mt-1 text-sm text-muted">No vehicles saved yet. Pick your vehicle above, then tap <span className="font-semibold text-fg">Save to My Garage</span> — next time you&rsquo;ll find it here with its tyre size.</p>
+        <p className="mt-1 text-xs text-faint">Signed in? It&rsquo;s saved to your account and shows on any device. Otherwise it&rsquo;s kept on this device.</p>
+      </div>
+    );
+  }
   return (
-    <div>
+    <div id="my-garage" className="scroll-mt-28">
       <h2 className="font-display text-xl">My Garage</h2>
       <p className="mt-1 text-sm text-muted">Your saved vehicles — jump straight to the right tyres.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

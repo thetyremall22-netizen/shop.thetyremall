@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/account", label: "Overview" },
   { href: "/account/orders", label: "My orders" },
   { href: "/wishlist", label: "Wishlist" },
+  { href: "/vehicle-search#my-garage", label: "My Garage" },
   { href: "/account/support", label: "Support" },
   { href: "/account/details", label: "My details" },
 ];

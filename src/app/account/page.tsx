@@ -5,6 +5,7 @@ import { getCustomer } from "@/lib/customers";
 import { listOrdersForEmail, STATUS_LABEL, STATUS_BADGE } from "@/lib/orders";
 import { listClientSupport, SUPPORT_STATUS_LABEL, SUPPORT_STATUS_BADGE, TOPIC_LABEL } from "@/lib/support";
 import { wishlistSlugs } from "@/lib/wishlist";
+import { getGarage } from "@/lib/garage";
 import { formatPrice } from "@/lib/format";
 import { AuthForms } from "@/components/account/AuthForms";
 import { AccountFrame } from "@/components/account/AccountNav";
@@ -27,6 +28,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           <ul className="mt-6 space-y-3 text-sm text-muted">
             {[
               ["📦", "All your orders in one place", "see every order, its status and what you paid."],
+              ["🚗", "My Garage on every device", "save your vehicles and jump straight to the tyres that fit."],
               ["♥", "A wishlist that follows you", "save tyres and wheels, and get an email when they go on sale or come back in stock."],
               ["💬", "Help with an order", "ask for a change, add items or request a cancellation, and follow our replies."],
               ["⚡", "Faster checkout", "your details and delivery address are filled in for you."],
@@ -40,7 +42,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
     );
   }
 
-  const [orders, support, wish] = await Promise.all([listOrdersForEmail(c.email, 5), listClientSupport(c.id), wishlistSlugs(c.id).catch(() => [])]);
+  const [orders, support, wish, garage] = await Promise.all([listOrdersForEmail(c.email, 5), listClientSupport(c.id), wishlistSlugs(c.id).catch(() => []), getGarage(c.id).catch(() => [])]);
   const openSupport = support.filter((s) => ["open", "in_progress", "waiting"].includes(s.status));
 
   return (
@@ -50,10 +52,11 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       <h1 className="font-display text-3xl sm:text-4xl">Hi {c.firstName}</h1>
       <p className="mt-1 text-sm text-muted">Signed in as {c.email}</p>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Link href="/account/orders" className="card p-4 hover:border-volt"><div className="text-xs font-semibold uppercase text-muted">Orders</div><div className="font-display text-3xl">{orders.length >= 5 ? "5+" : orders.length}</div></Link>
         <Link href="/wishlist" className="card p-4 hover:border-volt"><div className="text-xs font-semibold uppercase text-muted">Wishlist</div><div className="font-display text-3xl">{wish.length}</div></Link>
         <Link href="/account/support" className="card p-4 hover:border-volt"><div className="text-xs font-semibold uppercase text-muted">Open support requests</div><div className="font-display text-3xl">{openSupport.length}</div></Link>
+        <Link href="/vehicle-search#my-garage" className="card p-4 hover:border-volt"><div className="text-xs font-semibold uppercase text-muted">My Garage</div><div className="font-display text-3xl">{garage.length}</div></Link>
       </div>
 
       <section className="mt-8">

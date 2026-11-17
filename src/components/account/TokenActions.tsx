@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { PasswordInput } from "@/components/admin/PasswordInput";
 import { useAccount } from "@/lib/account-client";
 import { field, lab } from "./AuthForms";
+import { clearLocalGarage } from "@/lib/garage-client";
 
 const safeNext = (n?: string) => (n && n.startsWith("/") && !n.startsWith("//") && n !== "/account" ? n : "/account?welcome=1");
 
@@ -91,7 +92,7 @@ export function SignOutButton({ className = "" }: { className?: string }) {
   const router = useRouter();
   const { refresh } = useAccount();
   return (
-    <button className={className} onClick={async () => { await fetch("/api/account/logout", { method: "POST" }); await refresh(); router.replace("/account"); router.refresh(); }}>
+    <button className={className} onClick={async () => { await fetch("/api/account/logout", { method: "POST" }); clearLocalGarage(); await refresh(); router.replace("/account"); router.refresh(); }}>
       Sign out
     </button>
   );

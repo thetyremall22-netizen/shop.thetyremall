@@ -159,7 +159,7 @@ export function TyreWheelSearch({
   const wheelWidths = wr && wpcd ? numSort(WHEEL_MAP[wr]?.[wpcd] ?? []) : [];
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid items-start gap-4 lg:grid-cols-2">
       <Panel
         title="TYRES"
         subtitle="Find the right tyres for your vehicle"

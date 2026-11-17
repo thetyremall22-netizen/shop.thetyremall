@@ -88,7 +88,7 @@ function CancelledInner() {
             </p>
             {/* The pay-over-time options switched on in The Tyre Mall's PayFast account (Nov 2026). */}
             <ul className="mt-3 space-y-1.5 text-left text-sm">
-              <li className="flex gap-2"><span className="text-volt">✓</span><span><b className="text-fg">Pay over time</b> with <b className="text-fg">MobiCred</b> or your <b className="text-fg">RCS / store card</b></span></li>
+              <li className="flex gap-2"><span className="text-volt">✓</span><span><b className="text-fg">Pay over time</b> with <b className="text-fg">MobiCred</b> or your <b className="text-fg">store card</b>: Pick n Pay Smart Shopper, Edgars, Jet, Makro, Game, Builders, RCS, Supa Quick and more</span></li>
               <li className="flex gap-2"><span className="text-volt">✓</span><span>Credit or debit card, Instant EFT, SnapScan, Apple Pay, Google Pay and more</span></li>
             </ul>
             {info.reference && info.total != null && (

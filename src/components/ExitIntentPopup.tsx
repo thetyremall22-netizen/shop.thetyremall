@@ -44,7 +44,7 @@ export function ExitIntentPopup() {
   const [mobile, setMobile] = useState(false);
   const armedAt = useRef(0);
   const hasItems = items.length > 0;
-  const blockedPage = !!pathname && (pathname.startsWith("/admin") || pathname.startsWith("/cart/recover") || pathname.startsWith("/checkout/return"));
+  const blockedPage = !!pathname && (pathname.startsWith("/admin") || pathname.startsWith("/cart/recover") || pathname.startsWith("/checkout/return") || pathname.startsWith("/checkout/cancelled"));
 
   useEffect(() => { setMobile(!!isTouchDevice()); }, []);
 

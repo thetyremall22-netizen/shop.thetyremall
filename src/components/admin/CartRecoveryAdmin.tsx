@@ -33,6 +33,8 @@ export interface CartRow {
   clickedVia?: "email" | "popup" | null;
   /** Bought after a recovery email went out, without clicking it. */
   boughtAfterEmail?: boolean;
+  /** Why this cart's order was cancelled (unpaid, HappyPay not approved…). */
+  orderNote?: string | null;
 }
 
 function waLink(phone: string, name: string) {
@@ -131,11 +133,11 @@ export function CartsTable({ rows, canAct, canDelete }: { rows: CartRow[]; canAc
                           className="h-8 w-full rounded-lg border border-line bg-surface-2 px-1.5 text-xs text-fg outline-none focus:border-volt">
                           {STATUS_OPTS.map((s) => <option key={s.v} value={s.v}>{s.label}</option>)}
                         </select>
-                      ) : <span className={`badge ${badge}`}>{label(r.status)}</span>}
+                      ) : <span className={`badge ${r.boughtAfterEmail ? "badge-pay" : badge}`}>{r.boughtAfterEmail ? "Bought after email" : label(r.status)}</span>}
                       {(r.status === "recovered" || r.status === "clicked") && r.clickedVia && (
                         <div className="mt-1 text-xs font-semibold text-volt">{r.clickedVia === "popup" ? "via exit popup" : "via email link"}</div>
                       )}
-                      {r.boughtAfterEmail && <div className="mt-1 text-xs font-semibold text-amber-300">after a recovery email</div>}
+                      {r.orderNote && <div className="mt-1 max-w-[180px] text-xs leading-snug text-muted">Order: {r.orderNote}</div>}
                       {r.recoveredOrderRef && <div className="mt-1 text-xs text-muted">Order {r.recoveredOrderRef}</div>}
                     </td>
                     <td className="px-3 py-2.5 text-xs text-muted">

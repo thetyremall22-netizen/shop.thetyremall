@@ -5,11 +5,21 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminSearch } from "@/components/admin/AdminSearch";
 import { CartsTable, RunNowButton, RecoverySettingsForm } from "@/components/admin/CartRecoveryAdmin";
 import { listCarts, recoveryStats, getRecoverySettings, STATUS_LABEL } from "@/lib/cart-recovery";
+import { cancelReasonsByRef } from "@/lib/cancel-reasons";
 
 export const instant = false;
 
 const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const FILTERS = [{ v: "", label: "All" }, { v: "open", label: "Open (in the flow)" }, ...(["abandoned", "pending", "contacted", "clicked", "recovered", "purchased", "lost"] as const).map((s) => ({ v: s, label: STATUS_LABEL[s] }))];
+// "All" = every real abandoned cart. Carts paid straight away at checkout (never
+// abandoned) are hidden unless their own filter is picked.
+const FILTERS = [
+  { v: "", label: "All abandoned" }, { v: "open", label: "Open (in the flow)" },
+  ...(["abandoned", "pending", "contacted", "clicked", "recovered"] as const).map((s) => ({ v: s, label: STATUS_LABEL[s] })),
+  { v: "after_email", label: "Bought after a recovery email" },
+  { v: "lost", label: STATUS_LABEL.lost },
+  { v: "purchased", label: "Paid straight away (not abandoned)" },
+  { v: "all", label: "Everything" },
+];
 
 export default async function CartRecoveryPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const me = await requirePermission("leads.view");
@@ -24,6 +34,7 @@ export default async function CartRecoveryPage({ searchParams }: { searchParams:
     tab === "carts" ? listCarts({ status: status || undefined, q }) : Promise.resolve([]),
     getRecoverySettings(),
   ]);
+  const cancelWhy = await cancelReasonsByRef(carts.map((c) => c.orderRef ?? "").filter(Boolean));
   const qs = (patch: Record<string, string>) => {
     const u = new URLSearchParams();
     if (q) u.set("q", q);
@@ -40,6 +51,7 @@ export default async function CartRecoveryPage({ searchParams }: { searchParams:
         Shoppers who started checkout but didn&apos;t finish (and unpaid or failed orders) get up to 3 friendly recovery emails with a one-click link that restores their cart.
         A cart counts as <b className="text-fg">recovered</b> when the customer came back through that link or the exit popup and then paid.
         <b className="text-fg"> Bought after a recovery email</b> counts customers who were emailed and then paid without clicking the link (they came back another way).
+        Every checkout is saved the moment an email is typed, so carts that were <b className="text-fg">paid straight away</b> (never abandoned) are hidden here — pick that filter to see them.
       </p>
       {!settings.enabled && <p className="mt-3 rounded-lg border border-sale/40 bg-sale/10 px-3 py-2 text-sm font-semibold text-sale">Cart Recovery is switched off. Turn it on under Settings.</p>}
 
@@ -76,7 +88,7 @@ export default async function CartRecoveryPage({ searchParams }: { searchParams:
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {[
               ["Tracked", stats.tracked], ["In the flow", stats.open], ["Contacted", stats.contacted], ["Clicked", stats.clicked],
-              ["Bought (not via recovery)", stats.purchased], ["Lost", stats.lost],
+              ["Lost", stats.lost], ["Paid straight away (not abandoned)", stats.purchased],
             ].map(([k, v]) => <Tile key={String(k)} label={String(k)} value={String(v)} />)}
           </div>
           <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -97,6 +109,7 @@ export default async function CartRecoveryPage({ searchParams }: { searchParams:
                 items: c.items.map((i) => ({ name: i.name, qty: i.qty })), total: c.total, emailsSent: c.emailsSent, lastEmailAt: c.lastEmailAt,
                 orderRef: c.orderRef, recoveredOrderRef: c.recoveredOrderRef, createdAt: c.createdAt, updatedAt: c.updatedAt, test: c.test,
                 clickedVia: c.clickedVia, boughtAfterEmail: c.boughtAfterEmail,
+                orderNote: c.orderRef && cancelWhy[c.orderRef] ? cancelWhy[c.orderRef].label : null,
               }))} />
           </div>
         </>

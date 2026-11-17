@@ -9,6 +9,7 @@ import { RefundForm } from "@/components/admin/RefundForm";
 import { AuditHistory } from "@/components/admin/AuditHistory";
 import { OrderCustomerEditor, OrderItemsEditor, OrderStatusEditor, OrderEmailActions, OrderNoteForm } from "@/components/admin/OrderEditors";
 import { getOrder, orderAttributions, STATUS_LABEL, STATUS_BADGE } from "@/lib/orders";
+import { cancelReasonsById } from "@/lib/cancel-reasons";
 import { OrderAttribution } from "@/components/admin/OrderAttribution";
 import { listAudit } from "@/lib/audit";
 import { getInvoice } from "@/lib/invoices";
@@ -27,7 +28,8 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   const { id } = await params;
   const o = await getOrder(id);
   if (!o) notFound();
-  const [orderEmails, history, invoice, support, attr] = await Promise.all([listEmailsForOrder(o.reference), listAudit("order", o.id), getInvoice(o.id), supportForOrder(o.reference), orderAttributions([o.id])]);
+  const [orderEmails, history, invoice, support, attr, cancelWhy] = await Promise.all([listEmailsForOrder(o.reference), listAudit("order", o.id), getInvoice(o.id), supportForOrder(o.reference), orderAttributions([o.id]), o.status === "cancelled" ? cancelReasonsById([o.id]) : Promise.resolve({} as Awaited<ReturnType<typeof cancelReasonsById>>)]);
+  const why = cancelWhy[o.id];
   // Show part numbers for orders placed before SKUs were saved on the order.
   const items = await Promise.all(o.items.map(async (i) => (i.sku ? i : { ...i, sku: (await getProduct(i.slug).catch(() => undefined))?.sku || undefined })));
   const canEdit = can(me.role, "orders.edit");
@@ -45,6 +47,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
             {canEdit && <TestToggle kind="order" id={o.id} test={!!o.test} />}
             {o.totals.total === 0 && <span className="badge badge-muted">free</span>}
           </div>
+          {why && <p className="mt-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm"><b className="text-fg">Why cancelled: {why.label}.</b> <span className="text-muted">{why.detail}</span></p>}
           <div className="mt-1 text-sm text-muted">{invoice ? <>Tax invoice <b className="text-fg">{invoice.number}</b> ({when(invoice.issuedAt)}) · </> : "No tax invoice issued yet · "}Placed {when(o.createdAt)} · {o.paymentMethod}{o.pfPaymentId ? ` (PF ${o.pfPaymentId})` : ""} · Last updated {when(o.updatedAt)}</div>
         </div>
         <Link href="/admin/orders" aria-label="Close" title="Close" className="grid size-10 shrink-0 place-items-center rounded-full border border-line text-muted transition hover:border-sale hover:text-sale">

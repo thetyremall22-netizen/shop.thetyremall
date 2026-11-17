@@ -6,6 +6,7 @@ import { listOrders, orderStatusCounts, orderAttributions, STATUS_LABEL, STATUS_
 import { classifyOrigin } from "@/lib/attribution";
 import { OriginBadge } from "@/components/admin/OriginBadge";
 import { AdminSearch } from "@/components/admin/AdminSearch";
+import { cancelReasonsById } from "@/lib/cancel-reasons";
 
 const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFractionDigits: 2 });
 
@@ -31,7 +32,10 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
     listOrders({ page, perPage: 25, status, test, q }),
     orderStatusCounts({ test }),
   ]);
-  const attr = await orderAttributions(orders.map((o) => o.id));
+  const [attr, cancelWhy] = await Promise.all([
+    orderAttributions(orders.map((o) => o.id)),
+    cancelReasonsById(orders.filter((o) => o.status === "cancelled").map((o) => o.id)),
+  ]);
   const allCount = Object.values(counts).reduce((a, b) => a + b, 0);
   const pages = Math.max(1, Math.ceil(total / perPage));
   const qs = (next: Record<string, string | number | undefined>) => {
@@ -109,7 +113,10 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
                       <div className="text-xs text-muted">{o.customer.phone}{o.delivery.address?.city ? ` · ${o.delivery.address.city}` : o.delivery.method === "fitment" ? " · fitment" : ""}</div>
                     </td>
                     <td className="px-4 py-2.5 text-muted">{o.items.reduce((n, i) => n + i.qty, 0)}</td>
-                    <td className="px-4 py-2.5"><span className={`badge ${STATUS_BADGE[o.status] ?? "badge-muted"}`}>{STATUS_LABEL[o.status] ?? o.status}</span></td>
+                    <td className="px-4 py-2.5">
+                      <span className={`badge ${STATUS_BADGE[o.status] ?? "badge-muted"}`}>{STATUS_LABEL[o.status] ?? o.status}</span>
+                      {cancelWhy[o.id] && <div className="mt-1 max-w-[190px] text-[11px] leading-snug text-muted" title={cancelWhy[o.id].detail}>{cancelWhy[o.id].label}</div>}
+                    </td>
                     <td className="px-4 py-2.5">{attr[o.id] ? <OriginBadge origin={classifyOrigin(attr[o.id])} /> : <span className="text-xs text-faint">—</span>}</td>
                     <td className="px-4 py-2.5 text-right font-semibold">{zar(o.totals.total)}</td>
                     <td className="px-4 py-2.5 text-xs text-muted">{new Date(o.createdAt).toLocaleDateString("en-ZA")}</td>

@@ -174,6 +174,12 @@ async function wasAutoCancelled(orderId: string): Promise<boolean> {
   return r.rows.length > 0;
 }
 
+/** A HappyPay order the customer switched to PayFast: its PayFast hold starts now. */
+export async function markPayfastSwitch(orderId: string): Promise<void> {
+  await libsql.execute(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')`);
+  await libsql.execute({ sql: "INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", args: [`pf_switch:${orderId}`, String(Date.now())] });
+}
+
 export async function cancelUnpaidOrders(): Promise<number> {
   await libsql.execute(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '')`);
   await libsql.execute({ sql: "INSERT OR IGNORE INTO meta (key, value) VALUES ('auto_cancel_since', ?)", args: [String(Date.now())] });
@@ -187,7 +193,9 @@ export async function cancelUnpaidOrders(): Promise<number> {
     const orderId = String(row.order_id);
     const method = String(row.payment_method ?? "");
     const limit = UNPAID_LIMIT_MIN[method] ?? 60;
-    if (Date.now() - Number(row.created_at) < limit * 60_000) continue;
+    // Switched from HappyPay to PayFast: count the hold from the switch.
+    const sw = Number((await libsql.execute({ sql: "SELECT value FROM meta WHERE key = ?", args: [`pf_switch:${orderId}`] })).rows[0]?.value) || 0;
+    if (Date.now() - Math.max(Number(row.created_at), sw) < limit * 60_000) continue;
     // HappyPay: one last check first, in case it was approved and the notice was missed.
     if (method === "happypay" && (await recheckHappyPayOrder(orderId, "HappyPay (final check before cancelling)")) === "paid") continue;
     const order = await getOrder(orderId);

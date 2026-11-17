@@ -21,6 +21,16 @@ async function handle(req: NextRequest) {
   const order = await getOrder(orderId);
   if (!order) return new NextResponse("ok", { status: 200 }); // ack unknown orders
 
+  // The customer switched this order to PayFast after HappyPay didn't go through.
+  if (order.paymentMethod !== "happypay") {
+    if (result !== "fail" && !["processing", "completed"].includes(order.status)) {
+      await holdForReview(orderId, { actor: "HappyPay", reason: "HappyPay sent an approval for this order AFTER the customer switched to paying with PayFast. Check both HappyPay and PayFast so the customer isn't charged twice." });
+    } else if (result !== "fail") {
+      console.warn(`[happypay] ${order.reference} approved by HappyPay but already paid via ${order.paymentMethod} — check for a double payment`);
+    }
+    return new NextResponse("ok", { status: 200 });
+  }
+
   if (result === "fail") {
     await failOrder(orderId, { actor: "HappyPay", note: "HappyPay reported the application was not approved" });
     return new NextResponse("ok", { status: 200 });

@@ -16,7 +16,7 @@ export type CartSource = "checkout" | "pending_order" | "failed_order" | "cancel
 
 export const STATUS_LABEL: Record<CartStatus, string> = {
   abandoned: "Abandoned", pending: "Unpaid", contacted: "Contacted", clicked: "Clicked (engaged)",
-  recovered: "Recovered", purchased: "Bought (not via recovery)", lost: "Lost",
+  recovered: "Recovered", purchased: "Paid straight away", lost: "Lost",
 };
 export const SOURCE_LABEL: Record<CartSource, string> = {
   checkout: "Abandoned at checkout", pending_order: "Unpaid order", failed_order: "Failed payment", cancelled_order: "Cancelled order",
@@ -222,6 +222,11 @@ function toCart(r: Record<string, unknown>): RecoveryCart {
   };
 }
 
+/** A purchased cart that had been sent a recovery email before the order was placed. */
+const AFTER_EMAIL_SQL = `(c.emails_sent > 0 AND c.last_email_at IS NOT NULL AND (SELECT o2.created_at FROM orders o2 WHERE o2.reference = c.recovered_order_ref ORDER BY o2.id DESC LIMIT 1) >= c.last_email_at)`;
+/** Paid at checkout before any recovery was needed — not really abandoned. */
+const PAID_STRAIGHT_AWAY_SQL = `(c.status = 'purchased' AND NOT ${AFTER_EMAIL_SQL})`;
+
 /** Time the order that closed this cart was placed (for "bought after an email"). */
 const PAID_ORDER_AT = `(SELECT o.created_at FROM orders o WHERE o.reference = c.recovered_order_ref ORDER BY o.id DESC LIMIT 1) AS paid_order_at`;
 
@@ -238,13 +243,21 @@ export async function getCartByToken(token: string): Promise<RecoveryCart | null
   return r.rows.length ? toCart(r.rows[0] as Record<string, unknown>) : null;
 }
 
+/** status: "" = every real abandoned cart (hides ones paid straight away), "open",
+ *  "after_email" (bought after a recovery email), "purchased" (paid straight away),
+ *  "all" (everything), or one status. */
 export async function listCarts(opts: { status?: string; q?: string; limit?: number } = {}): Promise<RecoveryCart[]> {
   try {
     await ensureTables();
     const where: string[] = [];
+    const extra: string[] = []; // already written with the c. prefix
     const args: (string | number)[] = [];
     if (opts.status === "open") where.push(`status IN ('abandoned','pending','contacted','clicked')`);
+    else if (opts.status === "after_email") extra.push(`c.status = 'purchased' AND ${AFTER_EMAIL_SQL}`);
+    else if (opts.status === "purchased") extra.push(PAID_STRAIGHT_AWAY_SQL);
+    else if (opts.status === "all") { /* everything */ }
     else if (opts.status) { where.push("status = ?"); args.push(opts.status); }
+    else extra.push(`NOT ${PAID_STRAIGHT_AWAY_SQL}`);
     const q = opts.q?.trim().toLowerCase();
     if (q) {
       const like = `%${q}%`;
@@ -256,7 +269,7 @@ export async function listCarts(opts: { status?: string; q?: string; limit?: num
     const r = await libsql.execute({
       sql: `SELECT c.*, ${PAID_ORDER_AT} FROM cart_recovery c
             JOIN (SELECT email, MAX(updated_at) m FROM cart_recovery GROUP BY email) g ON g.email = c.email
-            ${where.length ? "WHERE " + where.map((w) => w.replace(/\b(status|email|first_name|last_name|phone|items|order_ref|address)\b/g, "c.$1")).join(" AND ") : ""}
+            ${where.length || extra.length ? "WHERE " + [...where.map((w) => w.replace(/\b(status|email|first_name|last_name|phone|items|order_ref|address)\b/g, "c.$1")), ...extra].join(" AND ") : ""}
             ORDER BY g.m DESC, c.email, c.id DESC LIMIT ?`,
       args,
     });
@@ -268,7 +281,10 @@ export async function listCarts(opts: { status?: string; q?: string; limit?: num
 }
 
 export interface RecoveryStats {
-  tracked: number; open: number; contacted: number; clicked: number; lost: number; purchased: number;
+  /** Real abandoned carts (excludes ones paid straight away at checkout). */
+  tracked: number; open: number; contacted: number; clicked: number; lost: number;
+  /** Paid at checkout before any recovery was needed (not abandoned). */
+  purchased: number;
   /** Paid after clicking the email link or the exit popup (each order once). */
   recovered: number; recoveredValue: number;
   recoveredEmail: number; recoveredEmailValue: number;
@@ -305,7 +321,9 @@ export async function recoveryStats(): Promise<RecoveryStats> {
     const p = await libsql.execute("SELECT event, device, COUNT(*) n, MIN(created_at) since FROM cart_recovery_popup GROUP BY event, device");
     const pc = (e: string, d: string) => Number(p.rows.find((x) => x.event === e && x.device === d)?.n ?? 0);
     const since = p.rows.length ? Math.min(...p.rows.map((x) => Number(x.since))) : null;
-    const tracked = [...by.values()].reduce((x, y) => x + y, 0);
+    const straight = await libsql.execute(`SELECT COUNT(*) n FROM cart_recovery c WHERE ${PAID_STRAIGHT_AWAY_SQL}`);
+    const paidStraightAway = Number(straight.rows[0]?.n) || 0;
+    const tracked = [...by.values()].reduce((x, y) => x + y, 0) - paidStraightAway;
     const em = rec.get("email") ?? { n: 0, s: 0 }, po = rec.get("popup") ?? { n: 0, s: 0 };
     return {
       tracked,
@@ -313,7 +331,7 @@ export async function recoveryStats(): Promise<RecoveryStats> {
       contacted: by.get("contacted") ?? 0,
       clicked: by.get("clicked") ?? 0,
       lost: by.get("lost") ?? 0,
-      purchased: by.get("purchased") ?? 0,
+      purchased: paidStraightAway,
       recovered: em.n + po.n, recoveredValue: em.s + po.s,
       recoveredEmail: em.n, recoveredEmailValue: em.s,
       recoveredPopup: po.n, recoveredPopupValue: po.s,

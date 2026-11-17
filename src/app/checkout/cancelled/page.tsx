@@ -84,8 +84,13 @@ function CancelledInner() {
             <h2 id="pf-offer-title" className="font-display text-2xl text-fg">Pay another way?</h2>
             <p className="mt-2 text-sm text-muted">
               HappyPay couldn&apos;t approve this one (or the application wasn&apos;t finished). You can still get your tyres —
-              pay for the same order securely with <b className="text-fg">PayFast</b>: card, Instant EFT and more.
+              pay for the same order securely with <b className="text-fg">PayFast</b>.
             </p>
+            {/* The pay-over-time options switched on in The Tyre Mall's PayFast account (Nov 2026). */}
+            <ul className="mt-3 space-y-1.5 text-left text-sm">
+              <li className="flex gap-2"><span className="text-volt">✓</span><span><b className="text-fg">Pay over time</b> with <b className="text-fg">MobiCred</b> or your <b className="text-fg">RCS / store card</b></span></li>
+              <li className="flex gap-2"><span className="text-volt">✓</span><span>Credit or debit card, Instant EFT, SnapScan, Apple Pay, Google Pay and more</span></li>
+            </ul>
             {info.reference && info.total != null && (
               <p className="mt-3 rounded-lg border border-line bg-surface px-3 py-2 text-sm">
                 Order <b className="text-fg">{info.reference}</b> · <b className="text-volt">{zar(info.total)}</b>

@@ -38,7 +38,8 @@ export default async function CartRecoveryPage({ searchParams }: { searchParams:
       <h1 className="font-display text-3xl">Abandoned carts</h1>
       <p className="mt-1 text-sm text-muted">
         Shoppers who started checkout but didn&apos;t finish (and unpaid or failed orders) get up to 3 friendly recovery emails with a one-click link that restores their cart.
-        A cart only counts as <b className="text-fg">recovered</b> when the customer came back through that link or the exit popup and then paid.
+        A cart counts as <b className="text-fg">recovered</b> when the customer came back through that link or the exit popup and then paid.
+        <b className="text-fg"> Bought after a recovery email</b> counts customers who were emailed and then paid without clicking the link (they came back another way).
       </p>
       {!settings.enabled && <p className="mt-3 rounded-lg border border-sale/40 bg-sale/10 px-3 py-2 text-sm font-semibold text-sale">Cart Recovery is switched off. Turn it on under Settings.</p>}
 
@@ -49,13 +50,34 @@ export default async function CartRecoveryPage({ searchParams }: { searchParams:
 
       {tab === "carts" && (
         <>
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+          {/* What recovery brought in */}
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Tile label="Recovered — email link" value={zar(stats.recoveredEmailValue)} sub={`${stats.recoveredEmail} order${stats.recoveredEmail === 1 ? "" : "s"} · clicked the email, then paid`} strong />
+            <Tile label="Recovered — exit popup" value={zar(stats.recoveredPopupValue)} sub={`${stats.recoveredPopup} order${stats.recoveredPopup === 1 ? "" : "s"} · tapped the popup, then paid`} strong />
+            <Tile label="Bought after a recovery email" value={zar(stats.afterEmailValue)} sub={`${stats.afterEmail} order${stats.afterEmail === 1 ? "" : "s"} · emailed, paid without clicking`} strong />
+            <Tile label="Total helped by recovery" value={zar(stats.recoveredValue + stats.afterEmailValue)} sub={`${stats.recovered + stats.afterEmail} order${stats.recovered + stats.afterEmail === 1 ? "" : "s"}`} strong />
+          </div>
+          {/* Exit popup */}
+          <div className="mt-3 card p-3 text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted">Exit popup</div>
+            {stats.popup.since ? (
+              <p className="mt-1 text-fg">
+                Shown <b>{stats.popup.shownDesktop + stats.popup.shownMobile}</b> times
+                <span className="text-muted"> ({stats.popup.shownMobile} on phones, {stats.popup.shownDesktop} on computers)</span>
+                {" · "}tapped <b>{stats.popup.tappedDesktop + stats.popup.tappedMobile}</b>
+                <span className="text-muted"> ({stats.popup.tappedMobile} phones, {stats.popup.tappedDesktop} computers)</span>
+                <span className="text-xs text-faint"> · counted since {new Date(stats.popup.since).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" })}</span>
+              </p>
+            ) : (
+              <p className="mt-1 text-muted">Not shown yet since counting started. {settings.exitPopup.enabled ? "It shows on computers when the pointer leaves the window, and on phones when they press Back on the cart or checkout, or come back to the site after switching away." : "It's switched off — turn it on under Recovery settings."}</p>
+            )}
+          </div>
+          {/* The flow */}
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {[
               ["Tracked", stats.tracked], ["In the flow", stats.open], ["Contacted", stats.contacted], ["Clicked", stats.clicked],
-              ["Recovered", stats.recovered], ["Recovered value", zar(stats.recoveredValue)], ["Lost", stats.lost],
-            ].map(([k, v]) => (
-              <div key={String(k)} className="card p-3"><div className="text-xs text-muted">{k}</div><div className="mt-1 font-display text-xl text-fg">{v}</div></div>
-            ))}
+              ["Bought (not via recovery)", stats.purchased], ["Lost", stats.lost],
+            ].map(([k, v]) => <Tile key={String(k)} label={String(k)} value={String(v)} />)}
           </div>
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <AdminSearch className="min-w-[260px] flex-1" placeholder="Search email, name, phone, product, order no.…" />
@@ -74,6 +96,7 @@ export default async function CartRecoveryPage({ searchParams }: { searchParams:
                 id: c.id, email: c.email, firstName: c.firstName, lastName: c.lastName, phone: c.phone, source: c.source, status: c.status,
                 items: c.items.map((i) => ({ name: i.name, qty: i.qty })), total: c.total, emailsSent: c.emailsSent, lastEmailAt: c.lastEmailAt,
                 orderRef: c.orderRef, recoveredOrderRef: c.recoveredOrderRef, createdAt: c.createdAt, updatedAt: c.updatedAt, test: c.test,
+                clickedVia: c.clickedVia, boughtAfterEmail: c.boughtAfterEmail,
               }))} />
           </div>
         </>
@@ -85,5 +108,15 @@ export default async function CartRecoveryPage({ searchParams }: { searchParams:
 
       <p className="mt-10 text-center text-xs text-faint">Cart Recovery · by <a href="https://iheartdigital.co.za" target="_blank" rel="noopener noreferrer" className="hover:text-volt">iHeart Digital</a></p>
     </AdminShell>
+  );
+}
+
+function Tile({ label, value, sub, strong }: { label: string; value: string; sub?: string; strong?: boolean }) {
+  return (
+    <div className={`card p-3 ${strong ? "border-volt/30" : ""}`}>
+      <div className="text-xs text-muted">{label}</div>
+      <div className={`mt-1 font-display ${strong ? "text-2xl text-volt" : "text-xl text-fg"}`}>{value}</div>
+      {sub && <div className="mt-0.5 text-[11px] text-faint">{sub}</div>}
+    </div>
   );
 }

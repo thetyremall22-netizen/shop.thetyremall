@@ -49,7 +49,17 @@ export interface RecoveryCart {
   lastActivityAt: number;
   /** Created while a staff member was logged in, or from a test order. */
   test: boolean;
+  /** How they came back: the recovery email link, or the exit popup. */
+  clickedVia: "email" | "popup" | null;
+  /** Bought (without clicking) after at least one recovery email was sent. */
+  boughtAfterEmail: boolean;
 }
+
+export type PopupEvent = "shown" | "tapped";
+export type PopupDevice = "desktop" | "mobile";
+/** What made the exit popup appear: mouse leaving the window (computers),
+ *  back button on cart/checkout, or coming back to the tab (phones). */
+export type PopupTrigger = "mouse_exit" | "back_button" | "tab_return";
 
 // ---- settings -----------------------------------------------------------------
 
@@ -117,6 +127,17 @@ async function ensureTables() {
     last_activity_at INTEGER NOT NULL
   )`);
   try { await libsql.execute("ALTER TABLE cart_recovery ADD COLUMN test INTEGER NOT NULL DEFAULT 0"); } catch { /* exists */ }
+  try { await libsql.execute("ALTER TABLE cart_recovery ADD COLUMN clicked_via TEXT"); } catch { /* exists */ }
+  // Every time the exit popup is shown or tapped (so its results can be measured).
+  await libsql.execute(`CREATE TABLE IF NOT EXISTS cart_recovery_popup (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event TEXT NOT NULL,
+    device TEXT NOT NULL DEFAULT '',
+    trigger TEXT NOT NULL DEFAULT '',
+    has_email INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  )`);
+  await libsql.execute(`CREATE INDEX IF NOT EXISTS cart_recovery_popup_at ON cart_recovery_popup (created_at)`);
   await libsql.execute(`CREATE INDEX IF NOT EXISTS cart_recovery_email ON cart_recovery (email)`);
   await libsql.execute(`CREATE INDEX IF NOT EXISTS cart_recovery_status ON cart_recovery (status)`);
   await libsql.execute(`CREATE UNIQUE INDEX IF NOT EXISTS cart_recovery_token ON cart_recovery (token)`);
@@ -195,12 +216,18 @@ function toCart(r: Record<string, unknown>): RecoveryCart {
     orderRef: r.order_ref == null ? null : String(r.order_ref), recoveredOrderRef: r.recovered_order_ref == null ? null : String(r.recovered_order_ref),
     recoveredValue: Number(r.recovered_value) || 0, createdAt: Number(r.created_at), updatedAt: Number(r.updated_at), lastActivityAt: Number(r.last_activity_at),
     test: Number(r.test) === 1,
+    clickedVia: r.clicked_via === "email" || r.clicked_via === "popup" ? r.clicked_via : null,
+    boughtAfterEmail: String(r.status) === "purchased" && Number(r.emails_sent) > 0 && r.last_email_at != null
+      && r.paid_order_at != null && Number(r.paid_order_at) >= Number(r.last_email_at),
   };
 }
 
+/** Time the order that closed this cart was placed (for "bought after an email"). */
+const PAID_ORDER_AT = `(SELECT o.created_at FROM orders o WHERE o.reference = c.recovered_order_ref ORDER BY o.id DESC LIMIT 1) AS paid_order_at`;
+
 export async function getCart(id: number): Promise<RecoveryCart | null> {
   await ensureTables();
-  const r = await libsql.execute({ sql: "SELECT * FROM cart_recovery WHERE id = ?", args: [id] });
+  const r = await libsql.execute({ sql: `SELECT c.*, ${PAID_ORDER_AT} FROM cart_recovery c WHERE c.id = ?`, args: [id] });
   return r.rows.length ? toCart(r.rows[0] as Record<string, unknown>) : null;
 }
 
@@ -227,7 +254,7 @@ export async function listCarts(opts: { status?: string; q?: string; limit?: num
     args.push(opts.limit ?? 500);
     // Most recent activity first, each customer's carts kept together.
     const r = await libsql.execute({
-      sql: `SELECT c.* FROM cart_recovery c
+      sql: `SELECT c.*, ${PAID_ORDER_AT} FROM cart_recovery c
             JOIN (SELECT email, MAX(updated_at) m FROM cart_recovery GROUP BY email) g ON g.email = c.email
             ${where.length ? "WHERE " + where.map((w) => w.replace(/\b(status|email|first_name|last_name|phone|items|order_ref|address)\b/g, "c.$1")).join(" AND ") : ""}
             ORDER BY g.m DESC, c.email, c.id DESC LIMIT ?`,
@@ -240,26 +267,62 @@ export async function listCarts(opts: { status?: string; q?: string; limit?: num
   }
 }
 
-export async function recoveryStats(): Promise<{ tracked: number; open: number; contacted: number; clicked: number; recovered: number; recoveredValue: number; lost: number; purchased: number }> {
+export interface RecoveryStats {
+  tracked: number; open: number; contacted: number; clicked: number; lost: number; purchased: number;
+  /** Paid after clicking the email link or the exit popup (each order once). */
+  recovered: number; recoveredValue: number;
+  recoveredEmail: number; recoveredEmailValue: number;
+  recoveredPopup: number; recoveredPopupValue: number;
+  /** Paid after a recovery email without clicking it (not already counted above). */
+  afterEmail: number; afterEmailValue: number;
+  /** Exit popup: times shown / tapped, by device (since tracking started). */
+  popup: { shownDesktop: number; shownMobile: number; tappedDesktop: number; tappedMobile: number; since: number | null };
+}
+
+const EMPTY_STATS: RecoveryStats = {
+  tracked: 0, open: 0, contacted: 0, clicked: 0, lost: 0, purchased: 0, recovered: 0, recoveredValue: 0,
+  recoveredEmail: 0, recoveredEmailValue: 0, recoveredPopup: 0, recoveredPopupValue: 0, afterEmail: 0, afterEmailValue: 0,
+  popup: { shownDesktop: 0, shownMobile: 0, tappedDesktop: 0, tappedMobile: 0, since: null },
+};
+
+export async function recoveryStats(): Promise<RecoveryStats> {
   try {
     await ensureTables();
     const r = await libsql.execute("SELECT status, COUNT(*) n FROM cart_recovery GROUP BY status");
     const by = new Map(r.rows.map((x) => [String(x.status), Number(x.n)]));
-    // Recovered value counts each recovered ORDER once.
-    const v = await libsql.execute("SELECT COUNT(*) n, COALESCE(SUM(v),0) s FROM (SELECT recovered_order_ref, MAX(recovered_value) v FROM cart_recovery WHERE status = 'recovered' GROUP BY COALESCE(recovered_order_ref, id))");
-    const tracked = [...by.values()].reduce((a, b) => a + b, 0);
+    // Recovered value counts each recovered ORDER once (popup if any cart for it came back via the popup).
+    const v = await libsql.execute(`SELECT via, COUNT(*) n, COALESCE(SUM(v),0) s FROM (
+        SELECT CASE WHEN MAX(clicked_via = 'popup') = 1 THEN 'popup' ELSE 'email' END via, MAX(recovered_value) v
+        FROM cart_recovery WHERE status = 'recovered' GROUP BY COALESCE(recovered_order_ref, id)) GROUP BY via`);
+    const rec = new Map(v.rows.map((x) => [String(x.via), { n: Number(x.n) || 0, s: Number(x.s) || 0 }]));
+    // Bought after an email went out, without clicking (orders not already credited as recovered).
+    const a = await libsql.execute(`SELECT COUNT(*) n, COALESCE(SUM(t),0) s FROM (
+        SELECT c.recovered_order_ref ref, MAX(json_extract(o.totals,'$.total')) t
+        FROM cart_recovery c JOIN orders o ON o.reference = c.recovered_order_ref
+        WHERE c.status = 'purchased' AND c.emails_sent > 0 AND c.last_email_at IS NOT NULL AND o.created_at >= c.last_email_at
+          AND c.recovered_order_ref NOT IN (SELECT recovered_order_ref FROM cart_recovery WHERE status = 'recovered' AND recovered_order_ref IS NOT NULL)
+        GROUP BY c.recovered_order_ref)`);
+    const p = await libsql.execute("SELECT event, device, COUNT(*) n, MIN(created_at) since FROM cart_recovery_popup GROUP BY event, device");
+    const pc = (e: string, d: string) => Number(p.rows.find((x) => x.event === e && x.device === d)?.n ?? 0);
+    const since = p.rows.length ? Math.min(...p.rows.map((x) => Number(x.since))) : null;
+    const tracked = [...by.values()].reduce((x, y) => x + y, 0);
+    const em = rec.get("email") ?? { n: 0, s: 0 }, po = rec.get("popup") ?? { n: 0, s: 0 };
     return {
       tracked,
       open: ACTIVE.reduce((n, s) => n + (by.get(s) ?? 0), 0),
       contacted: by.get("contacted") ?? 0,
       clicked: by.get("clicked") ?? 0,
-      recovered: Number(v.rows[0].n) || 0,
-      recoveredValue: Number(v.rows[0].s) || 0,
       lost: by.get("lost") ?? 0,
       purchased: by.get("purchased") ?? 0,
+      recovered: em.n + po.n, recoveredValue: em.s + po.s,
+      recoveredEmail: em.n, recoveredEmailValue: em.s,
+      recoveredPopup: po.n, recoveredPopupValue: po.s,
+      afterEmail: Number(a.rows[0]?.n) || 0, afterEmailValue: Number(a.rows[0]?.s) || 0,
+      popup: { shownDesktop: pc("shown", "desktop"), shownMobile: pc("shown", "mobile"), tappedDesktop: pc("tapped", "desktop"), tappedMobile: pc("tapped", "mobile"), since },
     };
-  } catch {
-    return { tracked: 0, open: 0, contacted: 0, clicked: 0, recovered: 0, recoveredValue: 0, lost: 0, purchased: 0 };
+  } catch (e) {
+    console.error("[cart-recovery] stats failed:", (e as Error).message);
+    return EMPTY_STATS;
   }
 }
 
@@ -268,6 +331,22 @@ export async function recoveryStats(): Promise<{ tracked: number; open: number; 
 /** Save/refresh a cart from the checkout form. The same cart (same products)
  *  updates one row; a different cart for the same customer starts a new one. */
 export async function captureCheckout(c: {
+  email: string; firstName?: string; lastName?: string; phone?: string; address?: Address; items: RecoveryItem[]; total: number; test?: boolean;
+  /** The shopper tapped the exit popup (before we knew their email) at this time. */
+  popupTappedAt?: number;
+}): Promise<void> {
+  await captureCheckoutRow(c);
+  // Tapped the exit popup in the last 24 hours, then went on to checkout:
+  // credit the popup if this cart goes on to be paid.
+  if (c.popupTappedAt && Date.now() - c.popupTappedAt < 86400_000 && c.popupTappedAt <= Date.now() + 60_000) {
+    await libsql.execute({
+      sql: `UPDATE cart_recovery SET status = 'clicked', clicked_via = 'popup', updated_at = ? WHERE LOWER(email) = LOWER(?) AND signature = ? AND status = 'abandoned'`,
+      args: [Date.now(), c.email, signature(c.items)],
+    }).catch(() => {});
+  }
+}
+
+async function captureCheckoutRow(c: {
   email: string; firstName?: string; lastName?: string; phone?: string; address?: Address; items: RecoveryItem[]; total: number; test?: boolean;
 }): Promise<void> {
   const settings = await getRecoverySettings();
@@ -422,12 +501,12 @@ async function markCartPurchased(id: number, orderRef: string, value: number): P
   });
 }
 
-/** The customer came back (recovery link or exit popup). */
-export async function markClicked(id: number): Promise<void> {
+/** The customer came back through the recovery email link. */
+export async function markClicked(id: number, via: "email" | "popup" = "email"): Promise<void> {
   await ensureTables();
   await libsql.execute({
-    sql: `UPDATE cart_recovery SET status = 'clicked', updated_at = ? WHERE id = ? AND status IN ('abandoned','pending','contacted','clicked','lost')`,
-    args: [Date.now(), id],
+    sql: `UPDATE cart_recovery SET status = 'clicked', clicked_via = ?, updated_at = ? WHERE id = ? AND status IN ('abandoned','pending','contacted','clicked','lost')`,
+    args: [via, Date.now(), id],
   });
 }
 
@@ -435,9 +514,22 @@ export async function markClickedByEmail(email: string): Promise<void> {
   if (!email) return;
   await ensureTables();
   await libsql.execute({
-    sql: `UPDATE cart_recovery SET status = 'clicked', updated_at = ? WHERE LOWER(email) = LOWER(?) AND status IN ('abandoned','pending','contacted')`,
+    sql: `UPDATE cart_recovery SET status = 'clicked', clicked_via = 'popup', updated_at = ? WHERE LOWER(email) = LOWER(?) AND status IN ('abandoned','pending','contacted')`,
     args: [Date.now(), email],
   });
+}
+
+/** Log one exit-popup showing or tap. */
+export async function recordPopupEvent(event: PopupEvent, device: PopupDevice, trigger: PopupTrigger, hasEmail: boolean): Promise<void> {
+  try {
+    await ensureTables();
+    await libsql.execute({
+      sql: "INSERT INTO cart_recovery_popup (event, device, trigger, has_email, created_at) VALUES (?,?,?,?,?)",
+      args: [event, device, trigger, hasEmail ? 1 : 0, Date.now()],
+    });
+  } catch (e) {
+    console.error("[cart-recovery] popup event failed:", (e as Error).message);
+  }
 }
 
 export async function setCartStatus(id: number, status: CartStatus): Promise<void> {

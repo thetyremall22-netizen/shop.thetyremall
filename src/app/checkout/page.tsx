@@ -93,6 +93,8 @@ export default function CheckoutPage() {
       address: { street: v("street"), suburb: v("suburb"), city: v("city"), province: v("province"), postalCode: v("postalCode") },
       total: totals.total,
       items: items.map((i) => ({ name: i.name, qty: i.qty, price: i.price, slug: i.slug, image: i.image, roadHazard: i.roadHazard, alignment: i.alignment, balanceQty: i.balanceQty })),
+      // When they tapped the exit popup (before we had their email), if they did.
+      popupTappedAt: (() => { try { return Number(localStorage.getItem("ttm-exit-tapped")) || undefined; } catch { return undefined; } })(),
     };
     const key = JSON.stringify(payload);
     if (key === lastCapture.current) return;

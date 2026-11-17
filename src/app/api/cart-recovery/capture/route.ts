@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     items,
     total: Math.max(0, Math.round(Number(b.total) || items.reduce((n, i) => n + i.price * i.qty, 0))),
     test: await isAdmin(), // staff testing checkout
+    popupTappedAt: Number(b.popupTappedAt) || undefined,
   });
   return NextResponse.json({ ok: true });
 }

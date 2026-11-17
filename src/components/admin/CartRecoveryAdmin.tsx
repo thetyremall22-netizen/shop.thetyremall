@@ -29,6 +29,10 @@ export interface CartRow {
   id: number; email: string; firstName: string; lastName: string; phone: string; source: string; status: string;
   items: { name: string; qty: number }[]; total: number; emailsSent: number; lastEmailAt: number | null;
   orderRef: string | null; recoveredOrderRef: string | null; createdAt: number; updatedAt: number; test?: boolean;
+  /** How they came back: recovery email link or exit popup. */
+  clickedVia?: "email" | "popup" | null;
+  /** Bought after a recovery email went out, without clicking it. */
+  boughtAfterEmail?: boolean;
 }
 
 function waLink(phone: string, name: string) {
@@ -128,6 +132,10 @@ export function CartsTable({ rows, canAct, canDelete }: { rows: CartRow[]; canAc
                           {STATUS_OPTS.map((s) => <option key={s.v} value={s.v}>{s.label}</option>)}
                         </select>
                       ) : <span className={`badge ${badge}`}>{label(r.status)}</span>}
+                      {(r.status === "recovered" || r.status === "clicked") && r.clickedVia && (
+                        <div className="mt-1 text-xs font-semibold text-volt">{r.clickedVia === "popup" ? "via exit popup" : "via email link"}</div>
+                      )}
+                      {r.boughtAfterEmail && <div className="mt-1 text-xs font-semibold text-amber-300">after a recovery email</div>}
                       {r.recoveredOrderRef && <div className="mt-1 text-xs text-muted">Order {r.recoveredOrderRef}</div>}
                     </td>
                     <td className="px-3 py-2.5 text-xs text-muted">

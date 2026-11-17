@@ -70,8 +70,8 @@ export interface PaymentMethod {
 }
 
 export const PAYMENT_METHODS: PaymentMethod[] = [
-  // Store cards / MobiCred: the pay-over-time options switched on in The Tyre Mall's PayFast account (Nov 2026).
-  { id: "payfast", name: "PayFast", tag: "Card / EFT / Store card", blurb: "Card, Instant EFT, SnapScan, Apple & Google Pay — or pay over time with MobiCred or your store card (Pick n Pay Smart Shopper, Edgars, Jet, Makro, Game, Builders, RCS and more).", live: true },
+  // RCS store cards: the pay-over-time option that works on The Tyre Mall's PayFast account (Nov 2026; MobiCred shows but is unavailable).
+  { id: "payfast", name: "PayFast", tag: "Card / EFT / Store card", blurb: "Card, Instant EFT, SnapScan, Apple & Google Pay — or use your RCS store card (Pick n Pay Smart Shopper, Edgars, Jet, Makro, Game, Builders, RCS and more).", live: true },
   { id: "happypay", name: "HappyPay", tag: "Pay over 2 months", blurb: "0% interest, no upfront. Instant credit check.", live: true },
   // Mobicred — not set up yet; re-add with live:true (or false for "coming soon") when ready.
 ];

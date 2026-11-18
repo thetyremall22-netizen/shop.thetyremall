@@ -69,11 +69,17 @@ export async function trafficReport(days: number): Promise<{ daily: DayRow[]; by
   const bySource = new Map<Bucket, SourceRow>(BUCKETS.map((b) => [b, { bucket: b, visits: 0, orders: 0, paid: 0, leads: 0 }]));
 
   const v = await libsql.execute({
-    sql: `SELECT date((at / 1000) + ${SAST}, 'unixepoch') d, bucket, COUNT(*) n FROM visit_sources WHERE at >= ? GROUP BY d, bucket`,
+    // Visits recorded before hand-tagged ad links (utm_source=google-ads…) were
+    // recognised as ads are regrouped here; the stored rows aren't changed.
+    sql: `SELECT date((at / 1000) + ${SAST}, 'unixepoch') d,
+            CASE WHEN bucket = 'campaign' AND LOWER(REPLACE(REPLACE(source, '_', '-'), ' ', '-')) IN ('google-ads','googleads','adwords','google-adwords') THEN 'google-ads'
+                 WHEN bucket = 'campaign' AND LOWER(REPLACE(REPLACE(source, '_', '-'), ' ', '-')) IN ('bing-ads','microsoft-ads','msads') THEN 'bing-ads'
+                 ELSE bucket END b, COUNT(*) n
+          FROM visit_sources WHERE at >= ? GROUP BY d, b`,
     args: [since],
   });
   for (const r of v.rows as Record<string, unknown>[]) {
-    const row = daily.get(String(r.d)); const b = String(r.bucket) as Bucket; const n = Number(r.n);
+    const row = daily.get(String(r.d)); const b = String(r.b) as Bucket; const n = Number(r.n);
     if (!row || !BUCKETS.includes(b)) continue;
     row.visits[b] += n; row.total += n; bySource.get(b)!.visits += n;
   }

@@ -64,6 +64,10 @@ export interface Origin {
 }
 
 const PAID_MEDIUM = /^(cpc|ppc|paid|paidsearch|paid_search|paid-social|paidsocial|cpm|display|ads?)$/i;
+// Hand-tagged ad links (utm_source=google-ads etc., without Google's click id
+// or a paid utm_medium) are still ad clicks.
+export const GOOGLE_ADS_UTM = /^(google[-_ ]?ads|googleads|adwords|google[-_ ]?adwords)$/i;
+export const MS_ADS_UTM = /^(bing[-_ ]?ads|microsoft[-_ ]?ads|msads)$/i;
 
 function classifyTouch(a: Attribution | null | undefined, ownHost: string): Origin {
   if (!a) return { type: "Direct", source: "Unknown", label: "Unknown (order placed before tracking)" };
@@ -83,6 +87,8 @@ function classifyTouch(a: Attribution | null | undefined, ownHost: string): Orig
     const ai = match(us, AI_UTM);
     if (ai) return { type: "AI assistant", source: ai, label: `AI assistant: ${ai}` };
     const medium = t.utm.medium?.trim() || "";
+    if (GOOGLE_ADS_UTM.test(us)) return { type: "Paid ads", source: "Google Ads", label: `Google Ads${t.utm.campaign ? ` (${t.utm.campaign})` : ""}`, medium: medium || "cpc" };
+    if (MS_ADS_UTM.test(us)) return { type: "Paid ads", source: "Microsoft Ads", label: `Microsoft (Bing) Ads${t.utm.campaign ? ` (${t.utm.campaign})` : ""}`, medium: medium || "cpc" };
     if (PAID_MEDIUM.test(medium)) return { type: "Paid ads", source: us, label: `Paid ads: ${us}${t.utm.campaign ? ` (${t.utm.campaign})` : ""}`, medium };
     if (/e-?mail|newsletter/i.test(medium) || /recovery|newsletter|mailchimp|klaviyo/i.test(us)) return { type: "Email", source: us, label: `Email: ${us}${t.utm.campaign ? ` (${t.utm.campaign})` : ""}`, medium };
     if (/social/i.test(medium)) return { type: "Social", source: us, label: `Social: ${us}`, medium };
@@ -141,7 +147,9 @@ export function originBucket(o: Origin): Bucket {
 
 /** A visit from a paid ad click (Google / Microsoft / TikTok ads, or a paid utm tag). */
 export function isPaidTouch(t: Touch): boolean {
-  return !!(t.clickIds.gclid || t.clickIds.gbraid || t.clickIds.wbraid || t.clickIds.msclkid || t.clickIds.ttclid || PAID_MEDIUM.test(t.utm.medium?.trim() || ""));
+  const us = t.utm.source?.trim() || "";
+  return !!(t.clickIds.gclid || t.clickIds.gbraid || t.clickIds.wbraid || t.clickIds.msclkid || t.clickIds.ttclid || PAID_MEDIUM.test(t.utm.medium?.trim() || "")
+    || GOOGLE_ADS_UTM.test(us) || MS_ADS_UTM.test(us));
 }
 
 /** A lead/enquiry's attribution from what the browser sent (null if none). */

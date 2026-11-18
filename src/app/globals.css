@@ -796,6 +796,17 @@ body::before {
   padding: 3px 9px;
 }
 
+/* Light-theme override: pale -200/-300 text (made for dark backgrounds, e.g.
+   the admin "Origin" badges: Google Ads, Search, AI, Email…) is unreadable on
+   white, so use the dark shade of the same colour in light mode. */
+:root[data-theme="light"] :is(.text-amber-200, .text-amber-300) { color: #b45309; }
+:root[data-theme="light"] .text-sky-300 { color: #0369a1; }
+:root[data-theme="light"] .text-fuchsia-300 { color: #a21caf; }
+:root[data-theme="light"] .text-pink-300 { color: #be185d; }
+:root[data-theme="light"] .text-teal-300 { color: #0f766e; }
+:root[data-theme="light"] .text-violet-300 { color: #6d28d9; }
+:root[data-theme="light"] .text-orange-300 { color: #c2410c; }
+
 /* metallic silver "chrome" button (e.g. the Chat with Tyrone launcher) */
 .btn-chrome {
   background: linear-gradient(180deg, #ffffff 0%, #e4e8ec 36%, #b7bec5 60%, #d4d9df 100%);

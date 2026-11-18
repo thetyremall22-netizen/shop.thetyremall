@@ -15,6 +15,8 @@ const zar = (c: number) => "R" + (c / 100).toLocaleString("en-ZA", { minimumFrac
 const FILTERS = [
   { v: "", label: "All abandoned" }, { v: "open", label: "Open (in the flow)" },
   ...(["abandoned", "pending", "contacted", "clicked", "recovered"] as const).map((s) => ({ v: s, label: STATUS_LABEL[s] })),
+  { v: "popup", label: "Tapped the exit popup" },
+  { v: "email_click", label: "Clicked a recovery email" },
   { v: "after_email", label: "Bought after a recovery email" },
   { v: "lost", label: STATUS_LABEL.lost },
   { v: "purchased", label: "Paid straight away (not abandoned)" },

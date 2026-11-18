@@ -244,6 +244,7 @@ export async function getCartByToken(token: string): Promise<RecoveryCart | null
 }
 
 /** status: "" = every real abandoned cart (hides ones paid straight away), "open",
+ *  "popup" (tapped the exit popup), "email_click" (clicked a recovery email link),
  *  "after_email" (bought after a recovery email), "purchased" (paid straight away),
  *  "all" (everything), or one status. */
 export async function listCarts(opts: { status?: string; q?: string; limit?: number } = {}): Promise<RecoveryCart[]> {
@@ -253,6 +254,8 @@ export async function listCarts(opts: { status?: string; q?: string; limit?: num
     const extra: string[] = []; // already written with the c. prefix
     const args: (string | number)[] = [];
     if (opts.status === "open") where.push(`status IN ('abandoned','pending','contacted','clicked')`);
+    else if (opts.status === "popup") extra.push(`c.clicked_via = 'popup'`);
+    else if (opts.status === "email_click") extra.push(`c.clicked_via = 'email'`);
     else if (opts.status === "after_email") extra.push(`c.status = 'purchased' AND ${AFTER_EMAIL_SQL}`);
     else if (opts.status === "purchased") extra.push(PAID_STRAIGHT_AWAY_SQL);
     else if (opts.status === "all") { /* everything */ }

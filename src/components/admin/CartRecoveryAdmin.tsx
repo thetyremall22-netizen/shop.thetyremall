@@ -20,7 +20,7 @@ export const STATUS_OPTS = [
   { v: "contacted", label: "Contacted", badge: "badge-volt" },
   { v: "clicked", label: "Clicked (engaged)", badge: "badge-volt" },
   { v: "recovered", label: "Recovered", badge: "badge-pay" },
-  { v: "purchased", label: "Bought (not via recovery)", badge: "badge-muted" },
+  { v: "purchased", label: "Paid straight away", badge: "badge-muted" },
   { v: "lost", label: "Lost", badge: "badge-sale" },
 ];
 const SOURCE: Record<string, string> = { checkout: "Abandoned at checkout", pending_order: "Unpaid order", failed_order: "Failed payment", cancelled_order: "Cancelled order" };
@@ -131,9 +131,12 @@ export function CartsTable({ rows, canAct, canDelete }: { rows: CartRow[]; canAc
                       {canAct ? (
                         <select value={r.status} autoComplete="off" onChange={(e) => setPending({ kind: "status", row: r, status: e.target.value })}
                           className="h-8 w-full rounded-lg border border-line bg-surface-2 px-1.5 text-xs text-fg outline-none focus:border-volt">
-                          {STATUS_OPTS.map((s) => <option key={s.v} value={s.v}>{s.label}</option>)}
+                          {STATUS_OPTS.map((s) => <option key={s.v} value={s.v}>{
+                            s.v === "clicked" && r.clickedVia ? `Clicked — ${r.clickedVia === "popup" ? "exit popup" : "email link"}`
+                            : s.v === "purchased" && r.boughtAfterEmail ? "Bought after email" : s.label}</option>)}
                         </select>
                       ) : <span className={`badge ${r.boughtAfterEmail ? "badge-pay" : badge}`}>{r.boughtAfterEmail ? "Bought after email" : label(r.status)}</span>}
+                      {canAct && r.boughtAfterEmail && <div className="mt-1"><span className="badge badge-pay">Bought after email</span></div>}
                       {(r.status === "recovered" || r.status === "clicked") && r.clickedVia && (
                         <div className="mt-1 text-xs font-semibold text-volt">{r.clickedVia === "popup" ? "via exit popup" : "via email link"}</div>
                       )}

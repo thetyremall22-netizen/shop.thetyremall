@@ -255,10 +255,10 @@ export function RecoverySettingsForm({ initial }: { initial: RecoverySettings })
     if (!res.ok) { setMsg({ ok: false, text: d.error ?? "Couldn't save." }); return null; }
     return d.settings as RecoverySettings;
   }
-  async function showPreview(step: number, send = false) {
+  async function showPreview(step: number, send = false, happypay = false) {
     setMsg(null);
     if (dirty) { setMsg({ ok: false, text: "Save your changes first, then preview." }); return; }
-    const res = await fetch("/api/admin/cart-recovery/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ step, send }) });
+    const res = await fetch("/api/admin/cart-recovery/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ step, send, happypay }) });
     const d = await res.json().catch(() => ({}));
     if (!res.ok) { setMsg({ ok: false, text: d.error ?? "Couldn't build the email." }); return; }
     if (send) setMsg({ ok: true, text: `✓ Test email ${step} sent to ${d.sentTo}` });
@@ -300,6 +300,7 @@ export function RecoverySettingsForm({ initial }: { initial: RecoverySettings })
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn btn-dark h-9 px-3 text-xs" onClick={() => showPreview(i + 1)}>Preview email {i + 1}</button>
             <button type="button" className="btn btn-dark h-9 px-3 text-xs" onClick={() => showPreview(i + 1, true)}>Send me a test</button>
+            <button type="button" className="btn btn-dark h-9 px-3 text-xs" title="How this email looks to a customer whose HappyPay didn't go through (suggests PayFast / RCS store cards)" onClick={() => showPreview(i + 1, false, true)}>HappyPay version</button>
           </div>
         </Card>
       ))}

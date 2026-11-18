@@ -8,8 +8,8 @@ import { sendMail, SHOP_EMAIL } from "@/lib/email";
 export async function POST(req: NextRequest) {
   const actor = await authorize("deals.manage");
   if (!actor) return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  let step = 1, send = false;
-  try { ({ step = 1, send = false } = (await req.json()) as { step?: number; send?: boolean }); } catch { /* defaults */ }
+  let step = 1, send = false, happypay = false;
+  try { ({ step = 1, send = false, happypay = false } = (await req.json()) as { step?: number; send?: boolean; happypay?: boolean }); } catch { /* defaults */ }
   const s = await getRecoverySettings();
   const sample: RecoveryCart = {
     id: 0, email: actor.email || SHOP_EMAIL, firstName: "Sipho", lastName: "Sample", phone: "", address: {},
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     emailsSent: 0, lastEmailAt: null, orderRef: null, recoveredOrderRef: null, recoveredValue: 0, createdAt: Date.now(), updatedAt: Date.now(), lastActivityAt: Date.now(), test: true, clickedVia: null, boughtAfterEmail: false,
   };
   const st = Math.max(1, Math.min(3, Math.round(step)));
-  const { subject, html } = await renderRecoveryEmail(sample, st, s);
+  const { subject, html } = await renderRecoveryEmail(sample, st, s, { happypay: !!happypay });
   if (send) {
     try { await sendMail(SHOP_EMAIL, `[TEST] ${subject}`, html, { type: "abandoned_cart", noCc: true }); }
     catch (e) { return NextResponse.json({ error: (e as Error).message }, { status: 502 }); }

@@ -1,6 +1,7 @@
 import "server-only";
 import { sendMail } from "./email";
 import { getProduct } from "./catalogue";
+import { libsql } from "./db";
 import {
   prepareRun, recordEmailSent, getRecoverySettings,
   type RecoveryCart, type RecoverySettings,
@@ -50,8 +51,30 @@ function shell(brand: string, inner: string, title: string): string {
 </table></td></tr></table></body></html>`;
 }
 
+/** True when this cart came from an order the customer tried to pay with HappyPay. */
+async function cameFromHappyPay(c: RecoveryCart): Promise<boolean> {
+  if (!c.orderRef) return false;
+  try {
+    const r = await libsql.execute({ sql: "SELECT payment_method FROM orders WHERE reference = ? ORDER BY id DESC LIMIT 1", args: [c.orderRef] });
+    return String(r.rows[0]?.payment_method ?? "").toLowerCase() === "happypay";
+  } catch { return false; }
+}
+
+/** For carts from a HappyPay order that wasn't approved / finished: suggest
+ *  paying with PayFast instead (checkout opens with PayFast selected). RCS
+ *  store cards are the pay-over-time option on the PayFast account (Nov 2026). */
+function happyPayBox(brand: string): string {
+  return `<tr><td style="padding:24px 32px 0">
+      <table role="presentation" width="100%" style="background:#f7fbef;border:1px solid ${esc(brand)};border-radius:8px"><tr><td style="padding:16px 20px;font-size:15px;line-height:1.55;color:#374151">
+        <strong style="display:block;margin-bottom:6px;font-size:16px;color:#111827">HappyPay didn&#39;t work out? Pay with PayFast instead</strong>
+        Your tyres are still waiting. Pay for the same order securely with PayFast:
+        <div style="margin:10px 0 0">✓ <strong>Pay over time with your RCS store card</strong>: Pick n Pay Smart Shopper, Edgars, Jet, Makro, Game, Builders, RCS and more</div>
+        <div style="margin:4px 0 0">✓ Credit or debit card, Instant EFT, SnapScan, Apple Pay or Google Pay</div>
+      </td></tr></table></td></tr>`;
+}
+
 /** The recovery email for one step (1–3). */
-export async function renderRecoveryEmail(c: RecoveryCart, step: number, s: RecoverySettings): Promise<{ subject: string; html: string }> {
+export async function renderRecoveryEmail(c: RecoveryCart, step: number, s: RecoverySettings, opts: { happypay?: boolean } = {}): Promise<{ subject: string; html: string }> {
   const brand = /^#[0-9a-f]{3,8}$/i.test(s.brandColor) ? s.brandColor : "#8ac53f";
   const e = s.emails[step - 1] ?? s.emails[0];
   const url = recoveryUrl(c);
@@ -60,6 +83,7 @@ export async function renderRecoveryEmail(c: RecoveryCart, step: number, s: Reco
     return { ...i, image: i.image ?? p?.thumb ?? p?.image ?? null, url: abs(`/product/${i.slug}`) };
   }));
   const firstUrl = items[0]?.url ?? SITE_URL;
+  const happypay = opts.happypay ?? (await cameFromHappyPay(c));
 
   const rows = items.map((i) => `<tr>
       <td style="padding:12px 0;border-bottom:1px solid #eee;width:64px">${i.image ? `<img src="${esc(abs(i.image))}" alt="" width="56" style="border-radius:6px;display:block">` : ""}</td>
@@ -95,8 +119,9 @@ export async function renderRecoveryEmail(c: RecoveryCart, step: number, s: Reco
   </td></tr>
   ${rows ? `<tr><td style="padding:24px 32px 0"><table role="presentation" width="100%" style="border-collapse:collapse">${rows}
     <tr><td></td><td style="padding:10px 12px 0;font-weight:bold">Total</td><td align="right" style="padding:10px 0 0;font-weight:bold">${zar(c.total)}</td></tr></table></td></tr>` : ""}
+  ${happypay ? happyPayBox(brand) : ""}
   <tr><td align="center" style="padding:28px 32px 8px">
-    <a href="${esc(url)}" style="display:inline-block;background:${esc(brand)};color:${INK};text-decoration:none;font-weight:bold;font-size:16px;padding:14px 28px;border-radius:8px">Complete my order</a>
+    <a href="${esc(url)}" style="display:inline-block;background:${esc(brand)};color:${INK};text-decoration:none;font-weight:bold;font-size:16px;padding:14px 28px;border-radius:8px">${happypay ? "Pay with PayFast" : "Complete my order"}</a>
   </td></tr>
   <tr><td align="center" style="padding:0 32px 8px"><a href="${esc(firstUrl)}" style="color:${INK};font-size:14px;text-decoration:underline">View the product again</a></td></tr>
   ${discount}

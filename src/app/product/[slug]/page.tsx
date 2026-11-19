@@ -96,7 +96,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
   // Special / sale deal products are temporary: kept out of Google, pointing it at the normal product.
   if (dealInfo) return { title: p.name, description: p.shortDescription, robots: { index: false, follow: true }, ...(dealInfo.originalSlug ? { alternates: { canonical: `/product/${dealInfo.originalSlug}` } } : {}) };
-  return { title: p.name, description: p.shortDescription };
+  return { title: p.name, description: p.shortDescription, alternates: { canonical: `/product/${p.slug}` } };
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {

@@ -8,6 +8,7 @@ import { Arrow, Truck, Bolt } from "@/components/icons";
 const BASE_META: Metadata = {
   title: "The Wheel Shop — Mag Wheels",
   description: "Shop mag wheels at The Tyre Mall — 15\" to 20\", bakkie & replica designs, nationwide delivery and fitment.",
+  alternates: { canonical: "/mag-wheels" },
 };
 
 export async function generateMetadata(): Promise<Metadata> {

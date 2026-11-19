@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Truck, Pin, Bolt } from "@/components/icons";
 
 const BASE_META: Metadata = {
+  alternates: { canonical: "/delivery-areas" },
   title: "Free Delivery Areas — Nationwide Across South Africa",
   description:
     "The Tyre Mall delivers tyres and mag wheels free on 2+ tyres to every province in South Africa — Gauteng, Western Cape, KwaZulu-Natal, Eastern Cape and more. See the towns and cities we cover.",

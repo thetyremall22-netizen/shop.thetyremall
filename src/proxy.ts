@@ -130,6 +130,14 @@ export async function proxy(req: NextRequest) {
   if (host === "www.thetyremall.co.za" && (req.method === "GET" || req.method === "HEAD") && !req.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.redirect(`https://thetyremall.co.za${req.nextUrl.pathname}${req.nextUrl.search}`, 308);
   }
+  // Sitemaps. The old WordPress site's sitemaps (product-sitemap.xml,
+  // product-sitemap2.xml…, page-sitemap.xml, sitemap_index.xml) are still listed
+  // in Google Search Console; send them to the new one so Google reads it.
+  // /sitemap.xml itself is served as normal.
+  if (/\.xml$/i.test(req.nextUrl.pathname)) {
+    if (req.nextUrl.pathname !== "/sitemap.xml") return NextResponse.redirect("https://thetyremall.co.za/sitemap.xml", 301);
+    return NextResponse.next();
+  }
   // The contact page lives at the old site's address, /contact-us/ (Google Ads
   // link there); the short /contact forwards to it permanently.
   if (/^\/contact\/?$/.test(req.nextUrl.pathname)) {
@@ -217,7 +225,8 @@ function redirectTo(req: NextRequest, pathname: string) {
 }
 
 // Pages and /api (for the country check). Never /_next, /admin, or any path
-// with a file extension (static assets such as product images).
+// with a file extension (static assets such as product images) — except
+// sitemaps (www → main address, old WordPress sitemaps → /sitemap.xml).
 export const config = {
-  matcher: ["/((?!_next|admin|.*\\..*).*)"],
+  matcher: ["/((?!_next|admin|.*\\..*).*)", "/(.*sitemap.*\\.xml)"],
 };

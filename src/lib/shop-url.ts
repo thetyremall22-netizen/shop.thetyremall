@@ -23,6 +23,16 @@ export const FILTER_PAGES: Record<string, { name: string; params: Record<string,
   "on-sale": { name: "Hot Dealz", params: { onSale: "1" }, canonical: "hot-dealz" },
 };
 
+/** A listing page number on its own rides in the path (/product-category/tyres/page/2),
+ *  which search engines can crawl (robots.txt keeps them out of "?" addresses). */
+function listingHref(path: string, p: URLSearchParams): string {
+  const page = Number(p.get("page"));
+  if ([...p.keys()].every((k) => k === "page")) return page > 1 ? `${path}/page/${page}` : path;
+  if (page <= 1) p.delete("page");
+  const qs = p.toString();
+  return `${path}${qs ? `?${qs}` : ""}`;
+}
+
 export function shopHref(params: URLSearchParams | string): string {
   const p = new URLSearchParams(params);
   // "All wheels" is the Mag Wheels category page.
@@ -30,23 +40,20 @@ export function shopHref(params: URLSearchParams | string): string {
   const cat = p.get("category");
   if (cat) {
     p.delete("category");
-    const qs = p.toString();
-    return `${categoryPath(cat)}${qs ? `?${qs}` : ""}`;
+    return listingHref(categoryPath(cat), p);
   }
   // A brand on its own (no search words) has its own page as well.
   const brand = p.get("brand");
   if (brand && !p.get("q")) {
     p.delete("brand");
-    const qs = p.toString();
-    return `${brandPath(brand)}${qs ? `?${qs}` : ""}`;
+    return listingHref(brandPath(brand), p);
   }
   // All tyres / everything on sale.
   if (!p.get("q") && !brand) {
     const slug = p.get("type") === "tyre" ? "tyres" : p.get("onSale") === "1" && !p.get("type") ? "hot-dealz" : null;
     if (slug) {
       for (const k of Object.keys(FILTER_PAGES[slug].params)) p.delete(k);
-      const qs = p.toString();
-      return `${categoryPath(slug)}${qs ? `?${qs}` : ""}`;
+      return listingHref(categoryPath(slug), p);
     }
   }
   const qs = p.toString();

@@ -25,6 +25,10 @@ import { categoryPath } from "@/lib/shop-url";
 import { DragScroll } from "@/components/DragScroll";
 import { getRatingSummary, getFeaturedReviews } from "@/lib/reviews";
 
+import type { Metadata } from "next";
+
+// The home page's one address for Google (www, trailing "?…" tags etc. all point here).
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export default async function Home() {
   const home = await getHomeContent();

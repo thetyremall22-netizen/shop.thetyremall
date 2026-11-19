@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Truck, Shield, Bolt, Phone, Pin } from "@/components/icons";
 
 const BASE_META: Metadata = {
+  alternates: { canonical: "/about" },
   title: "About Us — The Tyre Mall",
   description:
     "The Tyre Mall is one of South Africa's largest online tyre suppliers, backed by the Trump Tyre Group (B-BBEE Level 1). Quality tyres & mag wheels, expert advice and nationwide delivery.",

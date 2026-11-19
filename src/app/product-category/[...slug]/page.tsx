@@ -29,12 +29,15 @@ function parse(segments: string[]): { slug: string; page?: string } {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string[] }> }): Promise<Metadata> {
-  const { slug } = parse((await params).slug);
+  const { slug, page } = parse((await params).slug);
+  // Page 2, 3… of a listing is its own page for Google (it lists different products).
+  const pg = (path: string) => (page && Number(page) > 1 ? `${path}/page/${Number(page)}` : path);
+  const pt = (t: string) => (page && Number(page) > 1 ? `${t} — page ${Number(page)}` : t);
   const f = FILTER_PAGES[slug];
   if (f) return {
-    title: f.name,
+    title: pt(f.name),
     description: `Shop ${f.name.toLowerCase()} at The Tyre Mall — South Africa's largest online tyre range, free delivery on 2+ tyres, pay later with HappyPay.`,
-    alternates: { canonical: categoryPath(f.canonical ?? slug) },
+    alternates: { canonical: pg(categoryPath(f.canonical ?? slug)) },
   };
   const c = await findCategory(slug);
   if (!c) {
@@ -43,17 +46,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     if (s) return { title: s.name, robots: { index: false, follow: true } };
     const b = await findBrand(slug);
     if (b) return {
-      title: `${b.name} tyres`,
+      title: pt(`${b.name} tyres`),
       description: `Shop ${b.name} at The Tyre Mall — South Africa's largest online tyre range, free delivery on 2+ tyres, pay later with HappyPay.`,
-      alternates: { canonical: brandPath(b.name) },
+      alternates: { canonical: pg(brandPath(b.name)) },
     };
     // Unknown/retired category: a search page, kept out of Google's index.
     return { title: "Shop tyres & mag wheels", robots: { index: false, follow: true } };
   }
   return {
-    title: c.name,
+    title: pt(c.name),
     description: `Shop ${c.name} at The Tyre Mall — South Africa's largest online tyre range, free delivery on 2+ tyres, pay later with HappyPay.`,
-    alternates: { canonical: categoryPath(c.slug) },
+    alternates: { canonical: pg(categoryPath(c.slug)) },
   };
 }
 

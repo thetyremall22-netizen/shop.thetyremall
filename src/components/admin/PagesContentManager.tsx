@@ -47,7 +47,7 @@ function PageEditor({ def, initial }: { def: PageDef; initial: PageOverride }) {
 
       <div className="rounded-xl border border-line p-3">
         <b className="text-sm">Banner (optional)</b>
-        <p className="mb-2 text-xs text-muted">Shows under the heading. Best size 2000 × 668 px.</p>
+        <p className="mb-2 text-xs text-muted">Shows under the heading. Size {BANNER_CANVAS.width} × {BANNER_CANVAS.height} px exactly.</p>
         <ImagePicker value={v.banner.src} onChange={(src) => setV({ ...v, banner: { ...v.banner, src } })} label="Banner image" fit={BANNER_CANVAS} previewClass="h-14 w-40" hint={canvasHint(BANNER_CANVAS)} />
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
           <label><span className={lab}>Link (optional)</span><input className={field} value={v.banner.href} placeholder="/product-category/radar" onChange={(e) => setV({ ...v, banner: { ...v.banner, href: e.target.value } })} /></label>

@@ -31,9 +31,10 @@ export function HomeBanners({ slides, mode, intervalSec }: { slides: Slide[]; mo
   // Render helpers (plain functions, not components, so images aren't
   // re-mounted on every slide change).
   const img = (s: Slide, idx: number) => (
-    // Plain <img>: banners are pre-compressed (≤300 KB, ≤2000px) on upload.
+    // Plain <img>: banners are cropped to 1400 × 468 and compressed (≤120 KB) on upload.
+    // (Older banners are 2000 × 668 — the same 3:1 shape, so the box below fits both.)
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={s.src} alt={s.alt} width={2000} height={668}
+    <img src={s.src} alt={s.alt} width={1400} height={468}
       loading={idx === 0 ? "eager" : "lazy"} fetchPriority={idx === 0 ? "high" : "low"} decoding="async"
       className="aspect-[2000/668] w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]" />
   );

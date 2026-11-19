@@ -14,13 +14,11 @@ const nextConfig: NextConfig = {
     staticGenerationMaxConcurrency: 2,
     staticGenerationMinPagesPerWorker: 2000,
   },
-  // Nginx Unit's unit-http response shim doesn't reliably forward the
-  // Content-Encoding header that Next sets when it gzips a response, so
-  // dynamically-rendered pages (e.g. /admin) arrive gzipped but undecoded —
-  // the browser shows binary garbage. Disable Next's own compression and let
-  // the front web server (LiteSpeed) handle gzip on the way out. Static pages
-  // were unaffected because they're served as plain prebuilt HTML.
-  compress: false,
+  // The site now runs as plain Node behind nginx (no Nginx Unit), so Next
+  // gzips its own responses — including the CSS/JS files, which nginx on h1
+  // doesn't compress (its gzip_types only covers HTML). Live server.js was
+  // switched to match with ~/ttm-compress-on.sh (undo: ~/ttm-compress-off.sh).
+  compress: true,
   // Self-contained server build for the 0724 (DirectAdmin/Passenger) deploy:
   // `.next/standalone/server.js` + a traced node_modules, so the server needs no
   // `npm install`. Vercel ignores this and deploys as normal.

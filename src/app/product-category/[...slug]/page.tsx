@@ -4,6 +4,7 @@ import { findCategory, getSpecialBySlug } from "@/lib/special-categories";
 import { SpecialEnded } from "@/components/SpecialEnded";
 import { categoryPath, brandPath, FILTER_PAGES } from "@/lib/shop-url";
 import { getBrandDirectory } from "@/lib/brand-registry";
+import { listingJsonLd, ldJson } from "@/lib/site-schema";
 
 /** A brand with products, by its page slug (e.g. "bridgestone"). */
 async function findBrand(slug: string) {
@@ -67,7 +68,9 @@ export default async function ProductCategoryPage({ params, searchParams }: { pa
   const pageSp = page && !sp.page ? { page } : {};
   // All tyres (/product-category/tyres) and everything on sale (/product-category/hot-dealz, also /on-sale).
   const f = FILTER_PAGES[slug];
-  if (f) return <ShopListing sp={{ ...sp, ...f.params, ...pageSp }} />;
+  // Structured data so Google knows this is a listing and where it sits (Home › Shop › …).
+  const ld = (name: string, path: string) => <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(listingJsonLd(name, path)) }} />;
+  if (f) return <>{ld(f.name, categoryPath(f.canonical ?? slug))}<ShopListing sp={{ ...sp, ...f.params, ...pageSp }} /></>;
   // An old link to a category that no longer exists still lands somewhere
   // useful: a search for its words (e.g. "womens-month-specials").
   if (!c) {
@@ -76,8 +79,8 @@ export default async function ProductCategoryPage({ params, searchParams }: { pa
     if (s) return <div className="container-x py-6 lg:py-10"><SpecialEnded special={s} limit={12} /></div>;
     // A brand page, e.g. /product-category/bridgestone.
     const b = await findBrand(slug);
-    if (b) return <ShopListing sp={{ ...sp, brand: b.name, ...pageSp }} />;
+    if (b) return <>{ld(`${b.name} tyres`, brandPath(b.name))}<ShopListing sp={{ ...sp, brand: b.name, ...pageSp }} /></>;
     return <ShopListing sp={{ ...sp, q: (sp.q as string) || slug.replace(/[-_]+/g, " ").trim(), ...pageSp }} />;
   }
-  return <ShopListing sp={{ ...sp, category: c.slug, ...pageSp }} />;
+  return <>{ld(c.name, categoryPath(c.slug))}<ShopListing sp={{ ...sp, category: c.slug, ...pageSp }} /></>;
 }

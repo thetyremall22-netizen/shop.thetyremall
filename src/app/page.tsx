@@ -24,11 +24,17 @@ import { productsFromCategories } from "@/lib/home-products";
 import { categoryPath } from "@/lib/shop-url";
 import { DragScroll } from "@/components/DragScroll";
 import { getRatingSummary, getFeaturedReviews } from "@/lib/reviews";
+import { homeJsonLd, ldJson } from "@/lib/site-schema";
 
 import type { Metadata } from "next";
 
 // The home page's one address for Google (www, trailing "?…" tags etc. all point here).
-export const metadata: Metadata = { alternates: { canonical: "/" } };
+export const metadata: Metadata = {
+  title: { absolute: "Buy Tyres & Mag Wheels Online in South Africa | The Tyre Mall" },
+  description:
+    "South Africa's largest online tyre supplier. Buy car, SUV, 4x4 and truck tyres and mag wheels online. Free nationwide delivery on 2 or more tyres. Pay by card, EFT or HappyPay.",
+  alternates: { canonical: "/" },
+};
 
 export default async function Home() {
   const home = await getHomeContent();
@@ -42,8 +48,8 @@ export default async function Home() {
     return auto(sec.limit);
   };
   const viewAll = (sec: ProductSection, fallback: string) => (sec.source === "categories" && sec.categories[0] ? categoryPath(sec.categories[0]) : fallback);
-  const [sellers, deals, mags, ratingSummary, reviews] = await Promise.all([
-    pick(home.fanFavourites, bestSellers), pick(home.deals, dealProducts), pick(home.mags, wheelProducts), getRatingSummary(), getFeaturedReviews(),
+  const [sellers, deals, mags, ratingSummary, reviews, siteLd] = await Promise.all([
+    pick(home.fanFavourites, bestSellers), pick(home.deals, dealProducts), pick(home.mags, wheelProducts), getRatingSummary(), getFeaturedReviews(), homeJsonLd(),
   ]);
   const [brandWall, brandOptions] = await Promise.all([menuBrands(), filterBrands()]);
   const [tileA, tileB] = home.tiles.items;
@@ -51,6 +57,8 @@ export default async function Home() {
 
   return (
     <>
+      {/* Who The Tyre Mall is + the site search, for Google (schema.org). */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(siteLd) }} />
       <Hero image={home.hero.image} />
 
       {/* ============ DUAL SEARCH ============ */}
@@ -111,7 +119,7 @@ export default async function Home() {
 
       {/* ============ PAY LATER — HappyPay (yellow / black) ============ */}
       {home.happyPay.show && (
-      <section className="container-x pb-12">
+      <section className="cv-auto container-x pb-12">
         <Reveal variant="zoom">
           <div className="relative overflow-hidden rounded-2xl bg-[#FFD400] p-6 sm:p-10">
             {/* faint black checker texture */}
@@ -158,7 +166,7 @@ export default async function Home() {
 
       {/* ============ DEALS ============ */}
       {home.deals.show && (
-      <section className="container-x pb-12">
+      <section className="cv-auto container-x pb-12">
         <Reveal>
           <div className="mb-6 flex items-end justify-between gap-4 border-l-4 border-sale pl-4">
             <div>
@@ -195,7 +203,7 @@ export default async function Home() {
 
       {/* ============ BRAND WALL ============ */}
       {home.brands.show && (
-      <section className="border-y border-line bg-ink-2">
+      <section className="cv-auto border-y border-line bg-ink-2">
         <div className="container-x py-10">
           <Reveal>
             <div className="mb-6 text-center">
@@ -224,17 +232,37 @@ export default async function Home() {
   );
 }
 
+// Smaller copies of the built-in feature-tile photos (public/brand/tile-*-800/1280.webp).
+const TILE_SIZES: Record<string, string> = {
+  "/brand/tile-tyres.webp": "/brand/tile-tyres-800.webp 800w, /brand/tile-tyres-1280.webp 1280w,",
+  "/brand/tile-wheels.webp": "/brand/tile-wheels-800.webp 800w, /brand/tile-wheels-1280.webp 1280w,",
+};
+
 function FeatureTile({ title, tags, href, cta, image }: { title: string; tags: string[]; href: string; cta: string; image: string }) {
   return (
     <Link href={href} className="glow-hover group relative block aspect-[16/9] overflow-hidden rounded-2xl border border-line sm:aspect-[16/7]">
-      <Image
-        src={image}
-        alt={title}
-        fill
-        unoptimized={!image.startsWith("/brand/")}
-        sizes="(max-width:1024px) 100vw, 640px"
-        className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.06]"
-      />
+      {TILE_SIZES[image] ? (
+        // Built-in tiles come in 800 / 1280 / full widths, so phones download ~35 KB instead of ~240 KB.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={image}
+          srcSet={`${TILE_SIZES[image]} ${image} 2048w`}
+          sizes="(max-width: 639px) 100vw, (max-width: 1280px) 50vw, 640px"
+          alt={title}
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 size-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.06]"
+        />
+      ) : (
+        <Image
+          src={image}
+          alt={title}
+          fill
+          unoptimized={!image.startsWith("/brand/")}
+          sizes="(max-width:1024px) 100vw, 640px"
+          className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.06]"
+        />
+      )}
       {/* legibility gradients */}
       <div className="absolute inset-0 bg-[linear-gradient(90deg,#0a0b0d_0%,rgba(10,11,13,0.72)_32%,rgba(10,11,13,0.18)_64%,transparent_100%)]" />
       <div className="absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(0deg,rgba(10,11,13,0.6),transparent)]" />

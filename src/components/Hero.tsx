@@ -25,10 +25,16 @@ export function Hero({ image = "/brand/hero-bg.webp" }: { image?: string }) {
       {/* full-bleed cinematic background */}
       {image === "/brand/hero-bg.webp" ? (
         // Phones get a 760px crop of the centre (what a phone shows anyway): 72 KB instead of 202 KB.
+        <>
+        {/* Start the hero photo download straight away (it is the biggest thing a phone paints first),
+            instead of waiting behind the stylesheet. React moves these into <head>. */}
+        <link rel="preload" as="image" href="/brand/hero-bg-mobile.webp" media="(max-width: 767px)" fetchPriority="high" />
+        <link rel="preload" as="image" href={image} media="(min-width: 768px)" fetchPriority="high" />
         <picture>
           <source media="(max-width: 767px)" srcSet="/brand/hero-bg-mobile.webp" />
           <img src={image} alt="" aria-hidden fetchPriority="high" loading="eager" decoding="async" className="absolute inset-0 z-0 size-full object-cover object-center" />
         </picture>
+        </>
       ) : (
         <Image
           src={image}

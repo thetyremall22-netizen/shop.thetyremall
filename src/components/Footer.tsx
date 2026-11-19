@@ -14,7 +14,7 @@ export async function Footer() {
   const year = await currentYear();
   const addressLines = s.contact.addressLines.split("\n").filter(Boolean);
   return (
-    <footer className="mt-20 border-t border-line bg-ink-2">
+    <footer className="cv-auto mt-20 border-t border-line bg-ink-2">
       {/* trust strip */}
       <div className="border-b border-line">
         <div className="container-x grid grid-cols-2 gap-px lg:grid-cols-4">

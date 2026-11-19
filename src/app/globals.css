@@ -799,6 +799,11 @@ body::before {
 /* Light-theme override: pale -200/-300 text (made for dark backgrounds, e.g.
    the admin "Origin" badges: Google Ads, Search, AI, Email…) is unreadable on
    white, so use the dark shade of the same colour in light mode. */
+/* Below-the-fold blocks (home page lower sections, footer): the browser skips
+   laying them out and painting them until they're near the screen, so taps
+   (menu, cart, search) respond faster on phones. */
+.cv-auto { content-visibility: auto; contain-intrinsic-size: auto 700px; }
+
 :root[data-theme="light"] :is(.text-amber-200, .text-amber-300) { color: #b45309; }
 :root[data-theme="light"] .text-sky-300 { color: #0369a1; }
 :root[data-theme="light"] .text-fuchsia-300 { color: #a21caf; }

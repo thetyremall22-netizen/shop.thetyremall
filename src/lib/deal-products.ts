@@ -1,6 +1,7 @@
 import "server-only";
-import { cacheTag, cacheLife } from "next/cache";
+import { cacheTag } from "next/cache";
 import { libsql } from "./db";
+import { cacheUntilNextChange, specialTimes } from "./cache-timing";
 import { PRODUCTS_TAG } from "./catalogue-cache";
 
 // Deal products: separate products made for one special / sale category by
@@ -36,7 +37,7 @@ const LIVE_SQL = `s.enabled = 1 AND (s.start_at IS NULL OR s.start_at <= ?) AND 
 export async function hiddenDealSlugs(): Promise<string[]> {
   "use cache";
   cacheTag(SPECIALS_TAG, PRODUCTS_TAG);
-  cacheLife("minutes");
+  cacheUntilNextChange(await specialTimes());
   try {
     await ensureTable();
     const now = Date.now();
@@ -62,7 +63,7 @@ export async function allDealSlugs(): Promise<Set<string>> {
 export async function dealProductInfo(slug: string): Promise<DealProductInfo | null> {
   "use cache";
   cacheTag(SPECIALS_TAG, PRODUCTS_TAG);
-  cacheLife("minutes");
+  cacheUntilNextChange(await specialTimes());
   try {
     await ensureTable();
     const now = Date.now();

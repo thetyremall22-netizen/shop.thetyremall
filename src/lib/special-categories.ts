@@ -1,6 +1,7 @@
 import "server-only";
-import { cacheTag, cacheLife, revalidateTag } from "next/cache";
+import { cacheTag, revalidateTag } from "next/cache";
 import { libsql } from "./db";
+import { cacheUntilNextChange, specialTimes } from "./cache-timing";
 import { categories as STATIC_CATEGORIES, getCategory } from "./catalogue";
 import { FILTER_PAGES } from "./shop-url";
 import { revalidateProducts, PRODUCTS_TAG } from "./catalogue-cache";
@@ -121,7 +122,7 @@ export const SPECIALS_TAG = "special-categories";
 export async function liveSpecialSlugs(): Promise<string[]> {
   "use cache";
   cacheTag(SPECIALS_TAG);
-  cacheLife("minutes");
+  cacheUntilNextChange(await specialTimes());
   const now = Date.now();
   return (await listSpecials()).filter((c) => specialStatus(c, now) === "live").map((c) => c.slug);
 }
@@ -142,7 +143,7 @@ export function dealOf(s: SpecialCategory): Deal | null {
 export async function liveDeals(): Promise<Record<string, Deal>> {
   "use cache";
   cacheTag(SPECIALS_TAG);
-  cacheLife("minutes");
+  cacheUntilNextChange(await specialTimes());
   const now = Date.now();
   const out: Record<string, Deal> = {};
   for (const s of await listSpecials()) {
@@ -197,7 +198,7 @@ export async function liveSpecialCategories(): Promise<Category[]> {
 export async function menuSpecials(): Promise<{ name: string; slug: string; kind: SpecialKind }[]> {
   "use cache";
   cacheTag(SPECIALS_TAG, PRODUCTS_TAG);
-  cacheLife("minutes");
+  cacheUntilNextChange(await specialTimes());
   return (await liveSpecialCategories()).filter((c) => c.count > 0).map((c) => ({ name: c.name, slug: c.slug, kind: c.kind ?? "special" }));
 }
 

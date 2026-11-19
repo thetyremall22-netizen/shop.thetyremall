@@ -1,6 +1,7 @@
 import "server-only";
-import { cacheTag, cacheLife, revalidateTag } from "next/cache";
+import { cacheTag, revalidateTag } from "next/cache";
 import { libsql } from "./db";
+import { cacheUntilNextChange, productDealTimes } from "./cache-timing";
 import type { Deal, DealKind } from "./deals";
 
 // A deal set on individual products (Admin → product → "Deal / offer", or the
@@ -137,7 +138,7 @@ export async function restoreProductDeals(items: { slug: string; deal: ProductDe
 export async function liveProductDeals(): Promise<Record<string, Deal>> {
   "use cache";
   cacheTag(PRODUCT_DEALS_TAG);
-  cacheLife("minutes");
+  cacheUntilNextChange(await productDealTimes());
   try {
     await ensureTable();
     const now = Date.now();

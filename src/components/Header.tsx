@@ -52,8 +52,47 @@ export function Header({ brands = [], pages = [], specials = [] }: { brands?: { 
             <Menu />
           </button>
 
-          {/* Logo — larger */}
-          <Logo className="shrink-0" priority />
+          {/* Logo, with the All Categories menu underneath it on desktop
+              (frees room in the main menu so its items stay on one line). */}
+          <div className="flex shrink-0 flex-col items-start gap-1.5">
+            <Logo className="lg:[&_img]:h-16" priority />
+            <div className="hidden lg:block">
+              <div className="group relative">
+                <Link
+                  href="/shop"
+                  className="flex items-center gap-1 whitespace-nowrap rounded-lg border border-volt/60 px-3 py-1.5 text-[13px] font-bold text-volt transition-colors group-hover:bg-volt group-hover:text-volt-ink"
+                >
+                  All Categories <Chevron width={14} height={14} className="transition-transform group-hover:rotate-180" />
+                </Link>
+                <div className="invisible absolute left-0 top-full z-50 w-56 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
+                  <div className="overflow-hidden rounded-xl border border-line bg-ink-2 shadow-2xl shadow-black/60">
+                    {/* Live specials & sales from Admin → Products → Special categories */}
+                    {specials.length > 0 && (
+                      <div className="border-b border-line">
+                        {specials.map((c) => (
+                          <Link key={c.slug} href={categoryPath(c.slug)} className="block px-4 py-2.5 text-sm font-bold text-volt transition-colors hover:bg-surface">
+                            {c.kind === "sale" ? "% " : "★ "}{c.name}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                    {NAV_PRIMARY.map((c) => (
+                      <Link
+                        key={c.slug}
+                        href={categoryPath(c.slug)}
+                        className="block px-4 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface hover:text-volt"
+                      >
+                        {c.slug === "mag-wheel" ? c.label : `${c.label} Tyres`}
+                      </Link>
+                    ))}
+                    <Link href="/shop" className="block border-t border-line px-4 py-2.5 text-sm font-bold text-volt transition-colors hover:bg-surface">
+                      View all →
+                    </Link>
+                  </div>
+            </div>
+          </div>
+            </div>
+          </div>
 
           {/* mobile actions (desktop shows these inside the column below) */}
           <div className="ml-auto flex items-center gap-0 lg:hidden [&>*]:!size-9">
@@ -79,48 +118,14 @@ export function Header({ brands = [], pages = [], specials = [] }: { brands?: { 
 
           {/* right column: nav + icons on top (desktop), compact search below.
               On mobile this wraps to full width beneath the logo. */}
-          <div className="order-last flex w-full flex-col gap-2 lg:order-none lg:w-auto lg:flex-1">
+          <div className="order-last flex w-full flex-col gap-2 lg:order-none lg:w-auto lg:min-w-0 lg:flex-1">
             <div className="hidden items-center gap-1 lg:flex">
-              <nav className="flex items-center gap-1">
-                <div className="group relative mr-1">
-                  <Link
-                    href="/shop"
-                    className="flex items-center gap-1 rounded-lg border border-volt/60 px-3.5 py-2 text-sm font-bold text-volt transition-colors group-hover:bg-volt group-hover:text-volt-ink"
-                  >
-                    All Categories <Chevron width={14} height={14} className="transition-transform group-hover:rotate-180" />
-                  </Link>
-                  <div className="invisible absolute left-0 top-full z-50 w-56 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
-                    <div className="overflow-hidden rounded-xl border border-line bg-ink-2 shadow-2xl shadow-black/60">
-                      {/* Live specials & sales from Admin → Products → Special categories */}
-                      {specials.length > 0 && (
-                        <div className="border-b border-line">
-                          {specials.map((c) => (
-                            <Link key={c.slug} href={categoryPath(c.slug)} className="block px-4 py-2.5 text-sm font-bold text-volt transition-colors hover:bg-surface">
-                              {c.kind === "sale" ? "% " : "★ "}{c.name}
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                      {NAV_PRIMARY.map((c) => (
-                        <Link
-                          key={c.slug}
-                          href={categoryPath(c.slug)}
-                          className="block px-4 py-2.5 text-sm font-semibold text-fg transition-colors hover:bg-surface hover:text-volt"
-                        >
-                          {c.slug === "mag-wheel" ? c.label : `${c.label} Tyres`}
-                        </Link>
-                      ))}
-                      <Link href="/shop" className="block border-t border-line px-4 py-2.5 text-sm font-bold text-volt transition-colors hover:bg-surface">
-                        View all →
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-                <Link href="/" className="rounded-md px-3 py-2 text-sm font-bold tracking-wide text-fg transition-colors hover:text-volt">Home</Link>
+              <nav className="flex items-center gap-0.5 2xl:gap-1">
+                <Link href="/" className="rounded-md px-2 py-2 text-[13px] font-bold leading-tight text-fg transition-colors xl:whitespace-nowrap 2xl:px-3 2xl:text-sm 2xl:tracking-wide hover:text-volt">Home</Link>
 
                 {/* Shop by Brands — click goes to shop, hover opens the brand mega menu */}
                 <div className="group relative">
-                  <Link href="/shop" className="flex items-center gap-1 rounded-md px-3 py-2 text-sm font-bold tracking-wide text-fg transition-colors group-hover:text-volt">
+                  <Link href="/shop" className="flex items-center gap-1 rounded-md px-2 py-2 text-[13px] font-bold leading-tight text-fg transition-colors xl:whitespace-nowrap 2xl:px-3 2xl:text-sm 2xl:tracking-wide group-hover:text-volt">
                     Shop by Brands <Chevron width={14} height={14} className="transition-transform group-hover:rotate-180" />
                   </Link>
                   <div className="invisible absolute left-1/2 top-full z-50 w-screen max-w-3xl -translate-x-1/2 pt-2 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
@@ -142,7 +147,7 @@ export function Header({ brands = [], pages = [], specials = [] }: { brands?: { 
                   <Link
                     key={n.label}
                     href={n.href}
-                    className="rounded-md px-3 py-2 text-sm font-bold tracking-wide text-fg transition-colors hover:text-volt"
+                    className="rounded-md px-2 py-2 text-[13px] font-bold leading-tight text-fg transition-colors xl:whitespace-nowrap 2xl:px-3 2xl:text-sm 2xl:tracking-wide hover:text-volt"
                   >
                     {n.label}
                   </Link>

@@ -1,4 +1,5 @@
 import type { Product } from "./types";
+import { STANDARD_DELIVERY_FEE } from "./shop-config";
 
 // Google Merchant Center: one place for how a product is described to Google,
 // used by the product feed (/feeds/google-merchant.xml) and the product pages'
@@ -43,15 +44,43 @@ export function feedProblem(p: Product): string | null {
   return null;
 }
 
-/** Product structured data (schema.org) for a product page. */
+// Delivery and returns as stated in the Terms (sections 5 and 7), for Google's
+// merchant listings. One item (a single tyre or wheel) costs the standard
+// delivery fee; 2+ tyres deliver free (shown on the site, not per item here).
+const SHIPPING_DETAILS = {
+  "@type": "OfferShippingDetails",
+  shippingRate: { "@type": "MonetaryAmount", value: (STANDARD_DELIVERY_FEE / 100).toFixed(2), currency: "ZAR" },
+  shippingDestination: { "@type": "DefinedRegion", addressCountry: "ZA" },
+  deliveryTime: {
+    "@type": "ShippingDeliveryTime",
+    handlingTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 1, unitCode: "DAY" },
+    transitTime: { "@type": "QuantitativeValue", minValue: 3, maxValue: 5, unitCode: "DAY" },
+  },
+};
+// 7-day cooling-off on unfitted, unused tyres in original packaging; courier
+// fees are the customer's (Terms §7).
+const RETURN_POLICY = {
+  "@type": "MerchantReturnPolicy",
+  applicableCountry: "ZA",
+  returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+  merchantReturnDays: 7,
+  returnMethod: "https://schema.org/ReturnByMail",
+  returnFees: "https://schema.org/ReturnFeesCustomerResponsibility",
+  itemCondition: "https://schema.org/NewCondition",
+  merchantReturnLink: `${SITE}/returns`,
+};
+
+/** Product structured data (schema.org) for a product page. Products without a
+ *  real photo get none (Google rejects a product listing without an image). */
 export function productJsonLd(p: Product) {
+  if (!p.image || /placeholder/i.test(p.image)) return null;
   return {
     "@context": "https://schema.org",
     "@type": "Product",
     name: p.name,
     sku: p.sku || undefined,
     productID: merchantId(p),
-    image: p.image && !/placeholder/i.test(p.image) ? [absUrl(p.image)] : undefined,
+    image: [absUrl(p.image)],
     description: merchantDescription(p),
     brand: { "@type": "Brand", name: merchantBrand(p) },
     category: googleCategory(p),
@@ -63,6 +92,8 @@ export function productJsonLd(p: Product) {
       availability: p.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       itemCondition: "https://schema.org/NewCondition",
       seller: { "@type": "Organization", name: "The Tyre Mall" },
+      shippingDetails: SHIPPING_DETAILS,
+      hasMerchantReturnPolicy: RETURN_POLICY,
     },
   };
 }

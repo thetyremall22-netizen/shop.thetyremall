@@ -5,9 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Slide { src: string; alt: string; href: string }
 
-/** Home page marketing banner: one static image, or up to 3 that rotate. Only
- *  the first banner loads up front; the others load lazily, so extra banners
- *  don't slow the first paint. */
+/** Home page marketing banner: one static image, or up to 3 that rotate. All
+ *  banners load lazily (they're below the hero), so they never slow the first paint. */
 export function HomeBanners({ slides, mode, intervalSec }: { slides: Slide[]; mode: "static" | "rotate"; intervalSec: number }) {
   const list = mode === "rotate" ? slides.slice(0, 3) : slides.slice(0, 1);
   const [i, setI] = useState(0);
@@ -35,7 +34,9 @@ export function HomeBanners({ slides, mode, intervalSec }: { slides: Slide[]; mo
     // (Older banners are 2000 × 668 — the same 3:1 shape, so the box below fits both.)
     // eslint-disable-next-line @next/next/no-img-element
     <img src={s.src} alt={s.alt} width={1400} height={468}
-      loading={idx === 0 ? "eager" : "lazy"} fetchPriority={idx === 0 ? "high" : "low"} decoding="async"
+      // Banners sit below the hero, so they load as the visitor scrolls towards them
+      // instead of competing with the hero photo (what phones paint first).
+      loading="lazy" fetchPriority={idx === 0 ? "auto" : "low"} decoding="async"
       className="aspect-[2000/668] w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]" />
   );
   const wrap = (s: Slide, idx: number) =>

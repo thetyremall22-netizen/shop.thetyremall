@@ -63,8 +63,9 @@ export const LOGO_CANVAS: Canvas = { width: 640, height: 416, padding: 0.08, max
 // Banners (home page, landing pages, specials) are fixed at 1400 × 468 and ≤120 KB:
 // sharp on phones and laptops at about half the weight of the old 2000 × 668 / 300 KB.
 export const BANNER_CANVAS: Canvas = { width: 1400, height: 468, padding: 0, maxBytes: 120_000, mode: "cover", label: "1400 × 468 px (3:1)", exact: true };
-export const TILE_CANVAS: Canvas = { width: 2000, height: 750, padding: 0, maxBytes: 300_000, mode: "cover", label: "2000 × 750 px (8:3)" };
-export const HERO_CANVAS: Canvas = { width: 1920, height: 820, padding: 0, maxBytes: 300_000, mode: "cover", label: "1920 × 820 px" };
+// Tiles show at most ~640px wide (half the page on desktop), so 1280 × 480 is sharp on every screen.
+export const TILE_CANVAS: Canvas = { width: 1280, height: 480, padding: 0, maxBytes: 100_000, mode: "cover", label: "1280 × 480 px (8:3)", exact: true };
+export const HERO_CANVAS: Canvas = { width: 1920, height: 820, padding: 0, maxBytes: 200_000, mode: "cover", label: "1920 × 820 px", exact: true };
 
 /** Guidance text shown beside an upload for a fixed-size image. */
 export function canvasHint(c: Canvas, extra = ""): string {

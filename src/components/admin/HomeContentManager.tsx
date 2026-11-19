@@ -150,7 +150,7 @@ export function HomeContentManager({ initial, defaults, categoryOptions = [] }: 
         ) : <p className="text-xs text-muted">Maximum of {MAX} banners reached. Remove one to add another.</p>}
       </Section>
 
-      <Section title="Hero background" note="The big image behind “South Africa’s cheapest tyres” at the top of the page (best: 1920 × 1080 px).">
+      <Section title="Hero background" note={`The big image behind “South Africa’s cheapest tyres” at the top of the page — ${HERO_CANVAS.width} × ${HERO_CANVAS.height} px exactly, ${Math.round(HERO_CANVAS.maxBytes / 1000)} KB or less.`}>
         <ImagePicker value={v.hero.image} onChange={(image) => up("hero", { image })} label="Background image" fit={HERO_CANVAS} previewClass="h-16 w-36" hint={canvasHint(HERO_CANVAS, "The left side sits behind the headline, so keep it fairly dark there.")} />
         {v.hero.image !== defaults.hero.image && <button type="button" onClick={() => up("hero", defaults.hero)} className="text-xs font-semibold text-muted hover:text-volt">Restore original image</button>}
       </Section>

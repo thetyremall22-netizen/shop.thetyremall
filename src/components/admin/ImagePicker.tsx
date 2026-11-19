@@ -22,19 +22,20 @@ export function ImagePicker({ value, onChange, label = "Image", hint, fit, previ
   // wrong-sized one is flagged and can be resized in one click.
   const [dims, setDims] = useState<{ src: string; w: number; h: number } | null>(null);
   useEffect(() => {
-    if (!fit?.exact || !value) return;
+    if (!fit?.exact || !value || value.startsWith("/brand/")) return;
     const i = new Image();
     i.onload = () => setDims({ src: value, w: i.naturalWidth, h: i.naturalHeight });
     i.src = value;
   }, [fit?.exact, value]);
   const fits = (w: number, h: number) => !fit?.exact || (w === fit.width && h === fit.height);
-  const wrongSize = !!(fit?.exact && value && dims && dims.src === value && !fits(dims.w, dims.h));
+  // Built-in site photos (/brand/…) already come with phone-sized copies, so they're never flagged.
+  const wrongSize = !!(fit?.exact && value && !value.startsWith("/brand/") && dims && dims.src === value && !fits(dims.w, dims.h));
 
   async function resizeCurrent() {
     setBusy(true); setErr(null);
     const blob = await fetch(value).then((r) => (r.ok ? r.blob() : null)).catch(() => null);
     if (!blob) { setBusy(false); setErr("Couldn't load the current image to resize it. Upload a new one instead."); return; }
-    await upload(new File([blob], `banner-${fit!.width}x${fit!.height}.webp`, { type: blob.type || "image/webp" }));
+    await upload(new File([blob], `resized-${fit!.width}x${fit!.height}.webp`, { type: blob.type || "image/webp" }));
   }
 
   async function load() {
@@ -78,7 +79,7 @@ export function ImagePicker({ value, onChange, label = "Image", hint, fit, previ
       {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
       {wrongSize && fit && (
         <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-sale/40 bg-sale/10 p-2 text-xs">
-          <span className="font-semibold text-sale">This image is {dims!.w} × {dims!.h} px — it should be {fit.width} × {fit.height} px.</span>
+          <span className="font-semibold text-sale">This image is {dims!.w} × {dims!.h} px — it should be {fit.width} × {fit.height} px ({Math.round(fit.maxBytes / 1000)} KB or less).</span>
           <button type="button" onClick={resizeCurrent} disabled={busy} className="btn btn-volt-outline h-8 px-3 text-xs">{busy ? "Resizing…" : `Resize to ${fit.width} × ${fit.height}`}</button>
           <span className="text-muted">Then click Save.</span>
         </div>
